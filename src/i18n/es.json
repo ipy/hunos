@@ -1,0 +1,155 @@
+{
+  "common": {
+    "actions": {
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "delete": "Eliminar",
+      "edit": "Editar",
+      "done": "Listo",
+      "undo": "Deshacer",
+      "share": "Compartir",
+      "export": "Exportar"
+    },
+    "confirm": {
+      "delete": "¿Estás seguro de que quieres eliminarlo?",
+      "permanent": "Esta acción no se puede deshacer."
+    }
+  },
+  "tags": {
+    "title": "Etiquetas",
+    "sections": {
+      "allNotes": "Todas las Notas",
+      "untagged": "Sin Etiqueta",
+      "archive": "Archivo",
+      "trash": "Papelera"
+    },
+    "empty": "Aún no hay etiquetas"
+  },
+  "notes": {
+    "title": "Notas",
+    "empty": "Aún no hay notas",
+    "emptyAction": "Toca + para crear tu primera nota",
+    "search": {
+      "placeholder": "Buscar notas...",
+      "noResults": "No se encontraron notas",
+      "hint": "Intenta con otro término"
+    },
+    "card": {
+      "pinned": "Fijada",
+      "archived": "Archivada"
+    },
+    "actions": {
+      "pin": "Fijar",
+      "unpin": "Desfijar",
+      "archive": "Archivar",
+      "unarchive": "Desarchivar",
+      "trash": "Mover a Papelera",
+      "restore": "Restaurar",
+      "deletePermanently": "Eliminar Permanentemente",
+      "export": "Exportar"
+    },
+    "sort": {
+      "modifiedAt": "Fecha de Modificación",
+      "createdAt": "Fecha de Creación",
+      "title": "Título"
+    }
+  },
+  "editor": {
+    "placeholder": "Empieza a escribir...",
+    "titlePlaceholder": "Título",
+    "toolbar": {
+      "bold": "Negrita",
+      "italic": "Cursiva",
+      "underline": "Subrayado",
+      "strikethrough": "Tachado",
+      "highlight": "Resaltado",
+      "heading1": "Título 1",
+      "heading2": "Título 2",
+      "heading3": "Título 3",
+      "bulletList": "Lista de Viñetas",
+      "orderedList": "Lista Numerada",
+      "taskList": "Lista de Tareas",
+      "blockquote": "Cita",
+      "codeBlock": "Bloque de Código",
+      "link": "Enlace",
+      "horizontalRule": "Separador"
+    },
+    "status": {
+      "words": "palabras",
+      "chars": "caracteres"
+    },
+    "stats": {
+      "title": "Estadísticas",
+      "words": "Palabras",
+      "characters": "Caracteres",
+      "charsNoSpaces": "Caracteres (sin espacios)",
+      "paragraphs": "Párrafos",
+      "readingTime": "Tiempo de Lectura",
+      "created": "Fecha de Creación",
+      "modified": "Fecha de Modificación"
+    },
+    "toc": {
+      "title": "Tabla de Contenidos",
+      "empty": "No se encontraron encabezados"
+    },
+    "backlinks": {
+      "title": "Retroenlaces",
+      "empty": "Aún no hay retroenlaces",
+      "hint": "Las notas que enlacen a esta aparecerán aquí"
+    }
+  },
+  "settings": {
+    "title": "Ajustes",
+    "theme": {
+      "title": "Tema",
+      "light": "Claro",
+      "dark": "Oscuro",
+      "system": "Sistema"
+    },
+    "language": {
+      "title": "Idioma",
+      "en": "English",
+      "es": "Español",
+      "zh": "中文"
+    },
+    "editor": {
+      "title": "Editor",
+      "font": "Fuente",
+      "fontSize": "Tamaño de Fuente",
+      "sans": "Sans Serif",
+      "serif": "Serif",
+      "mono": "Monoespaciada"
+    },
+    "typography": {
+      "title": "Tipografía",
+      "fonts": "Fuentes",
+      "textFont": "Fuente de Texto",
+      "headingsFont": "Fuente de Títulos",
+      "codeFont": "Fuente de Código",
+      "fontSize": "Tamaño de Fuente",
+      "lineHeight": "Altura de Línea",
+      "lineWidth": "Ancho de Línea",
+      "paragraphSpacing": "Espaciado de Párrafo",
+      "paragraphIndent": "Sangría de Párrafo",
+      "restoreDefaults": "Restaurar Valores",
+      "hint": "La altura de línea, el espaciado y la sangría se basan en el tamaño de fuente."
+    },
+    "about": {
+      "title": "Acerca de",
+      "version": "Versión",
+      "description": "Una aplicación de notas hermosa con grafos de conocimiento"
+    }
+  },
+  "export": {
+    "title": "Exportar Nota",
+    "markdown": "Markdown",
+    "html": "HTML",
+    "text": "Texto Plano",
+    "pdf": "PDF"
+  },
+  "paywall": {
+    "title": "Función Premium",
+    "description": "Esta función está disponible con Hunos Pro",
+    "upgrade": "Mejorar"
+  }
+}

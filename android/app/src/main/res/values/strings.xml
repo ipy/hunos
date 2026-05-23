@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Hunos</string>
+    <string name="title_activity_main">Hunos</string>
+    <string name="package_name">app.hunos.notes</string>
+    <string name="custom_url_scheme">app.hunos.notes</string>
+</resources>

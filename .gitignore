@@ -1,0 +1,27 @@
+node_modules/
+dist/
+dist-harmony/
+.vite/
+*.local
+.DS_Store
+*.tgz
+coverage/
+web/downloads/*.hap
+
+references/
+
+# iOS
+ios/App/Pods/
+ios/App/App/public/
+ios/App/output/
+
+# Android
+android/app/src/main/assets/public/
+android/app/build/
+android/.gradle/
+
+# HarmonyOS
+harmony/.hvigor/
+harmony/.idea/
+harmony/entry/build/
+harmony/oh_modules/

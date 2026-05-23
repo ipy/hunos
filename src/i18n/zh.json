@@ -1,0 +1,155 @@
+{
+  "common": {
+    "actions": {
+      "save": "保存",
+      "cancel": "取消",
+      "delete": "删除",
+      "edit": "编辑",
+      "done": "完成",
+      "undo": "撤销",
+      "share": "分享",
+      "export": "导出"
+    },
+    "confirm": {
+      "delete": "确定要删除吗？",
+      "permanent": "此操作无法撤销。"
+    }
+  },
+  "tags": {
+    "title": "标签",
+    "sections": {
+      "allNotes": "全部笔记",
+      "untagged": "未分类",
+      "archive": "归档",
+      "trash": "废纸篓"
+    },
+    "empty": "还没有标签"
+  },
+  "notes": {
+    "title": "笔记",
+    "empty": "还没有笔记",
+    "emptyAction": "点击 + 创建第一篇笔记",
+    "search": {
+      "placeholder": "搜索笔记...",
+      "noResults": "未找到笔记",
+      "hint": "试试其他关键词"
+    },
+    "card": {
+      "pinned": "已置顶",
+      "archived": "已归档"
+    },
+    "actions": {
+      "pin": "置顶",
+      "unpin": "取消置顶",
+      "archive": "归档",
+      "unarchive": "取消归档",
+      "trash": "移到废纸篓",
+      "restore": "恢复",
+      "deletePermanently": "永久删除",
+      "export": "导出"
+    },
+    "sort": {
+      "modifiedAt": "修改日期",
+      "createdAt": "创建日期",
+      "title": "标题"
+    }
+  },
+  "editor": {
+    "placeholder": "开始写作...",
+    "titlePlaceholder": "标题",
+    "toolbar": {
+      "bold": "粗体",
+      "italic": "斜体",
+      "underline": "下划线",
+      "strikethrough": "删除线",
+      "highlight": "高亮",
+      "heading1": "标题 1",
+      "heading2": "标题 2",
+      "heading3": "标题 3",
+      "bulletList": "无序列表",
+      "orderedList": "有序列表",
+      "taskList": "任务列表",
+      "blockquote": "引用",
+      "codeBlock": "代码块",
+      "link": "链接",
+      "horizontalRule": "分隔线"
+    },
+    "status": {
+      "words": "字",
+      "chars": "字符"
+    },
+    "stats": {
+      "title": "统计",
+      "words": "字数",
+      "characters": "字符",
+      "charsNoSpaces": "字符（不含空格）",
+      "paragraphs": "段落",
+      "readingTime": "阅读时间",
+      "created": "创建时间",
+      "modified": "修改时间"
+    },
+    "toc": {
+      "title": "目录",
+      "empty": "未找到标题"
+    },
+    "backlinks": {
+      "title": "反向链接",
+      "empty": "暂无反向链接",
+      "hint": "引用此笔记的其他笔记会显示在这里"
+    }
+  },
+  "settings": {
+    "title": "设置",
+    "theme": {
+      "title": "主题",
+      "light": "浅色",
+      "dark": "深色",
+      "system": "跟随系统"
+    },
+    "language": {
+      "title": "语言",
+      "en": "English",
+      "es": "Español",
+      "zh": "中文"
+    },
+    "editor": {
+      "title": "编辑器",
+      "font": "字体",
+      "fontSize": "字号",
+      "sans": "无衬线",
+      "serif": "衬线",
+      "mono": "等宽"
+    },
+    "typography": {
+      "title": "排版",
+      "fonts": "字体",
+      "textFont": "正文字体",
+      "headingsFont": "标题字体",
+      "codeFont": "代码字体",
+      "fontSize": "字号",
+      "lineHeight": "行高",
+      "lineWidth": "行宽",
+      "paragraphSpacing": "段间距",
+      "paragraphIndent": "段落缩进",
+      "restoreDefaults": "恢复默认",
+      "hint": "行高、段间距和段落缩进均基于字号设置。"
+    },
+    "about": {
+      "title": "关于",
+      "version": "版本",
+      "description": "一款美观的图谱化笔记应用"
+    }
+  },
+  "export": {
+    "title": "导出笔记",
+    "markdown": "Markdown",
+    "html": "HTML",
+    "text": "纯文本",
+    "pdf": "PDF"
+  },
+  "paywall": {
+    "title": "高级功能",
+    "description": "此功能需要 Hunos Pro",
+    "upgrade": "升级"
+  }
+}

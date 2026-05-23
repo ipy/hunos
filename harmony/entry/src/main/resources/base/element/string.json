@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "Hunos Note App"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "Hunos Notes"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "Hunos"
+    }
+  ]
+}
