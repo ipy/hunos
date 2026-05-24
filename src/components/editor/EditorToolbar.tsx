@@ -201,18 +201,32 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
         editor.view.dispatch(tr);
       }
     } else {
-      editor.chain().focus().setImage({ src: dataUrl }).run();
-      requestAnimationFrame(() => {
-        const { state } = editor;
-        const { $from } = state.selection;
-        const pos = $from.pos - 1;
-        const node = state.doc.nodeAt(pos);
-        if (node && node.type.name === 'image') {
-          const { tr } = state;
-          tr.setNodeMarkup(pos, undefined, { ...node.attrs, 'data-sketch': 'true' });
-          editor.view.dispatch(tr);
-        }
-      });
+      const { state } = editor;
+      const { selection } = state;
+      const selectedNode = state.doc.nodeAt(selection.from);
+      if (selectedNode && selectedNode.type.name === 'image') {
+        const insertPos = selection.from + selectedNode.nodeSize;
+        const { tr } = state;
+        const imgNode = state.schema.nodes.image.create({
+          src: dataUrl,
+          'data-sketch': 'true',
+        });
+        tr.insert(insertPos, imgNode);
+        editor.view.dispatch(tr);
+      } else {
+        editor.chain().focus().setImage({ src: dataUrl }).run();
+        requestAnimationFrame(() => {
+          const { state: s } = editor;
+          const { $from } = s.selection;
+          const pos = $from.pos - 1;
+          const node = s.doc.nodeAt(pos);
+          if (node && node.type.name === 'image') {
+            const { tr } = s;
+            tr.setNodeMarkup(pos, undefined, { ...node.attrs, 'data-sketch': 'true' });
+            editor.view.dispatch(tr);
+          }
+        });
+      }
     }
     setSketchState(null);
   };

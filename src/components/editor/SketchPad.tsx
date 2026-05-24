@@ -18,7 +18,7 @@ interface Point {
 
 const COLORS = ['#1C1C1E', '#E85D4A', '#3478F6', '#34C759', '#FF9500', '#AF52DE', '#636366'];
 const STROKE_WIDTHS = [2, 4, 8, 16];
-const HEIGHT_OPTIONS = [200, 300, 400, 600];
+const DEFAULT_HEIGHT = 400;
 
 export function SketchPad({ onSave, onCancel, initialImage }: SketchPadProps) {
   const theme = useTheme();
@@ -27,7 +27,7 @@ export function SketchPad({ onSave, onCancel, initialImage }: SketchPadProps) {
   const [tool, setTool] = useState<Tool>('pen');
   const [color, setColor] = useState(COLORS[0]);
   const [strokeWidth, setStrokeWidth] = useState(4);
-  const [canvasHeight, setCanvasHeight] = useState(400);
+  const [canvasHeight] = useState(DEFAULT_HEIGHT);
   const [isDrawing, setIsDrawing] = useState(false);
   const lastPoint = useRef<Point | null>(null);
   const pathsRef = useRef<ImageData[]>([]);
@@ -61,29 +61,6 @@ export function SketchPad({ onSave, onCancel, initialImage }: SketchPadProps) {
     }
   }, [initialImage, canvasHeight]);
 
-  const resizeCanvas = (newHeight: number) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const currentData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    setCanvasHeight(newHeight);
-
-    requestAnimationFrame(() => {
-      const c = canvasRef.current;
-      if (!c) return;
-      const newCtx = c.getContext('2d');
-      if (!newCtx) return;
-      const rect = c.getBoundingClientRect();
-      c.width = rect.width * 2;
-      c.height = rect.height * 2;
-      newCtx.scale(2, 2);
-      newCtx.fillStyle = '#FFFFFF';
-      newCtx.fillRect(0, 0, rect.width, rect.height);
-      newCtx.putImageData(currentData, 0, 0);
-    });
-  };
 
   const getPoint = (e: React.PointerEvent): Point => {
     const canvas = canvasRef.current!;
@@ -200,32 +177,6 @@ export function SketchPad({ onSave, onCancel, initialImage }: SketchPadProps) {
         }}>
           {t('common.done', { defaultValue: 'Done' })}
         </button>
-      </div>
-
-      {/* Height selector */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-        padding: '6px 12px',
-        borderBottom: `1px solid ${theme.colors.borderLight}`,
-      }}>
-        <span style={{ fontSize: 12, color: theme.colors.textTertiary, marginRight: 4 }}>
-          {t('editor.sketch.height', { defaultValue: 'Height' })}:
-        </span>
-        {HEIGHT_OPTIONS.map(h => (
-          <button
-            key={h}
-            onClick={() => resizeCanvas(h)}
-            style={{
-              padding: '3px 10px', borderRadius: 4, border: 'none', cursor: 'pointer',
-              fontSize: 12,
-              backgroundColor: canvasHeight === h ? theme.colors.accentLight : theme.colors.surface,
-              color: canvasHeight === h ? theme.colors.accent : theme.colors.textSecondary,
-              fontWeight: canvasHeight === h ? '600' : '400',
-            }}
-          >
-            {h}px
-          </button>
-        ))}
       </div>
 
       {/* Canvas */}

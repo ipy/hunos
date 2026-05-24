@@ -16,10 +16,13 @@ import { MarkdownReveal } from './MarkdownReveal';
 import { MarkdownPaste } from './MarkdownPaste';
 import { WikiLinkDecoration } from './WikiLinkDecoration';
 import { TagDecoration } from './TagDecoration';
+import { SketchResize } from './SketchNodeView';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/theme/ThemeContext';
 import { resolveTextFontFamily, resolveCodeFontFamily } from '@/utils/fonts';
 import { useNoteStore } from '@/store/noteStore';
+import { noteStorage } from '@/storage/noteStorage';
+import { graphEngine } from '@/graph/graphEngine';
 import type { Editor } from '@tiptap/react';
 import type { EditorFont } from '@/types/settings';
 
@@ -65,6 +68,10 @@ export function TiptapEditor({
       store.setActiveNote(target.id);
     } else {
       await store.createNote(title);
+      const sourceNote = await noteStorage.get(noteId);
+      if (sourceNote?.content) {
+        await graphEngine.syncNoteLinks(noteId, sourceNote.content);
+      }
     }
   };
 
@@ -84,7 +91,34 @@ export function TiptapEditor({
         openOnClick: false,
         HTMLAttributes: { class: 'editor-link' },
       }),
-      Image.configure({
+      Image.extend({
+        addAttributes() {
+          return {
+            src: { default: null },
+            alt: { default: null },
+            title: { default: null },
+            height: {
+              default: null,
+              renderHTML: (attrs) => {
+                if (!attrs.height) return {};
+                return { style: `height: ${attrs.height}px; object-fit: contain;` };
+              },
+              parseHTML: (el) => {
+                const h = el.style.height;
+                return h ? parseInt(h, 10) || null : null;
+              },
+            },
+            'data-sketch': {
+              default: null,
+              renderHTML: (attrs) => {
+                if (!attrs['data-sketch']) return {};
+                return { 'data-sketch': 'true' };
+              },
+              parseHTML: (el) => el.getAttribute('data-sketch'),
+            },
+          };
+        },
+      }).configure({
         inline: false,
         allowBase64: true,
         HTMLAttributes: { class: 'editor-image' },
@@ -97,6 +131,7 @@ export function TiptapEditor({
       MarkdownPaste,
       WikiLinkDecoration.configure({ onWikiLinkClick: handleWikiLinkClick }),
       TagDecoration,
+      SketchResize,
     ],
     content: initialContent ? tryParseJson(initialContent) : undefined,
     onUpdate: ({ editor }) => {
@@ -248,6 +283,31 @@ export function TiptapEditor({
         .hunos-editor img[data-sketch="true"]:hover {
           border-color: ${theme.colors.accent};
           box-shadow: 0 0 0 2px ${theme.colors.accentLight};
+        }
+        .sketch-resize-handle {
+          width: 100%;
+          height: 12px;
+          cursor: ns-resize;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: -6px 0 6px;
+          opacity: 0;
+          transition: opacity 0.15s ease;
+        }
+        .sketch-resize-handle:hover,
+        .sketch-resize-handle:active {
+          opacity: 1;
+        }
+        .sketch-resize-handle::after {
+          content: '';
+          width: 40px;
+          height: 4px;
+          border-radius: 2px;
+          background: ${theme.colors.textTertiary};
+        }
+        .hunos-editor img[data-sketch="true"]:hover + .sketch-resize-handle {
+          opacity: 1;
         }
         .hunos-editor table {
           border-collapse: collapse;
