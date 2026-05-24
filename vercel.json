@@ -4,6 +4,15 @@
   "installCommand": "npm install --legacy-peer-deps",
   "framework": null,
   "regions": ["sin1"],
+  "headers": [
+    {
+      "source": "/downloads/(.*).hap",
+      "headers": [
+        { "key": "Content-Type", "value": "application/octet-stream" },
+        { "key": "Content-Disposition", "value": "attachment" }
+      ]
+    }
+  ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]

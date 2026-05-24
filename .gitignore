@@ -6,7 +6,6 @@ dist-harmony/
 .DS_Store
 *.tgz
 coverage/
-web/downloads/*.hap
 
 references/
 

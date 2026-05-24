@@ -74,4 +74,24 @@ export const graphEngine = {
 
     return results;
   },
+
+  async getOutgoingLinks(noteId: string): Promise<BacklinkResult[]> {
+    const outgoing = await linkStorage.getOutgoing(noteId);
+    const wikiLinks = outgoing.filter(l => l.type === 'wiki_link');
+
+    const results: BacklinkResult[] = [];
+    for (const link of wikiLinks) {
+      const note = await noteStorage.get(link.targetNoteId);
+      if (note && note.status === 'active') {
+        results.push({
+          noteId: note.id,
+          noteTitle: note.title,
+          context: link.context,
+          type: 'wiki_link',
+        });
+      }
+    }
+
+    return results;
+  },
 };

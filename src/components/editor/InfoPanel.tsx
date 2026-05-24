@@ -1,13 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/theme/ThemeContext';
 import { Icon } from '@/components/common/Icon';
-import { graphEngine } from '@/graph/graphEngine';
-import { useNoteStore } from '@/store/noteStore';
 import type { Note } from '@/types/note';
-import type { BacklinkResult } from '@/types/graph';
 
-type Tab = 'stats' | 'toc' | 'backlinks';
+type Tab = 'stats' | 'toc';
 
 interface InfoPanelProps {
   note: Note;
@@ -50,18 +47,12 @@ function formatDateTime(ts: number): string {
 export function InfoPanel({ note, onClose }: InfoPanelProps) {
   const { t } = useTranslation();
   const theme = useTheme();
-  const { setActiveNote } = useNoteStore();
   const [activeTab, setActiveTab] = useState<Tab>('stats');
-  const [backlinks, setBacklinks] = useState<BacklinkResult[]>([]);
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartY = useRef<number | null>(null);
   const dragOffsetRef = useRef(0);
   const panelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    graphEngine.getBacklinks(note.id).then(setBacklinks);
-  }, [note.id]);
 
   const charCount = note.contentPlain.length;
   const wordCount = note.wordCount || note.contentPlain.split(/\s+/).filter(Boolean).length;
@@ -72,7 +63,6 @@ export function InfoPanel({ note, onClose }: InfoPanelProps) {
   const tabs: { id: Tab; icon: string }[] = [
     { id: 'stats', icon: 'stats' },
     { id: 'toc', icon: 'list' },
-    { id: 'backlinks', icon: 'link' },
   ];
 
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -165,9 +155,7 @@ export function InfoPanel({ note, onClose }: InfoPanelProps) {
             padding: '6px 20px 10px',
           }}>
             <span style={{ fontSize: 15, fontWeight: '600', color: theme.colors.text, letterSpacing: -0.2 }}>
-              {activeTab === 'stats' ? t('editor.stats.title')
-                : activeTab === 'toc' ? t('editor.toc.title')
-                : t('editor.backlinks.title')}
+              {activeTab === 'stats' ? t('editor.stats.title') : t('editor.toc.title')}
             </span>
           </div>
         </div>
@@ -277,38 +265,6 @@ export function InfoPanel({ note, onClose }: InfoPanelProps) {
             </div>
           )}
 
-          {activeTab === 'backlinks' && (
-            <div>
-              {backlinks.length === 0 ? (
-                <p style={{ color: theme.colors.textTertiary, fontSize: 14, textAlign: 'center', padding: 20 }}>
-                  {t('editor.backlinks.empty')}
-                </p>
-              ) : (
-                backlinks.map((bl) => (
-                  <div
-                    key={bl.noteId}
-                    onClick={() => setActiveNote(bl.noteId)}
-                    style={{
-                      padding: '12px 0',
-                      borderBottom: `1px solid ${theme.colors.borderLight}`,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <div style={{
-                      fontSize: 15, fontWeight: '500', color: theme.colors.accent, marginBottom: 4,
-                    }}>
-                      {bl.noteTitle}
-                    </div>
-                    {bl.context && (
-                      <div style={{ fontSize: 13, color: theme.colors.textSecondary, lineHeight: 1.5 }}>
-                        {bl.context}
-                      </div>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          )}
         </div>
       </div>
     </>
