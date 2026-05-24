@@ -34,13 +34,9 @@ export function EditorScreen({ layout = 'mobile' }: EditorScreenProps) {
   const [titleValue, setTitleValue] = useState('');
   const titleTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
-  const prevNoteId = useRef<string | null>(null);
   useEffect(() => {
-    if (note?.id !== prevNoteId.current) {
-      prevNoteId.current = note?.id ?? null;
-      setTitleValue(note?.title ?? '');
-    }
-  }, [note?.id, note?.title]);
+    setTitleValue(note?.title ?? '');
+  }, [note?.id]);
 
   const handleTitleChange = (newTitle: string) => {
     setTitleValue(newTitle);

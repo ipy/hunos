@@ -240,6 +240,15 @@ export function TiptapEditor({
           margin: 0.6em 0;
           display: block;
         }
+        .hunos-editor img[data-sketch="true"] {
+          cursor: pointer;
+          border: 1px solid ${theme.colors.borderLight};
+          transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .hunos-editor img[data-sketch="true"]:hover {
+          border-color: ${theme.colors.accent};
+          box-shadow: 0 0 0 2px ${theme.colors.accentLight};
+        }
         .hunos-editor table {
           border-collapse: collapse;
           width: 100%;

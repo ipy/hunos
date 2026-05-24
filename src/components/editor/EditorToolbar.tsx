@@ -130,11 +130,17 @@ const INSERT_ITEMS_BASE: ToolbarButton[] = [
   },
 ];
 
+interface SketchState {
+  editing: boolean;
+  initialImage?: string;
+  nodePos?: number;
+}
+
 export function EditorToolbar({ editor }: EditorToolbarProps) {
   const theme = useTheme();
   const layout = useAdaptiveLayout();
   const [activeTab, setActiveTab] = useState<'format' | 'blocks' | 'insert'>('format');
-  const [showSketch, setShowSketch] = useState(false);
+  const [sketchState, setSketchState] = useState<SketchState | null>(null);
   const [, setTick] = useState(0);
   const rafRef = useRef<number>(0);
   const touchHandledRef = useRef(false);
@@ -158,19 +164,57 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
     setTick(t => t + 1);
   }, [editor]);
 
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.src && detail?.pos !== undefined) {
+        setSketchState({ editing: true, initialImage: detail.src, nodePos: detail.pos });
+      }
+    };
+    window.addEventListener('hunos-edit-sketch', handler);
+    return () => window.removeEventListener('hunos-edit-sketch', handler);
+  }, []);
+
   if (!editor) return null;
 
   const INSERT_ITEMS: ToolbarButton[] = [
     ...INSERT_ITEMS_BASE,
     {
       icon: 'pencil', label: '✏',
-      action: () => setShowSketch(true),
+      action: () => {
+        setSketchState({ editing: false });
+      },
     },
   ];
 
   const handleSketchSave = (dataUrl: string) => {
-    if (editor) editor.chain().focus().setImage({ src: dataUrl }).run();
-    setShowSketch(false);
+    if (!editor) { setSketchState(null); return; }
+    if (sketchState?.editing && sketchState.nodePos !== undefined) {
+      const { tr } = editor.state;
+      const node = editor.state.doc.nodeAt(sketchState.nodePos);
+      if (node) {
+        tr.setNodeMarkup(sketchState.nodePos, undefined, {
+          ...node.attrs,
+          src: dataUrl,
+          'data-sketch': 'true',
+        });
+        editor.view.dispatch(tr);
+      }
+    } else {
+      editor.chain().focus().setImage({ src: dataUrl }).run();
+      requestAnimationFrame(() => {
+        const { state } = editor;
+        const { $from } = state.selection;
+        const pos = $from.pos - 1;
+        const node = state.doc.nodeAt(pos);
+        if (node && node.type.name === 'image') {
+          const { tr } = state;
+          tr.setNodeMarkup(pos, undefined, { ...node.attrs, 'data-sketch': 'true' });
+          editor.view.dispatch(tr);
+        }
+      });
+    }
+    setSketchState(null);
   };
 
   const isMobile = layout === 'mobile';
@@ -180,10 +224,11 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
 
   return (
     <>
-    {showSketch && (
+    {sketchState && (
       <SketchPad
         onSave={handleSketchSave}
-        onCancel={() => setShowSketch(false)}
+        onCancel={() => setSketchState(null)}
+        initialImage={sketchState.initialImage}
       />
     )}
     <div style={{

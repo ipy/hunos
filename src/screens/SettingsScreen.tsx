@@ -87,6 +87,14 @@ function SectionHeader({ title }: { title: string }) {
   );
 }
 
+function isNativeShell(): boolean {
+  if (typeof window === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  if (ua.includes('ArkWeb')) return true;
+  if ((window as any).Capacitor?.isNativePlatform?.()) return true;
+  return false;
+}
+
 export function SettingsScreen({ layout = 'mobile' }: SettingsScreenProps) {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
@@ -94,6 +102,7 @@ export function SettingsScreen({ layout = 'mobile' }: SettingsScreenProps) {
   const { theme: themeMode, locale, setTheme, setLocale } = useSettingsStore();
   const [view, setView] = useState<SettingsView>('main');
   const showBackButton = layout === 'mobile' || layout === 'tablet';
+  const showDownloads = !isNativeShell();
 
   const handleLocaleChange = (newLocale: Locale) => {
     setLocale(newLocale);
@@ -171,17 +180,21 @@ export function SettingsScreen({ layout = 'mobile' }: SettingsScreenProps) {
           onClick={() => setView('typography')}
         />
 
-        <SectionHeader title={t('settings.downloads.title', { defaultValue: 'Downloads' })} />
-        <SettingRow
-          label="HarmonyOS (.hap)"
-          value={t('settings.downloads.download', { defaultValue: 'Download' })}
-          onClick={() => {
-            const link = document.createElement('a');
-            link.href = '/downloads/hunos.hap';
-            link.download = 'hunos.hap';
-            link.click();
-          }}
-        />
+        {showDownloads && (
+          <>
+            <SectionHeader title={t('settings.downloads.title', { defaultValue: 'Downloads' })} />
+            <SettingRow
+              label="HarmonyOS (.hap)"
+              value={t('settings.downloads.download', { defaultValue: 'Download' })}
+              onClick={() => {
+              const link = document.createElement('a');
+              link.href = '/downloads/hunos-aca9f8fc.hap';
+              link.download = 'hunos.hap';
+              link.click();
+              }}
+            />
+          </>
+        )}
 
         <SectionHeader title={t('settings.about.title')} />
         <SettingRow label={t('settings.about.version')} value="1.0.0" />
