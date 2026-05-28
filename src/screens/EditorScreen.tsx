@@ -136,6 +136,10 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
   const handleRestorePlayground = async () => {
     if (!note) return;
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = undefined;
+    }
     await restoreFormatPlayground(note.id, settings.locale);
     showToast(t("notes.actions.restorePlaygroundDone"));
     setShowActions(false);
