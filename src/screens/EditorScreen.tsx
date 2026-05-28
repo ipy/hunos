@@ -102,7 +102,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     if (migrated) {
       saveNoteContent(note.id, migrated);
     }
-  }, [note?.id, note?.title, settings.locale, saveNoteContent]);
+  }, [note?.id, note?.title, note?.content, settings.locale, saveNoteContent]);
 
   useEffect(() => {
     if (prevFocusModeRef.current === focusMode) return;

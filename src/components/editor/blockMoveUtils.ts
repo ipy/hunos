@@ -268,9 +268,16 @@ function getAdjacentRange(
   direction: BlockMoveDirection,
 ): MovableBlockRange | null {
   if (getHeadingDepthForRange(doc, range) !== null) {
-    return direction === "up"
-      ? getPreviousHeadingSectionRange(doc, range)
-      : getNextHeadingSectionRange(doc, range);
+    if (direction === "up") {
+      return getPreviousHeadingSectionRange(doc, range);
+    }
+
+    // AC7: Mod+Alt+Down on a heading section swaps with the section above when present.
+    const previousSection = getPreviousHeadingSectionRange(doc, range);
+    if (previousSection) {
+      return previousSection;
+    }
+    return getNextHeadingSectionRange(doc, range);
   }
 
   const context = getParentBlockContext(doc, range);

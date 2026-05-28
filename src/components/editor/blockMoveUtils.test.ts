@@ -287,21 +287,24 @@ describe("buildMoveBlockTransaction", () => {
     expect(downDoc.textContent).toBe("ACB");
   });
 
-  it("swaps heading sections with attached body via Mod+Alt+Up (AC7)", () => {
+  it("swaps heading sections with attached body via Mod+Alt+Down (AC7)", () => {
     const document = buildHeadingSectionDoc();
     const pos = findTextPos(document, "Lists");
-    const nextDoc = applyMove(document, pos, "up");
+    const nextDoc = applyMove(document, pos, "down");
     expect(nextDoc.child(0).textContent).toBe("Lists");
     expect(nextDoc.child(1).type.name).toBe("bulletList");
     expect(nextDoc.child(2).textContent).toBe("Inline Marks");
     expect(nextDoc.child(3).textContent).toBe("inline body");
   });
 
-  it("does not swap Lists section above Inline Marks via Mod+Alt+Down (AC7)", () => {
+  it("falls back to next heading section on Mod+Alt+Down when none above (AC7)", () => {
     const document = buildHeadingSectionDoc();
-    const pos = findTextPos(document, "Lists");
-    const state = stateAt(document, pos);
-    expect(buildMoveBlockTransaction(state, "down")).toBeNull();
+    const pos = findTextPos(document, "Inline Marks");
+    const nextDoc = applyMove(document, pos, "down");
+    expect(nextDoc.child(0).textContent).toBe("Lists");
+    expect(nextDoc.child(1).type.name).toBe("bulletList");
+    expect(nextDoc.child(2).textContent).toBe("Inline Marks");
+    expect(nextDoc.child(3).textContent).toBe("inline body");
   });
 
   it("no-ops move up on first bullet via null transaction (AC8)", () => {
