@@ -5,7 +5,7 @@ import type { Locale } from "@/types/settings";
 
 type PlaygroundLocale = "en" | "zh";
 
-export const PLAYGROUND_CONTENT_VERSION = 2;
+export const PLAYGROUND_CONTENT_VERSION = 3;
 
 export const FORMAT_PLAYGROUND_TITLES: readonly string[] = [
   "Format Playground",
@@ -94,7 +94,7 @@ const STRINGS: Record<PlaygroundLocale, PlaygroundStrings> = {
     tag: "#format-test",
     wikiLink: "[[Welcome to Hunos]]",
     tryHint:
-      "Add new blocks below — type # / ## / ### , - , 1. , - [ ] , > , ``` , --- , type # for tag autocomplete, or [[ to link notes with autocomplete. Desktop shortcuts: Cmd+B/I/Shift+X/K, Cmd+Enter for tasks, Tab / Shift+Tab to nest lists, Enter on empty list items to outdent or exit, Backspace at line start to outdent nested items, Cmd+N new note, Cmd+F search.",
+      "Add new blocks below — type # / ## / ### , - , 1. , - [ ] , > , ``` , --- , type # for tag autocomplete, or [[ to link notes with autocomplete. Desktop shortcuts: Cmd+B/I/Shift+X/K, Cmd+Enter for tasks, Tab / Shift+Tab to nest lists, Cmd+Alt+↑/↓ to move lines, Enter on empty list items to outdent or exit, Backspace at line start to outdent nested items, Cmd+N new note, Cmd+F search.",
   },
   zh: {
     title: "格式试炼场",
@@ -136,7 +136,7 @@ const STRINGS: Record<PlaygroundLocale, PlaygroundStrings> = {
     tag: "#格式测试",
     wikiLink: "[[欢迎使用 Hunos]]",
     tryHint:
-      "在下方空行试输入 # / ## / ### 、- 、1. 、- [ ] 、> 、``` 、--- ，输入 # 可用标签自动完成，或输入 [[ 链接笔记。桌面快捷键：Cmd+B/I/Shift+X/K、Cmd+Enter 切换任务、Tab / Shift+Tab 嵌套列表、空列表项按 Enter 降级或退出列表、行首 Backspace 降级嵌套项、Cmd+N 新建笔记、Cmd+F 搜索。",
+      "在下方空行试输入 # / ## / ### 、- 、1. 、- [ ] 、> 、``` 、--- ，输入 # 可用标签自动完成，或输入 [[ 链接笔记。桌面快捷键：Cmd+B/I/Shift+X/K、Cmd+Enter 切换任务、Tab / Shift+Tab 嵌套列表、Cmd+Alt+↑/↓ 移动行、空列表项按 Enter 降级或退出列表、行首 Backspace 降级嵌套项、Cmd+N 新建笔记、Cmd+F 搜索。",
   },
 };
 
