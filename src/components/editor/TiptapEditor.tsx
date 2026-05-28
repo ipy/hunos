@@ -26,6 +26,8 @@ import { TagDecoration } from './TagDecoration';
 import { SketchResize } from './SketchNodeView';
 import { FocusModeShortcuts } from './FocusModeShortcuts';
 import { EditorKeyboardShortcuts } from './EditorKeyboardShortcuts';
+import { ListOutlineShortcuts } from './ListOutlineShortcuts';
+import ListItem from '@tiptap/extension-list-item';
 import { SelectionBubbleMenu } from './SelectionBubbleMenu';
 import Strike from '@tiptap/extension-strike';
 import Italic from '@tiptap/extension-italic';
@@ -119,6 +121,14 @@ export function TiptapEditor({
         bulletList: false,
         strike: false,
         italic: false,
+        listItem: false,
+      }),
+      ListItem.extend({
+        addKeyboardShortcuts() {
+          return {
+            Enter: () => this.editor.commands.splitListItem(this.name),
+          };
+        },
       }),
       Strike.extend({
         addKeyboardShortcuts() {
@@ -194,6 +204,7 @@ export function TiptapEditor({
       SketchResize,
       FocusModeShortcuts,
       EditorKeyboardShortcuts,
+      ListOutlineShortcuts,
     ],
     content: initialContent ? tryParseJson(initialContent) : undefined,
     onUpdate: ({ editor }) => {

@@ -199,6 +199,12 @@ export const MarkdownTaskItem = TaskItem.extend({
   addInputRules() {
     return [];
   },
+
+  addKeyboardShortcuts() {
+    return {
+      Enter: () => this.editor.commands.splitListItem(this.name),
+    };
+  },
 });
 
 export const MarkdownShortcuts = Extension.create({
