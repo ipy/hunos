@@ -27,6 +27,7 @@ import { SketchResize } from './SketchNodeView';
 import { FocusModeShortcuts } from './FocusModeShortcuts';
 import { EditorKeyboardShortcuts } from './EditorKeyboardShortcuts';
 import { ListOutlineShortcuts } from './ListOutlineShortcuts';
+import { ListKeyboardShortcuts } from './ListKeyboardShortcuts';
 import ListItem from '@tiptap/extension-list-item';
 import { SelectionBubbleMenu } from './SelectionBubbleMenu';
 import Strike from '@tiptap/extension-strike';
@@ -205,6 +206,7 @@ export function TiptapEditor({
       FocusModeShortcuts,
       EditorKeyboardShortcuts,
       ListOutlineShortcuts,
+      ListKeyboardShortcuts,
     ],
     content: initialContent ? tryParseJson(initialContent) : undefined,
     onUpdate: ({ editor }) => {

@@ -1,4 +1,5 @@
 import type { Editor } from "@tiptap/core";
+import type { ResolvedPos } from "@tiptap/pm/model";
 
 export type OutlineListItemType = "listItem" | "taskItem";
 
@@ -54,4 +55,76 @@ export function isEditorFocusedForOutline(editor: Editor): boolean {
 
   const active = document.activeElement;
   return active instanceof Node && dom.contains(active);
+}
+
+/** Depth of the nearest list item / task item ancestor, or null when absent. */
+export function findListItemDepth(
+  $from: ResolvedPos,
+  itemTypeName: OutlineListItemType,
+): number | null {
+  for (let depth = $from.depth; depth > 0; depth -= 1) {
+    if ($from.node(depth).type.name === itemTypeName) {
+      return depth;
+    }
+  }
+  return null;
+}
+
+/** True when the list item sits inside another item of the same type. */
+export function isNestedListItem(
+  $from: ResolvedPos,
+  itemTypeName: OutlineListItemType,
+): boolean {
+  const depth = findListItemDepth($from, itemTypeName);
+  if (depth === null || depth < 2) {
+    return false;
+  }
+  return $from.node(depth - 2).type.name === itemTypeName;
+}
+
+/** True when the list item's primary textblock has no content. */
+export function isListItemEmpty(
+  $from: ResolvedPos,
+  itemTypeName: OutlineListItemType,
+): boolean {
+  const depth = findListItemDepth($from, itemTypeName);
+  if (depth === null) {
+    return false;
+  }
+  const listItem = $from.node(depth);
+  const firstChild = listItem.firstChild;
+  if (!firstChild?.isTextblock) {
+    return false;
+  }
+  return firstChild.content.size === 0;
+}
+
+/** True when the caret is at the start of the list item's primary textblock. */
+export function isAtListItemStart(
+  $from: ResolvedPos,
+  itemTypeName: OutlineListItemType,
+): boolean {
+  const depth = findListItemDepth($from, itemTypeName);
+  if (depth === null) {
+    return false;
+  }
+
+  const listItem = $from.node(depth);
+  const firstChild = listItem.firstChild;
+  if (!firstChild?.isTextblock) {
+    return false;
+  }
+
+  const textblockDepth = depth + 1;
+  const contentStart =
+    $from.depth >= textblockDepth
+      ? $from.start(textblockDepth)
+      : $from.start(depth);
+  const contentEnd = contentStart + firstChild.content.size;
+
+  if ($from.pos < contentStart || $from.pos > contentEnd) {
+    return false;
+  }
+
+  return $from.pos === contentStart;
 }
