@@ -100,6 +100,10 @@
     "wikiLink": {
       "menuLabel": "链接到笔记",
       "create": "创建「{{title}}」"
+    },
+    "tagAutocomplete": {
+      "menuLabel": "标签建议",
+      "create": "标签「{{name}}」"
     }
   },
   "settings": {

@@ -100,6 +100,10 @@
     "wikiLink": {
       "menuLabel": "Link to a note",
       "create": "Create \"{{title}}\""
+    },
+    "tagAutocomplete": {
+      "menuLabel": "Tag suggestions",
+      "create": "Tag \"{{name}}\""
     }
   },
   "settings": {

@@ -21,12 +21,14 @@ import {
 } from './MarkdownShortcuts';
 import { WikiLinkDecoration } from './WikiLinkDecoration';
 import { WikiLinkSuggestion } from './WikiLinkSuggestion';
+import { TagSuggestion } from './TagSuggestion';
 import { TagDecoration } from './TagDecoration';
 import { SketchResize } from './SketchNodeView';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/theme/ThemeContext';
 import { resolveTextFontFamily, resolveCodeFontFamily } from '@/utils/fonts';
 import { useNoteStore } from '@/store/noteStore';
+import { useTagStore } from '@/store/tagStore';
 import { noteStorage } from '@/storage/noteStorage';
 import { graphEngine } from '@/graph/graphEngine';
 import { findNoteByWikiTitle } from '@/utils/wikiLink';
@@ -67,11 +69,19 @@ export function TiptapEditor({
   const noteIdRef = useRef(noteId);
   noteIdRef.current = noteId;
   const notesRef = useRef(useNoteStore.getState().notes);
+  const tagsRef = useRef(useTagStore.getState().tags);
 
   useEffect(() => {
     notesRef.current = useNoteStore.getState().notes;
     return useNoteStore.subscribe((state) => {
       notesRef.current = state.notes;
+    });
+  }, []);
+
+  useEffect(() => {
+    tagsRef.current = useTagStore.getState().tags;
+    return useTagStore.subscribe((state) => {
+      tagsRef.current = state.tags;
     });
   }, []);
 
@@ -159,6 +169,9 @@ export function TiptapEditor({
       WikiLinkSuggestion.configure({
         getNoteId: () => noteIdRef.current,
         getNotes: () => notesRef.current,
+      }),
+      TagSuggestion.configure({
+        getTags: () => tagsRef.current,
       }),
       TagDecoration,
       SketchResize,

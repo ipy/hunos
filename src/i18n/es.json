@@ -100,6 +100,10 @@
     "wikiLink": {
       "menuLabel": "Enlazar a una nota",
       "create": "Crear «{{title}}»"
+    },
+    "tagAutocomplete": {
+      "menuLabel": "Sugerencias de etiquetas",
+      "create": "Etiqueta «{{name}}»"
     }
   },
   "settings": {

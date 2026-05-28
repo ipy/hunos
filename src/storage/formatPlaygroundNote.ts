@@ -84,7 +84,7 @@ const STRINGS: Record<Locale, PlaygroundStrings> = {
     tagsText: 'Organize with ',
     tag: '#format-test',
     wikiLink: '[[Welcome to Hunos]]',
-    tryHint: 'Add new blocks below — type # / ## / ### , - , 1. , - [ ] , > , ``` , --- , or [[ to link notes with autocomplete.',
+    tryHint: 'Add new blocks below — type # / ## / ### , - , 1. , - [ ] , > , ``` , --- , type # for tag autocomplete, or [[ to link notes with autocomplete.',
   },
   zh: {
     title: '格式试炼场',
@@ -124,7 +124,7 @@ const STRINGS: Record<Locale, PlaygroundStrings> = {
     tagsText: '用 ',
     tag: '#格式测试',
     wikiLink: '[[欢迎使用 Hunos]]',
-    tryHint: '在下方空行试输入 # / ## / ### 、- 、1. 、- [ ] 、> 、``` 、--- ，或输入 [[ 用自动完成链接笔记。',
+    tryHint: '在下方空行试输入 # / ## / ### 、- 、1. 、- [ ] 、> 、``` 、--- ，输入 # 可用标签自动完成，或输入 [[ 链接笔记。',
   },
 };
 
