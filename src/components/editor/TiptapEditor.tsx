@@ -1,49 +1,50 @@
-import React, { useEffect, useRef } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Placeholder from '@tiptap/extension-placeholder';
-import TaskList from '@tiptap/extension-task-list';
-import Highlight from '@tiptap/extension-highlight';
-import Underline from '@tiptap/extension-underline';
-import Link from '@tiptap/extension-link';
-import Image from '@tiptap/extension-image';
-import { Table } from '@tiptap/extension-table';
-import { TableRow } from '@tiptap/extension-table-row';
-import { TableCell } from '@tiptap/extension-table-cell';
-import { TableHeader } from '@tiptap/extension-table-header';
-import { MarkdownReveal } from './MarkdownReveal';
-import { MarkdownPaste } from './MarkdownPaste';
+import React, { useEffect, useRef } from "react";
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Placeholder from "@tiptap/extension-placeholder";
+import TaskList from "@tiptap/extension-task-list";
+import Highlight from "@tiptap/extension-highlight";
+import Underline from "@tiptap/extension-underline";
+import Link from "@tiptap/extension-link";
+import Image from "@tiptap/extension-image";
+import { Table } from "@tiptap/extension-table";
+import { TableRow } from "@tiptap/extension-table-row";
+import { TableCell } from "@tiptap/extension-table-cell";
+import { TableHeader } from "@tiptap/extension-table-header";
+import { MarkdownReveal } from "./MarkdownReveal";
+import { MarkdownPaste } from "./MarkdownPaste";
 import {
   MarkdownBold,
   MarkdownBulletList,
   MarkdownShortcuts,
   MarkdownTaskItem,
-} from './MarkdownShortcuts';
-import { WikiLinkDecoration } from './WikiLinkDecoration';
-import { WikiLinkSuggestion } from './WikiLinkSuggestion';
-import { TagSuggestion } from './TagSuggestion';
-import { TagDecoration } from './TagDecoration';
-import { SketchResize } from './SketchNodeView';
-import { FocusModeShortcuts } from './FocusModeShortcuts';
-import { EditorKeyboardShortcuts } from './EditorKeyboardShortcuts';
-import { ListOutlineShortcuts } from './ListOutlineShortcuts';
-import { ListKeyboardShortcuts } from './ListKeyboardShortcuts';
-import { BlockLineShortcuts } from './BlockLineShortcuts';
-import { BlockMoveShortcuts } from './BlockMoveShortcuts';
-import ListItem from '@tiptap/extension-list-item';
-import { SelectionBubbleMenu } from './SelectionBubbleMenu';
-import Strike from '@tiptap/extension-strike';
-import Italic from '@tiptap/extension-italic';
-import { useTranslation } from 'react-i18next';
-import { useTheme } from '@/theme/ThemeContext';
-import { resolveTextFontFamily, resolveCodeFontFamily } from '@/utils/fonts';
-import { useNoteStore } from '@/store/noteStore';
-import { useTagStore } from '@/store/tagStore';
-import { noteStorage } from '@/storage/noteStorage';
-import { graphEngine } from '@/graph/graphEngine';
-import { findNoteByWikiTitle } from '@/utils/wikiLink';
-import type { Editor } from '@tiptap/react';
-import type { EditorFont } from '@/types/settings';
+} from "./MarkdownShortcuts";
+import { WikiLinkDecoration } from "./WikiLinkDecoration";
+import { WikiLinkSuggestion } from "./WikiLinkSuggestion";
+import { TagSuggestion } from "./TagSuggestion";
+import { TagDecoration } from "./TagDecoration";
+import { SketchResize } from "./SketchNodeView";
+import { FocusModeShortcuts } from "./FocusModeShortcuts";
+import { EditorKeyboardShortcuts } from "./EditorKeyboardShortcuts";
+import { ListOutlineShortcuts } from "./ListOutlineShortcuts";
+import { ListKeyboardShortcuts } from "./ListKeyboardShortcuts";
+import { BlockLineShortcuts } from "./BlockLineShortcuts";
+import { BlockMoveShortcuts } from "./BlockMoveShortcuts";
+import { HistoryKeyboardShortcuts } from "./HistoryKeyboardShortcuts";
+import ListItem from "@tiptap/extension-list-item";
+import { SelectionBubbleMenu } from "./SelectionBubbleMenu";
+import Strike from "@tiptap/extension-strike";
+import Italic from "@tiptap/extension-italic";
+import { useTranslation } from "react-i18next";
+import { useTheme } from "@/theme/ThemeContext";
+import { resolveTextFontFamily, resolveCodeFontFamily } from "@/utils/fonts";
+import { useNoteStore } from "@/store/noteStore";
+import { useTagStore } from "@/store/tagStore";
+import { noteStorage } from "@/storage/noteStorage";
+import { graphEngine } from "@/graph/graphEngine";
+import { findNoteByWikiTitle } from "@/utils/wikiLink";
+import type { Editor } from "@tiptap/react";
+import type { EditorFont } from "@/types/settings";
 
 interface TiptapEditorProps {
   noteId: string;
@@ -147,7 +148,7 @@ export function TiptapEditor({
       MarkdownShortcuts,
       MarkdownBulletList,
       Placeholder.configure({
-        placeholder: t('editor.placeholder'),
+        placeholder: t("editor.placeholder"),
       }),
       TaskList,
       MarkdownTaskItem.configure({ nested: true }),
@@ -155,7 +156,7 @@ export function TiptapEditor({
       Underline,
       Link.configure({
         openOnClick: false,
-        HTMLAttributes: { class: 'editor-link' },
+        HTMLAttributes: { class: "editor-link" },
       }),
       Image.extend({
         addAttributes() {
@@ -167,27 +168,29 @@ export function TiptapEditor({
               default: null,
               renderHTML: (attrs) => {
                 if (!attrs.height) return {};
-                return { style: `height: ${attrs.height}px; object-fit: contain;` };
+                return {
+                  style: `height: ${attrs.height}px; object-fit: contain;`,
+                };
               },
               parseHTML: (el) => {
                 const h = el.style.height;
                 return h ? parseInt(h, 10) || null : null;
               },
             },
-            'data-sketch': {
+            "data-sketch": {
               default: null,
               renderHTML: (attrs) => {
-                if (!attrs['data-sketch']) return {};
-                return { 'data-sketch': 'true' };
+                if (!attrs["data-sketch"]) return {};
+                return { "data-sketch": "true" };
               },
-              parseHTML: (el) => el.getAttribute('data-sketch'),
+              parseHTML: (el) => el.getAttribute("data-sketch"),
             },
           };
         },
       }).configure({
         inline: false,
         allowBase64: true,
-        HTMLAttributes: { class: 'editor-image' },
+        HTMLAttributes: { class: "editor-image" },
       }),
       Table.configure({ resizable: true }),
       TableRow,
@@ -211,6 +214,7 @@ export function TiptapEditor({
       ListKeyboardShortcuts,
       BlockMoveShortcuts,
       BlockLineShortcuts,
+      HistoryKeyboardShortcuts,
     ],
     content: initialContent ? tryParseJson(initialContent) : undefined,
     onUpdate: ({ editor }) => {
@@ -219,7 +223,7 @@ export function TiptapEditor({
     },
     editorProps: {
       attributes: {
-        class: 'hunos-editor',
+        class: "hunos-editor",
       },
     },
   });
@@ -237,6 +241,15 @@ export function TiptapEditor({
 
     if (!noteChanged && !contentChangedExternally) return;
 
+    if (
+      !noteChanged &&
+      contentChangedExternally &&
+      editorContentMatchesStored(editor, initialContent)
+    ) {
+      lastExternalContentRef.current = initialContent;
+      return;
+    }
+
     prevNoteIdRef.current = noteId;
     lastExternalContentRef.current = initialContent;
 
@@ -248,7 +261,7 @@ export function TiptapEditor({
     }
 
     if (noteChanged) {
-      editor.commands.focus('start');
+      editor.commands.focus("start");
     }
   }, [noteId, editor, initialContent]);
 
@@ -265,7 +278,7 @@ export function TiptapEditor({
     dom.style.maxWidth = `${lineWidth}em`;
   }, [editor, textFontCSS, fontSize, lineHeight, lineWidth]);
 
-  const pMargin = paragraphSpacing > 0 ? `${paragraphSpacing}em` : '0.5em';
+  const pMargin = paragraphSpacing > 0 ? `${paragraphSpacing}em` : "0.5em";
 
   return (
     <>
@@ -494,4 +507,13 @@ function tryParseJson(str: string): object | string | undefined {
   } catch {
     return str;
   }
+}
+
+/** Skip autosave echo sync so ProseMirror history is not reset by setContent. */
+function editorContentMatchesStored(
+  editor: Editor,
+  storedContent: string,
+): boolean {
+  if (!storedContent) return false;
+  return storedContent === JSON.stringify(editor.getJSON());
 }

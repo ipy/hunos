@@ -40,5 +40,7 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+Alt+↑/↓");
     expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+D");
     expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+Shift+K");
+    expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+Z");
+    expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+Shift+Z");
   });
 });
