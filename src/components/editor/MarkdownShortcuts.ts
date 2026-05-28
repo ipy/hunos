@@ -14,7 +14,7 @@ const TASK_BRACKET_INPUT_REGEX = /^\s*(\[([ x])?\])\s$/;
 const TASK_ITEM_INPUT_REGEX = /^\s*-\s*\[([ x])\]\s$/;
 
 function isCheckedTaskMatch(match: RegExpMatchArray): boolean {
-  return match[match.length - 1] === 'x';
+  return match[2] === 'x';
 }
 
 function findBulletListItemDepth($from: ResolvedPos): number {
@@ -35,6 +35,7 @@ function replaceBulletListWithTaskList(
   listItemDepth: number,
   taskListType: NodeType,
   taskItemType: NodeType,
+  paragraphType: NodeType,
   checked: boolean,
 ) {
   const bulletListDepth = listItemDepth - 1;
@@ -47,7 +48,8 @@ function replaceBulletListWithTaskList(
     return false;
   }
 
-  const taskItem = taskItemType.create({ checked }, paragraph);
+  const emptyParagraph = paragraphType.create();
+  const taskItem = taskItemType.create({ checked }, emptyParagraph);
   const taskList = taskListType.create(null, taskItem);
 
   tr.replaceWith(bulletListPos, bulletListPos + bulletList.nodeSize, taskList);
@@ -83,11 +85,19 @@ function createTaskItemInputRule(
     handler: ({ state, range, match }) => {
       const checked = getChecked(match);
       const tr = state.tr.delete(range.from, range.to);
-      const $from = state.doc.resolve(range.from);
+      const $from = tr.doc.resolve(range.from);
       const listItemDepth = findBulletListItemDepth($from);
 
       if (listItemDepth > 0) {
-        if (!replaceBulletListWithTaskList(tr, $from, listItemDepth, taskListType, taskItemType, checked)) {
+        if (!replaceBulletListWithTaskList(
+          tr,
+          $from,
+          listItemDepth,
+          taskListType,
+          taskItemType,
+          state.schema.nodes.paragraph,
+          checked,
+        )) {
           return null;
         }
         return;
