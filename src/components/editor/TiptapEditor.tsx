@@ -26,6 +26,7 @@ import { TagDecoration } from './TagDecoration';
 import { SketchResize } from './SketchNodeView';
 import { FocusModeShortcuts } from './FocusModeShortcuts';
 import { EditorKeyboardShortcuts } from './EditorKeyboardShortcuts';
+import { SelectionBubbleMenu } from './SelectionBubbleMenu';
 import Strike from '@tiptap/extension-strike';
 import Italic from '@tiptap/extension-italic';
 import { useTranslation } from 'react-i18next';
@@ -464,6 +465,7 @@ export function TiptapEditor({
         }
       `}</style>
       <EditorContent editor={editor} />
+      <SelectionBubbleMenu editor={editor} />
     </>
   );
 }

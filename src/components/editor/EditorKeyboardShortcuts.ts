@@ -1,26 +1,9 @@
 import { Extension } from '@tiptap/core';
-import i18n from '@/i18n';
-import { useUIStore } from '@/store/uiStore';
 import { isEditorSuggestionMenuOpen } from '@/utils/editorSuggestionMenu';
+import { promptAndSetLink } from './inlineFormatActions';
 
 function suggestionMenuBlocksShortcut(): boolean {
   return isEditorSuggestionMenuOpen();
-}
-
-function isValidLinkUrl(url: string): boolean {
-  const trimmed = url.trim();
-  if (!trimmed) return false;
-  try {
-    const parsed = new URL(trimmed.includes('://') ? trimmed : `https://${trimmed}`);
-    return Boolean(parsed.hostname);
-  } catch {
-    return false;
-  }
-}
-
-function normalizeLinkUrl(url: string): string {
-  const trimmed = url.trim();
-  return trimmed.includes('://') ? trimmed : `https://${trimmed}`;
 }
 
 export const EditorKeyboardShortcuts = Extension.create({
@@ -43,31 +26,8 @@ export const EditorKeyboardShortcuts = Extension.create({
       },
       'Mod-k': () => {
         if (suggestionMenuBlocksShortcut()) return true;
-
-        const previousUrl = this.editor.getAttributes('link').href ?? '';
-        const url = window.prompt(
-          i18n.t('editor.link.prompt'),
-          typeof previousUrl === 'string' ? previousUrl : '',
-        );
-
-        if (url === null) return true;
-
-        const trimmed = url.trim();
-        if (!trimmed) {
-          return this.editor.chain().focus().extendMarkRange('link').unsetLink().run();
-        }
-
-        if (!isValidLinkUrl(trimmed)) {
-          useUIStore.getState().showToast(i18n.t('editor.link.invalidUrl'), 'error');
-          return true;
-        }
-
-        return this.editor
-          .chain()
-          .focus()
-          .extendMarkRange('link')
-          .setLink({ href: normalizeLinkUrl(trimmed) })
-          .run();
+        promptAndSetLink(this.editor);
+        return true;
       },
       'Mod-Enter': () => {
         if (suggestionMenuBlocksShortcut()) return true;

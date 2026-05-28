@@ -14,6 +14,7 @@ import { resolveTextFontFamily } from '@/utils/fonts';
 import type { Editor } from '@tiptap/react';
 import type { LayoutMode } from '@/hooks/useAdaptiveLayout';
 import { shouldSuppressFocusModeEscape } from '@/utils/editorSuggestionMenu';
+import { editorHasNonEmptySelection } from '@/utils/editorSelection';
 
 interface EditorScreenProps {
   layout?: LayoutMode;
@@ -84,12 +85,13 @@ export function EditorScreen({ layout = 'mobile' }: EditorScreenProps) {
       if (e.key !== 'Escape') return;
       if (!focusMode) return;
       if (shouldSuppressFocusModeEscape()) return;
+      if (editorHasNonEmptySelection(editorInstance)) return;
       e.preventDefault();
       setFocusMode(false);
     };
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [focusMode, setFocusMode]);
+  }, [focusMode, setFocusMode, editorInstance]);
 
   const handlePin = () => {
     if (!note) return;

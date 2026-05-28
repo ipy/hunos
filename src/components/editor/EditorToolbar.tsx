@@ -3,62 +3,14 @@ import { useTheme } from '@/theme/ThemeContext';
 import { useAdaptiveLayout } from '@/hooks/useAdaptiveLayout';
 import { Icon } from '@/components/common/Icon';
 import { SketchPad } from './SketchPad';
+import { INLINE_FORMAT_ITEMS, type InlineFormatItem } from './inlineFormatActions';
 import type { Editor } from '@tiptap/react';
 
 interface EditorToolbarProps {
   editor: Editor | null;
 }
 
-interface ToolbarButton {
-  icon: string;
-  label: string;
-  action: (editor: Editor) => void;
-  isActive?: (editor: Editor) => boolean;
-}
-
-function toggleMark(editor: Editor, markName: string, toggleCmd: () => boolean) {
-  if (editor.isActive(markName)) {
-    editor.chain().focus().extendMarkRange(markName).unsetMark(markName).run();
-  } else if (editor.state.selection.empty) {
-    const { $from } = editor.state.selection;
-    const start = $from.start();
-    const end = $from.end();
-    if (end > start) {
-      editor.chain().focus().setTextSelection({ from: start, to: end }).run();
-    }
-    toggleCmd();
-  } else {
-    toggleCmd();
-  }
-}
-
-const FORMAT_ITEMS: ToolbarButton[] = [
-  {
-    icon: 'bold', label: 'B',
-    action: (e) => toggleMark(e, 'bold', () => e.chain().focus().toggleBold().run()),
-    isActive: (e) => e.isActive('bold'),
-  },
-  {
-    icon: 'italic', label: 'I',
-    action: (e) => toggleMark(e, 'italic', () => e.chain().focus().toggleItalic().run()),
-    isActive: (e) => e.isActive('italic'),
-  },
-  {
-    icon: 'underline', label: 'U',
-    action: (e) => toggleMark(e, 'underline', () => e.chain().focus().toggleUnderline().run()),
-    isActive: (e) => e.isActive('underline'),
-  },
-  {
-    icon: 'strikethrough', label: 'S',
-    action: (e) => toggleMark(e, 'strike', () => e.chain().focus().toggleStrike().run()),
-    isActive: (e) => e.isActive('strike'),
-  },
-  {
-    icon: 'highlight', label: 'H',
-    action: (e) => toggleMark(e, 'highlight', () => e.chain().focus().toggleHighlight().run()),
-    isActive: (e) => e.isActive('highlight'),
-  },
-];
+type ToolbarButton = InlineFormatItem;
 
 const BLOCK_ITEMS: ToolbarButton[] = [
   { icon: 'heading1', label: 'H1', action: (e) => e.chain().focus().toggleHeading({ level: 1 }).run(), isActive: (e) => e.isActive('heading', { level: 1 }) },
@@ -233,8 +185,8 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
 
   const isMobile = layout === 'mobile';
   const items = isMobile
-    ? (activeTab === 'format' ? FORMAT_ITEMS : activeTab === 'blocks' ? BLOCK_ITEMS : INSERT_ITEMS)
-    : [...FORMAT_ITEMS, ...BLOCK_ITEMS, ...INSERT_ITEMS];
+    ? (activeTab === 'format' ? INLINE_FORMAT_ITEMS : activeTab === 'blocks' ? BLOCK_ITEMS : INSERT_ITEMS)
+    : [...INLINE_FORMAT_ITEMS, ...BLOCK_ITEMS, ...INSERT_ITEMS];
 
   return (
     <>
