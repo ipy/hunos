@@ -16,16 +16,14 @@ const ATOMIC_BLOCK_NODE_NAMES = new Set([
   "codeBlock",
   "horizontalRule",
 ]);
-const TOP_LEVEL_BLOCK_NODE_NAMES = new Set([
-  "paragraph",
-  "heading",
-  "blockquote",
-  "codeBlock",
-  "horizontalRule",
-  "bulletList",
-  "orderedList",
-  "taskList",
-]);
+
+function isSingleParagraphBlockquote(node: Node): boolean {
+  return (
+    node.type.name === "blockquote" &&
+    node.childCount === 1 &&
+    node.firstChild?.type.name === "paragraph"
+  );
+}
 
 const BLOCKED_INTERIOR_NODE_NAMES = new Set(["tableCell", "tableHeader"]);
 
@@ -86,6 +84,9 @@ export function getMovableBlockRange(
     }
 
     if (ATOMIC_BLOCK_NODE_NAMES.has(name)) {
+      if (name === "blockquote" && isSingleParagraphBlockquote(node)) {
+        return null;
+      }
       return getNodeRange($from, depth);
     }
 
@@ -481,8 +482,4 @@ export function buildMoveBlockTransaction(
   }
 
   return null;
-}
-
-export function isMovableTopLevelBlockNode(node: Node): boolean {
-  return TOP_LEVEL_BLOCK_NODE_NAMES.has(node.type.name);
 }

@@ -15,7 +15,10 @@ import type { Editor } from "@tiptap/react";
 import type { LayoutMode } from "@/hooks/useAdaptiveLayout";
 import { shouldSuppressFocusModeEscape } from "@/utils/editorSuggestionMenu";
 import { editorHasNonEmptySelection } from "@/utils/editorSelection";
-import { isFormatPlaygroundNote } from "@/storage/formatPlaygroundNote";
+import {
+  isFormatPlaygroundNote,
+  migratePlaygroundContentIfStale,
+} from "@/storage/formatPlaygroundNote";
 
 interface EditorScreenProps {
   layout?: LayoutMode;
@@ -89,6 +92,17 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       if (titleTimeoutRef.current) clearTimeout(titleTimeoutRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!note || !isFormatPlaygroundNote(note.title)) return;
+    const migrated = migratePlaygroundContentIfStale(
+      note.content,
+      settings.locale,
+    );
+    if (migrated) {
+      saveNoteContent(note.id, migrated);
+    }
+  }, [note?.id, note?.title, settings.locale, saveNoteContent]);
 
   useEffect(() => {
     if (prevFocusModeRef.current === focusMode) return;

@@ -210,6 +210,8 @@ xxxl: 48px
 - `Cmd/Ctrl + K`: Insert link
 - `Cmd/Ctrl + Shift + X`: Strikethrough
 - `Cmd/Ctrl + Enter`: Toggle todo checkbox
+- `Cmd/Ctrl + Alt + ↑/↓`: Move line / block up or down
+- `Tab` / `Shift + Tab`: Nest / outdent list items
 - `Escape`: Dismiss modal / deselect
 
 ## Empty States

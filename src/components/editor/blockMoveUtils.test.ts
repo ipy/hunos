@@ -45,6 +45,7 @@ const {
   listItem,
   taskItem,
   blockquote,
+  codeBlock,
   table,
   tableRow,
   tableCell,
@@ -187,12 +188,10 @@ describe("getMovableBlockRange", () => {
     expect(document.textBetween(range!.from, range!.to)).toBe("two");
   });
 
-  it("returns blockquote instead of inner paragraph", () => {
+  it("returns null for single-paragraph blockquote interior (AC10)", () => {
     const document = buildBlockquoteDoc();
     const pos = findTextPos(document, "quote");
-    const range = getMovableBlockRange(document.resolve(pos));
-    expect(range).not.toBeNull();
-    expect(document.nodeAt(range!.from)?.type.name).toBe("blockquote");
+    expect(getMovableBlockRange(document.resolve(pos))).toBeNull();
   });
 
   it("returns null inside table cells", () => {
@@ -288,7 +287,7 @@ describe("buildMoveBlockTransaction", () => {
     expect(downDoc.textContent).toBe("ACB");
   });
 
-  it("swaps heading sections with attached body (AC7)", () => {
+  it("swaps heading sections with attached body via Mod+Alt+Up (AC7)", () => {
     const document = buildHeadingSectionDoc();
     const pos = findTextPos(document, "Lists");
     const nextDoc = applyMove(document, pos, "up");
@@ -296,6 +295,13 @@ describe("buildMoveBlockTransaction", () => {
     expect(nextDoc.child(1).type.name).toBe("bulletList");
     expect(nextDoc.child(2).textContent).toBe("Inline Marks");
     expect(nextDoc.child(3).textContent).toBe("inline body");
+  });
+
+  it("does not swap Lists section above Inline Marks via Mod+Alt+Down (AC7)", () => {
+    const document = buildHeadingSectionDoc();
+    const pos = findTextPos(document, "Lists");
+    const state = stateAt(document, pos);
+    expect(buildMoveBlockTransaction(state, "down")).toBeNull();
   });
 
   it("no-ops move up on first bullet via null transaction (AC8)", () => {
@@ -310,9 +316,21 @@ describe("buildMoveBlockTransaction", () => {
     expect(buildMoveBlockTransaction(state, "down")).toBeNull();
   });
 
-  it("no-ops both directions for lone blockquote paragraph (AC10)", () => {
+  it("no-ops both directions for single-paragraph blockquote (AC10)", () => {
     const document = buildBlockquoteDoc();
     const pos = findTextPos(document, "quote");
+    const state = stateAt(document, pos);
+    expect(buildMoveBlockTransaction(state, "up")).toBeNull();
+    expect(buildMoveBlockTransaction(state, "down")).toBeNull();
+  });
+
+  it("no-ops seed playground blockquote between siblings (AC10)", () => {
+    const document = doc.create({}, [
+      heading.create({ level: 2 }, textNode("Blocks")),
+      blockquote.create({}, [paragraph.create({}, textNode("A blockquote"))]),
+      codeBlock.create({}, textNode('const x = "y";')),
+    ]);
+    const pos = findTextPos(document, "A blockquote");
     const state = stateAt(document, pos);
     expect(buildMoveBlockTransaction(state, "up")).toBeNull();
     expect(buildMoveBlockTransaction(state, "down")).toBeNull();

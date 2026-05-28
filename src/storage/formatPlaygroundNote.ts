@@ -187,6 +187,7 @@ export function buildPlaygroundContent(locale: Locale) {
 
   return {
     type: "doc",
+    attrs: { playgroundContentVersion: PLAYGROUND_CONTENT_VERSION },
     content: [
       heading(1, s.title),
       paragraph(text(s.intro)),
@@ -324,4 +325,83 @@ export async function createFormatPlaygroundNote(
 
 export function resolveSeedLocale(): PlaygroundLocale {
   return navigator.language.startsWith("zh") ? "zh" : "en";
+}
+
+type PlaygroundDocNode = {
+  type: string;
+  attrs?: Record<string, unknown>;
+  content?: PlaygroundDocNode[];
+  text?: string;
+};
+
+type PlaygroundDoc = {
+  type: "doc";
+  attrs?: { playgroundContentVersion?: number };
+  content: PlaygroundDocNode[];
+};
+
+function headingText(node: PlaygroundDocNode): string {
+  return (node.content ?? []).map((child) => child.text ?? "").join("");
+}
+
+function readPlaygroundContentVersion(content: string): number | null {
+  try {
+    const parsed = JSON.parse(content) as PlaygroundDoc;
+    if (parsed.type !== "doc") {
+      return null;
+    }
+    return parsed.attrs?.playgroundContentVersion ?? 0;
+  } catch {
+    return null;
+  }
+}
+
+/** Refresh stale tryHint copy when playground seed version lags; preserves user edits elsewhere. */
+export function migratePlaygroundContentIfStale(
+  content: string,
+  locale: Locale,
+): string | null {
+  const version = readPlaygroundContentVersion(content);
+  if (version === null || version >= PLAYGROUND_CONTENT_VERSION) {
+    return null;
+  }
+
+  let parsed: PlaygroundDoc;
+  try {
+    parsed = JSON.parse(content) as PlaygroundDoc;
+  } catch {
+    return null;
+  }
+
+  if (parsed.type !== "doc" || !Array.isArray(parsed.content)) {
+    return null;
+  }
+
+  const s = STRINGS[resolvePlaygroundLocale(locale)];
+  const contentNodes = [...parsed.content];
+  for (let i = 0; i < contentNodes.length; i += 1) {
+    const node = contentNodes[i];
+    if (node.type !== "heading" || node.attrs?.level !== 2) {
+      continue;
+    }
+    if (headingText(node) !== s.sectionTry) {
+      continue;
+    }
+    const tryHintNode = contentNodes[i + 1];
+    if (tryHintNode?.type === "paragraph") {
+      contentNodes[i + 1] = paragraph(text(s.tryHint));
+    }
+    break;
+  }
+
+  const updated: PlaygroundDoc = {
+    ...parsed,
+    attrs: {
+      ...parsed.attrs,
+      playgroundContentVersion: PLAYGROUND_CONTENT_VERSION,
+    },
+    content: contentNodes,
+  };
+
+  return JSON.stringify(updated);
 }
