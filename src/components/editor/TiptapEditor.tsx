@@ -35,6 +35,7 @@ import ListItem from "@tiptap/extension-list-item";
 import { SelectionBubbleMenu } from "./SelectionBubbleMenu";
 import Strike from "@tiptap/extension-strike";
 import Italic from "@tiptap/extension-italic";
+import History from "@tiptap/extension-history";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/theme/ThemeContext";
 import { resolveTextFontFamily, resolveCodeFontFamily } from "@/utils/fonts";
@@ -126,6 +127,12 @@ export function TiptapEditor({
         strike: false,
         italic: false,
         listItem: false,
+        history: false,
+      }),
+      History.extend({
+        addKeyboardShortcuts() {
+          return {};
+        },
       }),
       ListItem.extend({
         addKeyboardShortcuts() {

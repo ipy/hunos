@@ -43,4 +43,17 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+Z");
     expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+Shift+Z");
   });
+
+  it("includes undo/redo hints in zh seed", () => {
+    const content = buildPlaygroundContent("zh") as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    const trySectionIndex = content.content.findIndex(
+      (node) =>
+        node.type === "heading" && node.content?.[0]?.text === "自由试炼",
+    );
+    const tryHintNode = content.content[trySectionIndex + 1];
+    expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+Z");
+    expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+Shift+Z");
+  });
 });
