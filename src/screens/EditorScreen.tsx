@@ -342,6 +342,7 @@ export function EditorScreen({ layout = 'mobile' }: EditorScreenProps) {
       >
         <div style={{ padding: '16px 24px 0', maxWidth: `${settings.lineWidth}em`, margin: '0 auto' }}>
           <input
+            data-field="note-title"
             value={titleValue}
             onChange={(e) => handleTitleChange(e.target.value)}
             placeholder={t('editor.titlePlaceholder')}

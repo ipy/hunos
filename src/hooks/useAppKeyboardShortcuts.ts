@@ -23,14 +23,11 @@ export function useAppKeyboardShortcuts() {
 
       const { currentScreen, openNoteSearch } = useUIStore.getState();
       if (currentScreen === 'settings') return;
-      if (isFormFieldTarget(e.target)) return;
 
       if (key === 'n') {
+        if (isFormFieldTarget(e.target)) return;
         e.preventDefault();
-        void (async () => {
-          const note = await useNoteStore.getState().createNote();
-          useNoteStore.getState().setActiveNote(note.id);
-        })();
+        void useNoteStore.getState().createNote();
         return;
       }
 
