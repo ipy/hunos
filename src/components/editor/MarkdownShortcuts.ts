@@ -2,19 +2,38 @@ import {
   Extension,
   InputRule,
   markInputRule,
+  wrappingInputRule,
 } from '@tiptap/core';
 import Bold, { starInputRegex } from '@tiptap/extension-bold';
+import BulletList from '@tiptap/extension-bullet-list';
 import TaskItem from '@tiptap/extension-task-item';
 import { findWrapping } from '@tiptap/pm/transform';
-import type { NodeType, ResolvedPos } from '@tiptap/pm/model';
+import type { Node, NodeType, ResolvedPos } from '@tiptap/pm/model';
 import type { Transaction } from '@tiptap/pm/state';
+import type { InputRuleMatch } from '@tiptap/core';
 
 const UNDERLINE_INPUT_REGEX = /(?:^|\s)(__(?!\s+__)((?:[^_]+))__(?!\s+__))$/;
 const TASK_BRACKET_INPUT_REGEX = /^\s*(\[([ x])?\])\s$/;
 const TASK_ITEM_INPUT_REGEX = /^\s*-\s*\[([ x])\]\s$/;
+const TASK_PREFIX_REGEX = /^\s*-\s*\[/;
 
 function isCheckedTaskMatch(match: RegExpMatchArray): boolean {
   return match[2] === 'x';
+}
+
+function asInputMatch(match: RegExpExecArray): InputRuleMatch {
+  return { index: match.index, text: match[0] };
+}
+
+/** Defer hyphen bullets while the user may be typing `- [ ]` / `- [x]`. */
+function shouldDeferHyphenBullet(text: string): boolean {
+  if (TASK_ITEM_INPUT_REGEX.test(text)) {
+    return false;
+  }
+  if (/^\s*-\s$/.test(text)) {
+    return true;
+  }
+  return TASK_PREFIX_REGEX.test(text);
 }
 
 function findBulletListItemDepth($from: ResolvedPos): number {
@@ -29,7 +48,7 @@ function findBulletListItemDepth($from: ResolvedPos): number {
   return -1;
 }
 
-function replaceBulletListWithTaskList(
+function convertBulletListItemToTask(
   tr: Transaction,
   $from: ResolvedPos,
   listItemDepth: number,
@@ -41,6 +60,7 @@ function replaceBulletListWithTaskList(
   const bulletListDepth = listItemDepth - 1;
   const bulletListPos = $from.before(bulletListDepth);
   const bulletList = $from.node(bulletListDepth);
+  const listItemIndex = $from.index(listItemDepth);
   const listItem = $from.node(listItemDepth);
   const paragraph = listItem.firstChild;
 
@@ -48,11 +68,37 @@ function replaceBulletListWithTaskList(
     return false;
   }
 
-  const emptyParagraph = paragraphType.create();
-  const taskItem = taskItemType.create({ checked }, emptyParagraph);
-  const taskList = taskListType.create(null, taskItem);
+  const taskParagraph = paragraphType.create();
+  const taskItem = taskItemType.create({ checked }, taskParagraph);
+  const taskListNode = taskListType.create(null, taskItem);
 
-  tr.replaceWith(bulletListPos, bulletListPos + bulletList.nodeSize, taskList);
+  if (bulletList.childCount === 1) {
+    tr.replaceWith(bulletListPos, bulletListPos + bulletList.nodeSize, taskListNode);
+    return true;
+  }
+
+  const beforeItems: Node[] = [];
+  const afterItems: Node[] = [];
+
+  for (let i = 0; i < bulletList.childCount; i += 1) {
+    if (i < listItemIndex) {
+      beforeItems.push(bulletList.child(i));
+    } else if (i > listItemIndex) {
+      afterItems.push(bulletList.child(i));
+    }
+  }
+
+  const nodes: Node[] = [];
+
+  if (beforeItems.length > 0) {
+    nodes.push(bulletList.type.create(bulletList.attrs, beforeItems));
+  }
+  nodes.push(taskListNode);
+  if (afterItems.length > 0) {
+    nodes.push(bulletList.type.create(bulletList.attrs, afterItems));
+  }
+
+  tr.replaceWith(bulletListPos, bulletListPos + bulletList.nodeSize, nodes);
   return true;
 }
 
@@ -89,7 +135,7 @@ function createTaskItemInputRule(
       const listItemDepth = findBulletListItemDepth($from);
 
       if (listItemDepth > 0) {
-        if (!replaceBulletListWithTaskList(
+        if (!convertBulletListItemToTask(
           tr,
           $from,
           listItemDepth,
@@ -119,6 +165,81 @@ export const MarkdownBold = Bold.extend({
       markInputRule({
         find: starInputRegex,
         type: this.type,
+      }),
+    ];
+  },
+});
+
+/**
+ * Hyphen bullets defer while the user may be typing `- [ ]` / `- [x]`.
+ * `*` and `+` still convert immediately; `- ` converts on Enter or `- text `.
+ */
+export const MarkdownBulletList = BulletList.extend({
+  addInputRules() {
+    const listType = this.type;
+
+    return [
+      wrappingInputRule({
+        find: /^\s*([*+])\s$/,
+        type: listType,
+      }),
+      wrappingInputRule({
+        find: (text) => {
+          if (shouldDeferHyphenBullet(text)) {
+            return null;
+          }
+
+          const emptyHyphen = /^\s*-\s$/.exec(text);
+          if (emptyHyphen) {
+            return asInputMatch(emptyHyphen);
+          }
+
+          return null;
+        },
+        type: listType,
+      }),
+      new InputRule({
+        find: (text) => {
+          if (shouldDeferHyphenBullet(text)) {
+            return null;
+          }
+
+          const withContent = /^\s*-\s+(?!\[)([^\n]+?\s)$/.exec(text);
+          if (withContent) {
+            return asInputMatch(withContent);
+          }
+
+          return null;
+        },
+        handler: ({ state, range, match, chain }) => {
+          const content = match[1];
+          chain()
+            .deleteRange({ from: range.from, to: range.to })
+            .toggleBulletList()
+            .insertContent(content)
+            .run();
+        },
+      }),
+      new InputRule({
+        find: (text) => {
+          const line = text.replace(/\n$/, '');
+          if (shouldDeferHyphenBullet(line)) {
+            return null;
+          }
+
+          const emptyHyphenEnter = /^\s*-\s\n$/.exec(text);
+          if (emptyHyphenEnter) {
+            return asInputMatch(emptyHyphenEnter);
+          }
+
+          return null;
+        },
+        handler: ({ state, range, chain }) => {
+          chain()
+            .deleteRange({ from: range.from, to: range.to - 1 })
+            .toggleBulletList()
+            .run();
+        },
       }),
     ];
   },
