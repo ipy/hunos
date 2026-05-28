@@ -15,6 +15,7 @@ import { MarkdownReveal } from './MarkdownReveal';
 import { MarkdownPaste } from './MarkdownPaste';
 import {
   MarkdownBold,
+  MarkdownBulletList,
   MarkdownShortcuts,
   MarkdownTaskItem,
 } from './MarkdownShortcuts';
@@ -84,9 +85,11 @@ export function TiptapEditor({
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
         bold: false,
+        bulletList: false,
       }),
       MarkdownBold,
       MarkdownShortcuts,
+      MarkdownBulletList,
       Placeholder.configure({
         placeholder: t('editor.placeholder'),
       }),

@@ -2,19 +2,35 @@ import {
   Extension,
   InputRule,
   markInputRule,
+  wrappingInputRule,
 } from '@tiptap/core';
 import Bold, { starInputRegex } from '@tiptap/extension-bold';
+import BulletList from '@tiptap/extension-bullet-list';
 import TaskItem from '@tiptap/extension-task-item';
 import { findWrapping } from '@tiptap/pm/transform';
 import type { Node, NodeType, ResolvedPos } from '@tiptap/pm/model';
 import type { Transaction } from '@tiptap/pm/state';
+import type { InputRuleMatch } from '@tiptap/core';
 
 const UNDERLINE_INPUT_REGEX = /(?:^|\s)(__(?!\s+__)((?:[^_]+))__(?!\s+__))$/;
 const TASK_BRACKET_INPUT_REGEX = /^\s*(\[([ x])?\])\s$/;
 const TASK_ITEM_INPUT_REGEX = /^\s*-\s*\[([ x])\]\s$/;
+const TASK_PREFIX_REGEX = /^\s*-\s*\[/;
 
 function isCheckedTaskMatch(match: RegExpMatchArray): boolean {
   return match[2] === 'x';
+}
+
+function asInputMatch(match: RegExpExecArray): InputRuleMatch {
+  return { index: match.index, text: match[0] };
+}
+
+/** Defer hyphen bullets only while typing a task prefix (`- [` …), not for plain `- `. */
+function shouldDeferHyphenBullet(text: string): boolean {
+  if (TASK_ITEM_INPUT_REGEX.test(text)) {
+    return false;
+  }
+  return TASK_PREFIX_REGEX.test(text);
 }
 
 function findBulletListItemDepth($from: ResolvedPos): number {
@@ -35,7 +51,6 @@ function convertBulletListItemToTask(
   listItemDepth: number,
   taskListType: NodeType,
   taskItemType: NodeType,
-  paragraphType: NodeType,
   checked: boolean,
 ) {
   const bulletListDepth = listItemDepth - 1;
@@ -49,8 +64,7 @@ function convertBulletListItemToTask(
     return false;
   }
 
-  const taskParagraph = paragraphType.create();
-  const taskItem = taskItemType.create({ checked }, taskParagraph);
+  const taskItem = taskItemType.create({ checked }, paragraph);
   const taskListNode = taskListType.create(null, taskItem);
 
   if (bulletList.childCount === 1) {
@@ -122,7 +136,6 @@ function createTaskItemInputRule(
           listItemDepth,
           taskListType,
           taskItemType,
-          state.schema.nodes.paragraph,
           checked,
         )) {
           return null;
@@ -146,6 +159,37 @@ export const MarkdownBold = Bold.extend({
       markInputRule({
         find: starInputRegex,
         type: this.type,
+      }),
+    ];
+  },
+});
+
+/**
+ * `- ` converts immediately; `- [` … defers so `- [ ]` / `- [x]` task rules can run first.
+ */
+export const MarkdownBulletList = BulletList.extend({
+  addInputRules() {
+    const listType = this.type;
+
+    return [
+      wrappingInputRule({
+        find: /^\s*([*+])\s$/,
+        type: listType,
+      }),
+      wrappingInputRule({
+        find: (text) => {
+          if (shouldDeferHyphenBullet(text)) {
+            return null;
+          }
+
+          const hyphen = /^\s*-\s$/.exec(text);
+          if (hyphen) {
+            return asInputMatch(hyphen);
+          }
+
+          return null;
+        },
+        type: listType,
       }),
     ];
   },
