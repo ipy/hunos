@@ -27,7 +27,3 @@ export function scrollToTocIndex(editor: Editor, tocIndex: number): boolean {
 
   return true;
 }
-
-export function isEditorSuggestionMenuOpen(): boolean {
-  return !!document.querySelector('[role="listbox"][aria-label]');
-}

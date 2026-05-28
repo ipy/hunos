@@ -7,6 +7,7 @@ import {
   WikiLinkSuggestionMenu,
   type WikiLinkSuggestionItem,
 } from './WikiLinkSuggestionMenu';
+import { markSuggestionMenuClosedByEscape } from '@/utils/editorSuggestionMenu';
 import {
   filterWikiLinkCandidates,
   findWikiLinkSuggestionMatch,
@@ -199,6 +200,7 @@ export const WikiLinkSuggestion = Extension.create<WikiLinkSuggestionOptions>({
 
             if (event.key === 'Escape') {
               event.preventDefault();
+              markSuggestionMenuClosedByEscape();
               destroyMenu();
               return true;
             }

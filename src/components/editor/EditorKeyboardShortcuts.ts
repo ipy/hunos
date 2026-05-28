@@ -1,7 +1,7 @@
 import { Extension } from '@tiptap/core';
 import i18n from '@/i18n';
 import { useUIStore } from '@/store/uiStore';
-import { isEditorSuggestionMenuOpen } from '@/utils/tocNavigation';
+import { isEditorSuggestionMenuOpen } from '@/utils/editorSuggestionMenu';
 
 function suggestionMenuBlocksShortcut(): boolean {
   return isEditorSuggestionMenuOpen();

@@ -7,6 +7,7 @@ import {
   TagSuggestionMenu,
   type TagSuggestionItem,
 } from './TagSuggestionMenu';
+import { markSuggestionMenuClosedByEscape } from '@/utils/editorSuggestionMenu';
 import {
   filterTagCandidates,
   findTagSuggestionMatch,
@@ -194,6 +195,7 @@ export const TagSuggestion = Extension.create<TagSuggestionOptions>({
 
             if (event.key === 'Escape') {
               event.preventDefault();
+              markSuggestionMenuClosedByEscape();
               destroyMenu();
               return true;
             }

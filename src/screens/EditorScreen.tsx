@@ -13,7 +13,7 @@ import { exportAndDownload } from '@/utils/export';
 import { resolveTextFontFamily } from '@/utils/fonts';
 import type { Editor } from '@tiptap/react';
 import type { LayoutMode } from '@/hooks/useAdaptiveLayout';
-import { isEditorSuggestionMenuOpen } from '@/utils/tocNavigation';
+import { shouldSuppressFocusModeEscape } from '@/utils/editorSuggestionMenu';
 
 interface EditorScreenProps {
   layout?: LayoutMode;
@@ -80,16 +80,15 @@ export function EditorScreen({ layout = 'mobile' }: EditorScreenProps) {
   }, [focusMode, showToast, t]);
 
   useEffect(() => {
-    if (!focusMode) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
-      if (isEditorSuggestionMenuOpen()) return;
-      const active = document.activeElement;
-      if (active?.closest('.ProseMirror')) return;
+      if (!focusMode) return;
+      if (shouldSuppressFocusModeEscape()) return;
+      e.preventDefault();
       setFocusMode(false);
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
   }, [focusMode, setFocusMode]);
 
   const handlePin = () => {

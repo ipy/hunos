@@ -63,11 +63,12 @@ export function TagSuggestionMenu({
   return (
     <div
       ref={menuRef}
+      data-hunos-editor-suggestion="true"
       role="listbox"
       aria-label={t('editor.tagAutocomplete.menuLabel')}
       style={{
         position: 'fixed',
-        zIndex: 60,
+        zIndex: 250,
         minWidth: 220,
         maxWidth: 'min(360px, calc(100vw - 16px))',
         maxHeight: MENU_MAX_HEIGHT,
