@@ -15,11 +15,11 @@ const WELCOME_CONTENT_EN = {
     ]},
     { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Formatting' }] },
     { type: 'paragraph', content: [
-      { type: 'text', text: 'Use the toolbar below to add ' },
-      { type: 'text', marks: [{ type: 'bold' }], text: 'bold' },
+      { type: 'text', text: 'Type markdown shortcuts — ' },
+      { type: 'text', marks: [{ type: 'bold' }], text: '**bold**' },
       { type: 'text', text: ', ' },
-      { type: 'text', marks: [{ type: 'italic' }], text: 'italic' },
-      { type: 'text', text: ', headings, lists, and more. When your cursor is on formatted text, you\'ll see the markdown symbols appear.' },
+      { type: 'text', marks: [{ type: 'italic' }], text: '_italic_' },
+      { type: 'text', text: ', # headings, - lists, - [ ] tasks, and more — or use the toolbar. Mix every format in this note while testing. When your cursor is on formatted text, markdown symbols appear.' },
     ]},
     { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Tags & Organization' }] },
     { type: 'paragraph', content: [
@@ -52,11 +52,11 @@ const WELCOME_CONTENT_ZH = {
     ]},
     { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: '格式化' }] },
     { type: 'paragraph', content: [
-      { type: 'text', text: '使用底部工具栏添加' },
-      { type: 'text', marks: [{ type: 'bold' }], text: '粗体' },
+      { type: 'text', text: '直接输入 Markdown 快捷键——' },
+      { type: 'text', marks: [{ type: 'bold' }], text: '**粗体**' },
       { type: 'text', text: '、' },
-      { type: 'text', marks: [{ type: 'italic' }], text: '斜体' },
-      { type: 'text', text: '、标题、列表等格式。当光标位于格式化文本上时，你会看到对应的 Markdown 符号。' },
+      { type: 'text', marks: [{ type: 'italic' }], text: '_斜体_' },
+      { type: 'text', text: '、# 标题、- 列表、- [ ] 任务等，或使用工具栏。测试时可在同一篇笔记里混用所有格式。光标位于格式化文本上时会显示 Markdown 符号。' },
     ]},
     { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: '标签与组织' }] },
     { type: 'paragraph', content: [
