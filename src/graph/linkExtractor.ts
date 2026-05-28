@@ -1,3 +1,5 @@
+import { TAG_EXTRACT_REGEX } from '@/utils/tagPattern';
+
 export interface ExtractedTag {
   name: string;
   position: number;
@@ -30,9 +32,9 @@ export function extractFromPlainText(text: string): ExtractionResult {
   const tags: ExtractedTag[] = [];
   const wikiLinks: ExtractedWikiLink[] = [];
 
-  const tagRegex = /(?:^|[^&\w])#([\w\u4e00-\u9fff][\w\u4e00-\u9fff/]*)/g;
+  TAG_EXTRACT_REGEX.lastIndex = 0;
   let match: RegExpExecArray | null;
-  while ((match = tagRegex.exec(text)) !== null) {
+  while ((match = TAG_EXTRACT_REGEX.exec(text)) !== null) {
     tags.push({
       name: match[1],
       position: match.index,

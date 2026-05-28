@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Note, NoteFilter } from '@/types/note';
 import { noteStorage } from '@/storage/noteStorage';
 import { graphEngine } from '@/graph/graphEngine';
+import { useTagStore } from '@/store/tagStore';
 
 function sortByModifiedDesc(notes: Note[]): Note[] {
   return [...notes].sort((a, b) => b.modifiedAt - a.modifiedAt);
@@ -52,6 +53,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   saveNoteContent: async (id, content) => {
     await noteStorage.update(id, { content });
     await graphEngine.syncNoteLinks(id, content);
+    await useTagStore.getState().loadTags();
     const updated = await noteStorage.get(id);
     if (updated) {
       const { notes } = get();

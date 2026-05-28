@@ -1,5 +1,6 @@
 import { noteStorage } from './noteStorage';
 import { db } from './database';
+import { graphEngine } from '@/graph/graphEngine';
 
 const WELCOME_CONTENT_EN = {
   type: 'doc',
@@ -78,11 +79,13 @@ export async function createWelcomeNotesIfNeeded(): Promise<void> {
   const locale = navigator.language.startsWith('zh') ? 'zh' : 'en';
   const content = locale === 'zh' ? WELCOME_CONTENT_ZH : WELCOME_CONTENT_EN;
 
-  await noteStorage.create({
+  const note = await noteStorage.create({
     content: JSON.stringify(content),
     title: locale === 'zh' ? '欢迎使用 Hunos' : 'Welcome to Hunos',
     contentPlain: locale === 'zh'
       ? '欢迎使用 Hunos\nHunos 是一款美观的、支持知识图谱的笔记应用。'
       : 'Welcome to Hunos\nHunos is a beautiful, graph-aware note-taking app.',
   });
+
+  await graphEngine.syncNoteLinks(note.id, note.content);
 }

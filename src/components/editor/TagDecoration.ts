@@ -3,8 +3,7 @@ import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import type { EditorState } from '@tiptap/pm/state';
-
-const TAG_REGEX = /(?:^|\s)#([\w\u4e00-\u9fff][\w\u4e00-\u9fff/]*)/g;
+import { TAG_DECORATION_REGEX } from '@/utils/tagPattern';
 const tagDecorationKey = new PluginKey('tagDecoration');
 
 interface TagMatch {
@@ -20,9 +19,9 @@ function findTags(doc: ProseMirrorNode): TagMatch[] {
   doc.descendants((node, pos) => {
     if (!node.isText || !node.text) return;
 
-    TAG_REGEX.lastIndex = 0;
+    TAG_DECORATION_REGEX.lastIndex = 0;
     let match: RegExpExecArray | null;
-    while ((match = TAG_REGEX.exec(node.text)) !== null) {
+    while ((match = TAG_DECORATION_REGEX.exec(node.text)) !== null) {
       const fullMatch = match[0];
       const hashOffset = fullMatch.indexOf('#');
       const start = pos + match.index + hashOffset;
