@@ -28,6 +28,7 @@ import { FocusModeShortcuts } from './FocusModeShortcuts';
 import { EditorKeyboardShortcuts } from './EditorKeyboardShortcuts';
 import { ListOutlineShortcuts } from './ListOutlineShortcuts';
 import { ListKeyboardShortcuts } from './ListKeyboardShortcuts';
+import { BlockLineShortcuts } from './BlockLineShortcuts';
 import { BlockMoveShortcuts } from './BlockMoveShortcuts';
 import ListItem from '@tiptap/extension-list-item';
 import { SelectionBubbleMenu } from './SelectionBubbleMenu';
@@ -209,6 +210,7 @@ export function TiptapEditor({
       ListOutlineShortcuts,
       ListKeyboardShortcuts,
       BlockMoveShortcuts,
+      BlockLineShortcuts,
     ],
     content: initialContent ? tryParseJson(initialContent) : undefined,
     onUpdate: ({ editor }) => {
