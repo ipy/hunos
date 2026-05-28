@@ -96,6 +96,10 @@
       "title": "Backlinks",
       "empty": "No backlinks yet",
       "hint": "Other notes linking to this one will appear here"
+    },
+    "wikiLink": {
+      "menuLabel": "Link to a note",
+      "create": "Create \"{{title}}\""
     }
   },
   "settings": {

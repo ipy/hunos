@@ -96,6 +96,10 @@
       "title": "反向链接",
       "empty": "暂无反向链接",
       "hint": "引用此笔记的其他笔记会显示在这里"
+    },
+    "wikiLink": {
+      "menuLabel": "链接到笔记",
+      "create": "创建「{{title}}」"
     }
   },
   "settings": {

@@ -20,6 +20,7 @@ import {
   MarkdownTaskItem,
 } from './MarkdownShortcuts';
 import { WikiLinkDecoration } from './WikiLinkDecoration';
+import { WikiLinkSuggestion } from './WikiLinkSuggestion';
 import { TagDecoration } from './TagDecoration';
 import { SketchResize } from './SketchNodeView';
 import { useTranslation } from 'react-i18next';
@@ -61,8 +62,16 @@ export function TiptapEditor({
   const { t } = useTranslation();
   const theme = useTheme();
   const prevNoteIdRef = useRef(noteId);
+  const noteIdRef = useRef(noteId);
+  noteIdRef.current = noteId;
   const notesRef = useRef(useNoteStore.getState().notes);
-  notesRef.current = useNoteStore.getState().notes;
+
+  useEffect(() => {
+    notesRef.current = useNoteStore.getState().notes;
+    return useNoteStore.subscribe((state) => {
+      notesRef.current = state.notes;
+    });
+  }, []);
 
   const handleWikiLinkClick = async (title: string) => {
     const store = useNoteStore.getState();
@@ -140,6 +149,10 @@ export function TiptapEditor({
       MarkdownReveal,
       MarkdownPaste,
       WikiLinkDecoration.configure({ onWikiLinkClick: handleWikiLinkClick }),
+      WikiLinkSuggestion.configure({
+        getNoteId: () => noteIdRef.current,
+        getNotes: () => notesRef.current,
+      }),
       TagDecoration,
       SketchResize,
     ],

@@ -96,6 +96,10 @@
       "title": "Retroenlaces",
       "empty": "Aún no hay retroenlaces",
       "hint": "Las notas que enlacen a esta aparecerán aquí"
+    },
+    "wikiLink": {
+      "menuLabel": "Enlazar a una nota",
+      "create": "Crear «{{title}}»"
     }
   },
   "settings": {
