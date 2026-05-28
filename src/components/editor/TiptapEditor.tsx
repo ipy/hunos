@@ -3,7 +3,6 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import TaskList from '@tiptap/extension-task-list';
-import TaskItem from '@tiptap/extension-task-item';
 import Highlight from '@tiptap/extension-highlight';
 import Underline from '@tiptap/extension-underline';
 import Link from '@tiptap/extension-link';
@@ -14,6 +13,12 @@ import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
 import { MarkdownReveal } from './MarkdownReveal';
 import { MarkdownPaste } from './MarkdownPaste';
+import {
+  MarkdownBold,
+  MarkdownBulletList,
+  MarkdownShortcuts,
+  MarkdownTaskItem,
+} from './MarkdownShortcuts';
 import { WikiLinkDecoration } from './WikiLinkDecoration';
 import { TagDecoration } from './TagDecoration';
 import { SketchResize } from './SketchNodeView';
@@ -79,12 +84,17 @@ export function TiptapEditor({
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
+        bold: false,
+        bulletList: false,
       }),
+      MarkdownBold,
+      MarkdownShortcuts,
+      MarkdownBulletList,
       Placeholder.configure({
         placeholder: t('editor.placeholder'),
       }),
       TaskList,
-      TaskItem.configure({ nested: true }),
+      MarkdownTaskItem.configure({ nested: true }),
       Highlight.configure({ multicolor: true }),
       Underline,
       Link.configure({
