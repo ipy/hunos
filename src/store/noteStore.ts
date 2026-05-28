@@ -64,10 +64,27 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   },
 
   saveNoteTitle: async (id, title) => {
+    const existing = get().notes.find(n => n.id === id) ?? (await noteStorage.get(id));
+    const oldTitle = existing?.title ?? '';
+
     await noteStorage.update(id, { title });
     const now = Date.now();
-    const { notes } = get();
-    set({ notes: sortByModifiedDesc(notes.map(n => n.id === id ? { ...n, title, modifiedAt: now } : n)) });
+    let notes = get().notes;
+    notes = sortByModifiedDesc(
+      notes.map(n => (n.id === id ? { ...n, title, modifiedAt: now } : n)),
+    );
+
+    if (oldTitle && oldTitle !== title) {
+      const renamed = await graphEngine.renameWikiLinkTargets(oldTitle, title);
+      if (renamed.length > 0) {
+        const byId = new Map(renamed.map(n => [n.id, n]));
+        notes = sortByModifiedDesc(
+          notes.map(n => (byId.has(n.id) ? byId.get(n.id)! : n)),
+        );
+      }
+    }
+
+    set({ notes });
   },
 
   pinNote: async (id, isPinned) => {

@@ -95,17 +95,24 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
           decorations(state) {
             return buildDecorations(state);
           },
-          handleClick(_view, _pos, event) {
+          handleClick(view, pos, event) {
             const target = event.target as HTMLElement;
             const linkEl = target.closest('.wiki-link-content');
             if (!linkEl) return false;
 
             const title = linkEl.getAttribute('data-wiki-title');
-            if (title) {
-              onWikiLinkClick(title);
-              return true;
+            if (!title) return false;
+
+            const wikiLinks = findWikiLinks(view.state.doc);
+            const linkAtPos = wikiLinks.find(wl => pos >= wl.start && pos <= wl.end);
+            if (linkAtPos) {
+              const { from } = view.state.selection;
+              const cursorInside = from >= linkAtPos.start && from <= linkAtPos.end;
+              if (cursorInside) return false;
             }
-            return false;
+
+            onWikiLinkClick(title);
+            return true;
           },
         },
       }),

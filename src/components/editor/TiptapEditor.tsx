@@ -29,6 +29,7 @@ import { resolveTextFontFamily, resolveCodeFontFamily } from '@/utils/fonts';
 import { useNoteStore } from '@/store/noteStore';
 import { noteStorage } from '@/storage/noteStorage';
 import { graphEngine } from '@/graph/graphEngine';
+import { findNoteByWikiTitle } from '@/utils/wikiLink';
 import type { Editor } from '@tiptap/react';
 import type { EditorFont } from '@/types/settings';
 
@@ -62,6 +63,7 @@ export function TiptapEditor({
   const { t } = useTranslation();
   const theme = useTheme();
   const prevNoteIdRef = useRef(noteId);
+  const lastExternalContentRef = useRef(initialContent);
   const noteIdRef = useRef(noteId);
   noteIdRef.current = noteId;
   const notesRef = useRef(useNoteStore.getState().notes);
@@ -75,17 +77,22 @@ export function TiptapEditor({
 
   const handleWikiLinkClick = async (title: string) => {
     const store = useNoteStore.getState();
-    const target = store.notes.find(
-      n => n.title.toLowerCase() === title.toLowerCase() && n.status === 'active',
-    );
+    let target = findNoteByWikiTitle(store.notes, title);
+
+    if (!target) {
+      const searchResults = await noteStorage.search(title);
+      target = findNoteByWikiTitle(searchResults, title);
+    }
+
     if (target) {
       store.setActiveNote(target.id);
-    } else {
-      await store.createNote(title);
-      const sourceNote = await noteStorage.get(noteId);
-      if (sourceNote?.content) {
-        await graphEngine.syncNoteLinks(noteId, sourceNote.content);
-      }
+      return;
+    }
+
+    await store.createNote(title);
+    const sourceNote = await noteStorage.get(noteIdRef.current);
+    if (sourceNote?.content) {
+      await graphEngine.syncNoteLinks(noteIdRef.current, sourceNote.content);
     }
   };
 
@@ -174,8 +181,15 @@ export function TiptapEditor({
 
   useEffect(() => {
     if (!editor) return;
-    if (prevNoteIdRef.current === noteId) return;
+
+    const noteChanged = prevNoteIdRef.current !== noteId;
+    const contentChangedExternally =
+      !noteChanged && initialContent !== lastExternalContentRef.current;
+
+    if (!noteChanged && !contentChangedExternally) return;
+
     prevNoteIdRef.current = noteId;
+    lastExternalContentRef.current = initialContent;
 
     if (!initialContent) {
       editor.commands.clearContent(true);
@@ -183,7 +197,10 @@ export function TiptapEditor({
       const parsed = tryParseJson(initialContent);
       if (parsed) editor.commands.setContent(parsed, false);
     }
-    editor.commands.focus('start');
+
+    if (noteChanged) {
+      editor.commands.focus('start');
+    }
   }, [noteId, editor, initialContent]);
 
   const textFontCSS = resolveTextFontFamily(fontFamily);

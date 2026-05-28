@@ -2,7 +2,9 @@ import { linkStorage } from '@/storage/linkStorage';
 import { tagStorage } from '@/storage/tagStorage';
 import { noteStorage } from '@/storage/noteStorage';
 import { extractFromPlainText, extractPlainTextFromTiptap } from './linkExtractor';
+import { replaceWikiLinkTitleInContent } from '@/utils/wikiLink';
 import type { BacklinkResult } from '@/types/graph';
+import type { Note } from '@/types/note';
 
 export const graphEngine = {
   async syncNoteLinks(noteId: string, content: string): Promise<void> {
@@ -43,16 +45,37 @@ export const graphEngine = {
       }
     }
 
-    const existingNote = await noteStorage.get(noteId);
-    const shouldUpdateTitle = extraction.title
-      && extraction.title !== 'Untitled'
-      && extraction.plainText.trim().length > 0;
-
     await noteStorage.update(noteId, {
-      ...(shouldUpdateTitle || !existingNote?.title ? { title: extraction.title } : {}),
       contentPlain: extraction.plainText,
       wordCount: extraction.wordCount,
     });
+  },
+
+  /** When a note title changes, update [[oldTitle]] wikilinks in every other note. */
+  async renameWikiLinkTargets(oldTitle: string, newTitle: string): Promise<Note[]> {
+    if (!oldTitle.trim() || !newTitle.trim() || oldTitle === newTitle) {
+      return [];
+    }
+
+    const notes = await noteStorage.list({ status: 'active' });
+    const updated: Note[] = [];
+
+    for (const note of notes) {
+      if (!note.content) continue;
+      const nextContent = replaceWikiLinkTitleInContent(
+        note.content,
+        oldTitle,
+        newTitle,
+      );
+      if (nextContent === note.content) continue;
+
+      await noteStorage.update(note.id, { content: nextContent });
+      await graphEngine.syncNoteLinks(note.id, nextContent);
+      const fresh = await noteStorage.get(note.id);
+      if (fresh) updated.push(fresh);
+    }
+
+    return updated;
   },
 
   async getBacklinks(noteId: string): Promise<BacklinkResult[]> {

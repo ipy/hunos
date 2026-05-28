@@ -35,6 +35,14 @@ export function EditorScreen({ layout = 'mobile' }: EditorScreenProps) {
   const titleTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = undefined;
+    }
+    if (titleTimeoutRef.current) {
+      clearTimeout(titleTimeoutRef.current);
+      titleTimeoutRef.current = undefined;
+    }
     setTitleValue(note?.title ?? '');
   }, [note?.id]);
 
