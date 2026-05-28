@@ -1,6 +1,9 @@
 import { Extension } from '@tiptap/core';
 import { useUIStore } from '@/store/uiStore';
-import { shouldSuppressFocusModeEscape } from '@/utils/editorSuggestionMenu';
+import {
+  isEditorSuggestionMenuOpen,
+  shouldSuppressFocusModeExitAfterMenuClose,
+} from '@/utils/editorSuggestionMenu';
 
 export const FocusModeShortcuts = Extension.create({
   name: 'focusModeShortcuts',
@@ -14,7 +17,8 @@ export const FocusModeShortcuts = Extension.create({
       Escape: () => {
         const { focusMode, setFocusMode } = useUIStore.getState();
         if (!focusMode) return false;
-        if (shouldSuppressFocusModeEscape()) return true;
+        if (isEditorSuggestionMenuOpen()) return false;
+        if (shouldSuppressFocusModeExitAfterMenuClose()) return true;
         setFocusMode(false);
         return true;
       },

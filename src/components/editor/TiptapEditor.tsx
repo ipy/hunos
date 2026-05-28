@@ -27,6 +27,7 @@ import { SketchResize } from './SketchNodeView';
 import { FocusModeShortcuts } from './FocusModeShortcuts';
 import { EditorKeyboardShortcuts } from './EditorKeyboardShortcuts';
 import Strike from '@tiptap/extension-strike';
+import Italic from '@tiptap/extension-italic';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/theme/ThemeContext';
 import { resolveTextFontFamily, resolveCodeFontFamily } from '@/utils/fonts';
@@ -116,8 +117,14 @@ export function TiptapEditor({
         bold: false,
         bulletList: false,
         strike: false,
+        italic: false,
       }),
       Strike.extend({
+        addKeyboardShortcuts() {
+          return {};
+        },
+      }),
+      Italic.extend({
         addKeyboardShortcuts() {
           return {};
         },

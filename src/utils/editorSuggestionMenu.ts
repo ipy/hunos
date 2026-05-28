@@ -1,13 +1,16 @@
-const ESCAPE_CLOSE_SUPPRESS_MS = 100;
-let suggestionMenuClosedByEscapeAt = 0;
+let suppressFocusModeExitThisEscape = false;
 
 /** Call when Escape closes a suggestion menu so focus mode is not exited on the same keypress. */
 export function markSuggestionMenuClosedByEscape(): void {
-  suggestionMenuClosedByEscapeAt = Date.now();
+  suppressFocusModeExitThisEscape = true;
+  queueMicrotask(() => {
+    suppressFocusModeExitThisEscape = false;
+  });
 }
 
-function didSuggestionMenuJustCloseByEscape(): boolean {
-  return Date.now() - suggestionMenuClosedByEscapeAt < ESCAPE_CLOSE_SUPPRESS_MS;
+/** True only for the Escape keypress that just closed a suggestion menu (not while menu is open). */
+export function shouldSuppressFocusModeExitAfterMenuClose(): boolean {
+  return suppressFocusModeExitThisEscape;
 }
 
 /** True when a Hunos tag/wiki autocomplete menu is mounted and visible. */
@@ -17,7 +20,7 @@ export function isEditorSuggestionMenuOpen(): boolean {
   return menu.getBoundingClientRect().height > 0;
 }
 
-/** True when Escape should not exit focus mode (menu open or just closed by Escape). */
+/** True when the window-level Escape handler should not exit focus mode. */
 export function shouldSuppressFocusModeEscape(): boolean {
-  return isEditorSuggestionMenuOpen() || didSuggestionMenuJustCloseByEscape();
+  return isEditorSuggestionMenuOpen() || suppressFocusModeExitThisEscape;
 }
