@@ -1,11 +1,12 @@
-import { Extension } from '@tiptap/core';
-import { Plugin, PluginKey } from '@tiptap/pm/state';
-import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
-import type { EditorState } from '@tiptap/pm/state';
+import { Extension } from "@tiptap/core";
+import { Plugin, PluginKey } from "@tiptap/pm/state";
+import { Decoration, DecorationSet } from "@tiptap/pm/view";
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
+import type { EditorState } from "@tiptap/pm/state";
+import { suppressWikiLinkSuggestionBriefly } from "./wikiLinkEditGuard";
 
 const WIKI_LINK_REGEX = /\[\[([^\]]+)\]\]/g;
-const wikiLinkKey = new PluginKey('wikiLinkDecoration');
+const wikiLinkKey = new PluginKey("wikiLinkDecoration");
 
 export interface WikiLinkDecorationOptions {
   onWikiLinkClick: (title: string) => void;
@@ -54,21 +55,29 @@ function buildDecorations(state: EditorState): DecorationSet {
 
     if (cursorInside) {
       decorations.push(
-        Decoration.inline(wl.start, wl.contentStart, { class: 'wiki-link-bracket-visible' }),
-        Decoration.inline(wl.contentStart, wl.contentEnd, {
-          class: 'wiki-link-content',
-          'data-wiki-title': wl.title,
+        Decoration.inline(wl.start, wl.contentStart, {
+          class: "wiki-link-bracket-visible",
         }),
-        Decoration.inline(wl.contentEnd, wl.end, { class: 'wiki-link-bracket-visible' }),
+        Decoration.inline(wl.contentStart, wl.contentEnd, {
+          class: "wiki-link-content",
+          "data-wiki-title": wl.title,
+        }),
+        Decoration.inline(wl.contentEnd, wl.end, {
+          class: "wiki-link-bracket-visible",
+        }),
       );
     } else {
       decorations.push(
-        Decoration.inline(wl.start, wl.contentStart, { class: 'wiki-link-bracket-hidden' }),
-        Decoration.inline(wl.contentStart, wl.contentEnd, {
-          class: 'wiki-link-content',
-          'data-wiki-title': wl.title,
+        Decoration.inline(wl.start, wl.contentStart, {
+          class: "wiki-link-bracket-hidden",
         }),
-        Decoration.inline(wl.contentEnd, wl.end, { class: 'wiki-link-bracket-hidden' }),
+        Decoration.inline(wl.contentStart, wl.contentEnd, {
+          class: "wiki-link-content",
+          "data-wiki-title": wl.title,
+        }),
+        Decoration.inline(wl.contentEnd, wl.end, {
+          class: "wiki-link-bracket-hidden",
+        }),
       );
     }
   }
@@ -77,7 +86,7 @@ function buildDecorations(state: EditorState): DecorationSet {
 }
 
 export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
-  name: 'wikiLinkDecoration',
+  name: "wikiLinkDecoration",
 
   addOptions() {
     return {
@@ -95,19 +104,30 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
           decorations(state) {
             return buildDecorations(state);
           },
+          handleDOMEvents: {
+            mousedown(_view, event) {
+              const target = event.target as HTMLElement;
+              if (!target.closest(".wiki-link-content")) return false;
+              suppressWikiLinkSuggestionBriefly();
+              return false;
+            },
+          },
           handleClick(view, pos, event) {
             const target = event.target as HTMLElement;
-            const linkEl = target.closest('.wiki-link-content');
+            const linkEl = target.closest(".wiki-link-content");
             if (!linkEl) return false;
 
-            const title = linkEl.getAttribute('data-wiki-title');
+            const title = linkEl.getAttribute("data-wiki-title");
             if (!title) return false;
 
             const wikiLinks = findWikiLinks(view.state.doc);
-            const linkAtPos = wikiLinks.find(wl => pos >= wl.start && pos <= wl.end);
+            const linkAtPos = wikiLinks.find(
+              (wl) => pos >= wl.start && pos <= wl.end,
+            );
             if (linkAtPos) {
               const { from } = view.state.selection;
-              const cursorInside = from >= linkAtPos.start && from <= linkAtPos.end;
+              const cursorInside =
+                from >= linkAtPos.start && from <= linkAtPos.end;
               if (cursorInside) return false;
             }
 

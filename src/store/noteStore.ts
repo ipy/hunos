@@ -1,8 +1,10 @@
-import { create } from 'zustand';
-import type { Note, NoteFilter } from '@/types/note';
-import { noteStorage } from '@/storage/noteStorage';
-import { graphEngine } from '@/graph/graphEngine';
-import { useTagStore } from '@/store/tagStore';
+import { create } from "zustand";
+import type { Note, NoteFilter } from "@/types/note";
+import type { Locale } from "@/types/settings";
+import { noteStorage } from "@/storage/noteStorage";
+import { graphEngine } from "@/graph/graphEngine";
+import { restoreFormatPlaygroundContent } from "@/storage/formatPlaygroundNote";
+import { useTagStore } from "@/store/tagStore";
 
 function sortByModifiedDesc(notes: Note[]): Note[] {
   return [...notes].sort((a, b) => b.modifiedAt - a.modifiedAt);
@@ -23,6 +25,7 @@ interface NoteStore {
   trashNote: (id: string) => Promise<void>;
   restoreNote: (id: string) => Promise<void>;
   permanentlyDelete: (id: string) => Promise<void>;
+  restoreFormatPlayground: (id: string, locale: Locale) => Promise<void>;
   setActiveNote: (id: string | null) => void;
 }
 
@@ -58,28 +61,31 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     if (updated) {
       const { notes } = get();
       set({
-        notes: sortByModifiedDesc(notes.map(n => n.id === id ? updated : n)),
+        notes: sortByModifiedDesc(
+          notes.map((n) => (n.id === id ? updated : n)),
+        ),
       });
     }
   },
 
   saveNoteTitle: async (id, title) => {
-    const existing = get().notes.find(n => n.id === id) ?? (await noteStorage.get(id));
-    const oldTitle = existing?.title ?? '';
+    const existing =
+      get().notes.find((n) => n.id === id) ?? (await noteStorage.get(id));
+    const oldTitle = existing?.title ?? "";
 
     await noteStorage.update(id, { title });
     const now = Date.now();
     let notes = get().notes;
     notes = sortByModifiedDesc(
-      notes.map(n => (n.id === id ? { ...n, title, modifiedAt: now } : n)),
+      notes.map((n) => (n.id === id ? { ...n, title, modifiedAt: now } : n)),
     );
 
     if (oldTitle && oldTitle !== title) {
       const renamed = await graphEngine.renameWikiLinkTargets(oldTitle, title);
       if (renamed.length > 0) {
-        const byId = new Map(renamed.map(n => [n.id, n]));
+        const byId = new Map(renamed.map((n) => [n.id, n]));
         notes = sortByModifiedDesc(
-          notes.map(n => (byId.has(n.id) ? byId.get(n.id)! : n)),
+          notes.map((n) => (byId.has(n.id) ? byId.get(n.id)! : n)),
         );
       }
     }
@@ -90,40 +96,58 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   pinNote: async (id, isPinned) => {
     await noteStorage.update(id, { isPinned });
     const { notes } = get();
-    set({ notes: sortByModifiedDesc(notes.map(n => n.id === id ? { ...n, isPinned } : n)) });
+    set({
+      notes: sortByModifiedDesc(
+        notes.map((n) => (n.id === id ? { ...n, isPinned } : n)),
+      ),
+    });
   },
 
   archiveNote: async (id) => {
-    await noteStorage.update(id, { status: 'archived' });
+    await noteStorage.update(id, { status: "archived" });
     const { notes, activeNoteId } = get();
     set({
-      notes: notes.filter(n => n.id !== id),
+      notes: notes.filter((n) => n.id !== id),
       activeNoteId: activeNoteId === id ? null : activeNoteId,
     });
   },
 
   trashNote: async (id) => {
-    await noteStorage.update(id, { status: 'trashed', trashedAt: Date.now() });
+    await noteStorage.update(id, { status: "trashed", trashedAt: Date.now() });
     const { notes, activeNoteId } = get();
     set({
-      notes: notes.filter(n => n.id !== id),
+      notes: notes.filter((n) => n.id !== id),
       activeNoteId: activeNoteId === id ? null : activeNoteId,
     });
   },
 
   restoreNote: async (id) => {
-    await noteStorage.update(id, { status: 'active', trashedAt: null });
+    await noteStorage.update(id, { status: "active", trashedAt: null });
     const { notes } = get();
-    set({ notes: notes.filter(n => n.id !== id) });
+    set({ notes: notes.filter((n) => n.id !== id) });
   },
 
   permanentlyDelete: async (id) => {
     await noteStorage.delete(id);
     const { notes, activeNoteId } = get();
     set({
-      notes: notes.filter(n => n.id !== id),
+      notes: notes.filter((n) => n.id !== id),
       activeNoteId: activeNoteId === id ? null : activeNoteId,
     });
+  },
+
+  restoreFormatPlayground: async (id, locale) => {
+    await restoreFormatPlaygroundContent(id, locale);
+    await useTagStore.getState().loadTags();
+    const updated = await noteStorage.get(id);
+    if (updated) {
+      const { notes } = get();
+      set({
+        notes: sortByModifiedDesc(
+          notes.map((n) => (n.id === id ? updated : n)),
+        ),
+      });
+    }
   },
 
   setActiveNote: (id) => set({ activeNoteId: id }),

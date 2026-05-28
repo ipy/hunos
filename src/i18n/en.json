@@ -46,7 +46,9 @@
       "trash": "Move to Trash",
       "restore": "Restore",
       "deletePermanently": "Delete Permanently",
-      "export": "Export"
+      "export": "Export",
+      "restorePlayground": "Restore Format Playground",
+      "restorePlaygroundDone": "Format Playground restored"
     },
     "sort": {
       "modifiedAt": "Date Modified",

@@ -46,7 +46,9 @@
       "trash": "移到废纸篓",
       "restore": "恢复",
       "deletePermanently": "永久删除",
-      "export": "导出"
+      "export": "导出",
+      "restorePlayground": "恢复格式试炼场",
+      "restorePlaygroundDone": "格式试炼场已恢复"
     },
     "sort": {
       "modifiedAt": "修改日期",
