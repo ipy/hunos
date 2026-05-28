@@ -44,6 +44,8 @@ const ICONS: Record<string, string> = {
   camera: 'M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
   table: 'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18',
   pencil: 'M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z',
+  focus: 'M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7',
+  focusOff: 'M8 3v3a2 2 0 0 0-2 2H3m18 0h-3a2 2 0 0 0-2 2v3M3 16v3a2 2 0 0 0 2 2h3m10 0h3a2 2 0 0 0 2-2v-3M12 8v8M8 12h8',
 };
 
 export function Icon({ name, size = 20, color = 'currentColor', className }: IconProps) {

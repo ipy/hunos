@@ -104,6 +104,12 @@
     "tagAutocomplete": {
       "menuLabel": "Sugerencias de etiquetas",
       "create": "Etiqueta «{{name}}»"
+    },
+    "focusMode": {
+      "enter": "Modo enfoque",
+      "exit": "Salir del modo enfoque",
+      "entered": "Modo enfoque activado",
+      "exited": "Modo enfoque desactivado"
     }
   },
   "settings": {

@@ -17,7 +17,7 @@ import { createWelcomeNotesIfNeeded } from '@/storage/welcomeNotes';
 
 function AppContent() {
   const layout = useAdaptiveLayout();
-  const { currentScreen, navigate, showSidebar, sidebarVisible, hideSidebar } = useUIStore();
+  const { currentScreen, showSidebar, sidebarVisible, hideSidebar, focusMode } = useUIStore();
   const { loadTags } = useTagStore();
   const { loadNotes } = useNoteStore();
   const { i18n } = useTranslation();
@@ -40,24 +40,31 @@ function AppContent() {
   }, [locale, i18n]);
 
   if (layout === 'desktop') {
+    const panelTransition = 'width 0.2s ease, min-width 0.2s ease, opacity 0.2s ease';
     return (
       <div style={{ display: 'flex', height: '100%', width: '100%', position: 'absolute', inset: 0 }}>
-        <div style={{
-          width: 220, minWidth: 180, flexShrink: 0,
-          borderRight: `1px solid ${borderColor}`,
-          overflow: 'hidden',
-          backgroundColor: theme.colors.surface,
-        }}>
-          <TagsScreen layout="desktop" />
-        </div>
-        <div style={{
-          width: 300, minWidth: 240, flexShrink: 0,
-          borderRight: `1px solid ${borderColor}`,
-          overflow: 'hidden', position: 'relative',
-        }}>
-          <NoteListScreen layout="desktop" />
-        </div>
-        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+        {!focusMode && (
+          <>
+            <div style={{
+              width: 220, minWidth: 180, flexShrink: 0,
+              borderRight: `1px solid ${borderColor}`,
+              overflow: 'hidden',
+              backgroundColor: theme.colors.surface,
+              transition: panelTransition,
+            }}>
+              <TagsScreen layout="desktop" />
+            </div>
+            <div style={{
+              width: 300, minWidth: 240, flexShrink: 0,
+              borderRight: `1px solid ${borderColor}`,
+              overflow: 'hidden', position: 'relative',
+              transition: panelTransition,
+            }}>
+              <NoteListScreen layout="desktop" />
+            </div>
+          </>
+        )}
+        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', transition: panelTransition }}>
           {currentScreen === 'settings' ? <SettingsScreen layout="desktop" /> : <EditorScreen layout="desktop" />}
         </div>
         <ToastContainer />

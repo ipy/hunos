@@ -104,6 +104,12 @@
     "tagAutocomplete": {
       "menuLabel": "Tag suggestions",
       "create": "Tag \"{{name}}\""
+    },
+    "focusMode": {
+      "enter": "Enter focus mode",
+      "exit": "Exit focus mode",
+      "entered": "Focus mode on",
+      "exited": "Focus mode off"
     }
   },
   "settings": {

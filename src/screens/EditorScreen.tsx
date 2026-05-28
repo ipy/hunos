@@ -13,6 +13,7 @@ import { exportAndDownload } from '@/utils/export';
 import { resolveTextFontFamily } from '@/utils/fonts';
 import type { Editor } from '@tiptap/react';
 import type { LayoutMode } from '@/hooks/useAdaptiveLayout';
+import { isEditorSuggestionMenuOpen } from '@/utils/tocNavigation';
 
 interface EditorScreenProps {
   layout?: LayoutMode;
@@ -22,7 +23,7 @@ export function EditorScreen({ layout = 'mobile' }: EditorScreenProps) {
   const { t } = useTranslation();
   const theme = useTheme();
   const { activeNoteId, notes, saveNoteContent, saveNoteTitle, pinNote, trashNote, archiveNote, restoreNote, permanentlyDelete } = useNoteStore();
-  const { goBack, showToast } = useUIStore();
+  const { goBack, showToast, focusMode, toggleFocusMode, setFocusMode } = useUIStore();
   const settings = useSettingsStore();
   const [showActions, setShowActions] = useState(false);
   const [showStats, setShowStats] = useState(false);
@@ -30,7 +31,9 @@ export function EditorScreen({ layout = 'mobile' }: EditorScreenProps) {
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   const note = notes.find(n => n.id === activeNoteId);
-  const showBackButton = layout === 'mobile';
+  const showBackButton = layout === 'mobile' && !focusMode;
+  const isCompactChrome = focusMode && layout !== 'desktop';
+  const prevFocusModeRef = useRef(focusMode);
   const [titleValue, setTitleValue] = useState('');
   const titleTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -69,6 +72,25 @@ export function EditorScreen({ layout = 'mobile' }: EditorScreenProps) {
       if (titleTimeoutRef.current) clearTimeout(titleTimeoutRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (prevFocusModeRef.current === focusMode) return;
+    prevFocusModeRef.current = focusMode;
+    showToast(focusMode ? t('editor.focusMode.entered') : t('editor.focusMode.exited'));
+  }, [focusMode, showToast, t]);
+
+  useEffect(() => {
+    if (!focusMode) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (isEditorSuggestionMenuOpen()) return;
+      const active = document.activeElement;
+      if (active?.closest('.ProseMirror')) return;
+      setFocusMode(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [focusMode, setFocusMode]);
 
   const handlePin = () => {
     if (!note) return;
@@ -146,32 +168,106 @@ export function EditorScreen({ layout = 'mobile' }: EditorScreenProps) {
           </button>
         )}
         <div style={{ flex: 1 }} />
-        <button
-          onClick={() => setShowStats(!showStats)}
-          title="Statistics"
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            padding: 7, borderRadius: theme.radius.full, display: 'flex',
-            backgroundColor: showStats ? theme.colors.accentLight : 'transparent',
-            transition: 'background-color 0.2s ease',
-          }}
-          onMouseEnter={(e) => { if (!showStats) e.currentTarget.style.backgroundColor = theme.colors.surfaceHover; }}
-          onMouseLeave={(e) => { if (!showStats) e.currentTarget.style.backgroundColor = 'transparent'; }}
-        >
-          <Icon name="stats" size={17} color={showStats ? theme.colors.accent : theme.colors.textTertiary} />
-        </button>
-        <button
-          onClick={() => setShowActions(!showActions)}
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            padding: 7, borderRadius: theme.radius.full, display: 'flex',
-            transition: 'background-color 0.15s ease',
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.surfaceHover}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-        >
-          <Icon name="more" size={17} color={theme.colors.textSecondary} />
-        </button>
+        {focusMode && isCompactChrome ? (
+          <>
+            <button
+              onClick={() => setShowStats(!showStats)}
+              title={t('editor.stats.title')}
+              aria-label={t('editor.stats.title')}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                padding: 7, borderRadius: theme.radius.full, display: 'flex',
+                minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center',
+                backgroundColor: showStats ? theme.colors.accentLight : 'transparent',
+              }}
+            >
+              <Icon name="stats" size={17} color={showStats ? theme.colors.accent : theme.colors.textTertiary} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setFocusMode(false)}
+              aria-label={t('editor.focusMode.exit')}
+              title={t('editor.focusMode.exit')}
+              style={{
+                background: theme.colors.surface,
+                border: `1px solid ${theme.colors.borderLight}`,
+                cursor: 'pointer',
+                padding: '8px 14px',
+                borderRadius: theme.radius.full,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                minHeight: 44,
+                minWidth: 44,
+                fontSize: 13,
+                fontWeight: 500,
+                color: theme.colors.textSecondary,
+              }}
+            >
+              <Icon name="focusOff" size={16} color={theme.colors.textSecondary} />
+              {t('editor.focusMode.exit')}
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={toggleFocusMode}
+              aria-label={focusMode ? t('editor.focusMode.exit') : t('editor.focusMode.enter')}
+              aria-pressed={focusMode}
+              title={focusMode ? t('editor.focusMode.exit') : t('editor.focusMode.enter')}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                padding: 7, borderRadius: theme.radius.full, display: 'flex',
+                minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center',
+                backgroundColor: focusMode ? theme.colors.accentLight : 'transparent',
+                transition: 'background-color 0.2s ease',
+              }}
+              onMouseEnter={(e) => { if (!focusMode) e.currentTarget.style.backgroundColor = theme.colors.surfaceHover; }}
+              onMouseLeave={(e) => { if (!focusMode) e.currentTarget.style.backgroundColor = focusMode ? theme.colors.accentLight : 'transparent'; }}
+            >
+              <Icon
+                name={focusMode ? 'focusOff' : 'focus'}
+                size={17}
+                color={focusMode ? theme.colors.accent : theme.colors.textTertiary}
+              />
+            </button>
+            {!isCompactChrome && (
+              <>
+                <button
+                  onClick={() => setShowStats(!showStats)}
+                  title={t('editor.stats.title')}
+                  aria-label={t('editor.stats.title')}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    padding: 7, borderRadius: theme.radius.full, display: 'flex',
+                    minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: showStats ? theme.colors.accentLight : 'transparent',
+                    transition: 'background-color 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => { if (!showStats) e.currentTarget.style.backgroundColor = theme.colors.surfaceHover; }}
+                  onMouseLeave={(e) => { if (!showStats) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                >
+                  <Icon name="stats" size={17} color={showStats ? theme.colors.accent : theme.colors.textTertiary} />
+                </button>
+                <button
+                  onClick={() => setShowActions(!showActions)}
+                  aria-label={t('common.actions.more', { defaultValue: 'More actions' })}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    padding: 7, borderRadius: theme.radius.full, display: 'flex',
+                    minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center',
+                    transition: 'background-color 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.surfaceHover}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  <Icon name="more" size={17} color={theme.colors.textSecondary} />
+                </button>
+              </>
+            )}
+          </>
+        )}
       </header>
 
       {/* Action menu with backdrop */}
@@ -233,7 +329,13 @@ export function EditorScreen({ layout = 'mobile' }: EditorScreenProps) {
         </>
       )}
 
-      {showStats && <InfoPanel note={note} onClose={() => setShowStats(false)} />}
+      {showStats && (
+        <InfoPanel
+          note={note}
+          editor={editorInstance}
+          onClose={() => setShowStats(false)}
+        />
+      )}
 
       <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}
         onClick={() => showActions && setShowActions(false)}
@@ -270,10 +372,10 @@ export function EditorScreen({ layout = 'mobile' }: EditorScreenProps) {
           lineWidth={settings.lineWidth}
           paragraphSpacing={settings.paragraphSpacing}
         />
-        <BacklinksPanel noteId={note.id} />
+        {!focusMode && <BacklinksPanel noteId={note.id} />}
       </div>
 
-      <EditorToolbar editor={editorInstance} />
+      {!focusMode && <EditorToolbar editor={editorInstance} />}
     </div>
   );
 }

@@ -104,6 +104,12 @@
     "tagAutocomplete": {
       "menuLabel": "标签建议",
       "create": "标签「{{name}}」"
+    },
+    "focusMode": {
+      "enter": "进入专注模式",
+      "exit": "退出专注模式",
+      "entered": "已开启专注模式",
+      "exited": "已退出专注模式"
     }
   },
   "settings": {

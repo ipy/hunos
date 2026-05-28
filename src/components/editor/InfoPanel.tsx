@@ -3,11 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/theme/ThemeContext';
 import { Icon } from '@/components/common/Icon';
 import type { Note } from '@/types/note';
+import type { Editor } from '@tiptap/react';
+import { scrollToTocIndex } from '@/utils/tocNavigation';
 
 type Tab = 'stats' | 'toc';
 
 interface InfoPanelProps {
   note: Note;
+  editor: Editor | null;
   onClose: () => void;
 }
 
@@ -44,7 +47,7 @@ function formatDateTime(ts: number): string {
   return `${day} ${month} ${year} at ${h}:${m}`;
 }
 
-export function InfoPanel({ note, onClose }: InfoPanelProps) {
+export function InfoPanel({ note, editor, onClose }: InfoPanelProps) {
   const { t } = useTranslation();
   const theme = useTheme();
   const [activeTab, setActiveTab] = useState<Tab>('stats');
@@ -247,11 +250,25 @@ export function InfoPanel({ note, onClose }: InfoPanelProps) {
                 </p>
               ) : (
                 toc.map((item, i) => (
-                  <div key={i} style={{
-                    padding: '10px 0',
-                    paddingLeft: (item.level - 1) * 16,
-                    borderBottom: `1px solid ${theme.colors.borderLight}`,
-                  }}>
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => {
+                      if (editor) scrollToTocIndex(editor, i);
+                      onClose();
+                    }}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      textAlign: 'left',
+                      padding: '10px 0',
+                      paddingLeft: (item.level - 1) * 16,
+                      background: 'none',
+                      border: 'none',
+                      borderBottom: `1px solid ${theme.colors.borderLight}`,
+                      cursor: editor ? 'pointer' : 'default',
+                    }}
+                  >
                     <span style={{
                       fontSize: item.level === 1 ? 15 : 14,
                       fontWeight: item.level === 1 ? '600' : '400',
@@ -259,7 +276,7 @@ export function InfoPanel({ note, onClose }: InfoPanelProps) {
                     }}>
                       {item.text}
                     </span>
-                  </div>
+                  </button>
                 ))
               )}
             </div>

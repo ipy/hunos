@@ -24,6 +24,7 @@ import { WikiLinkSuggestion } from './WikiLinkSuggestion';
 import { TagSuggestion } from './TagSuggestion';
 import { TagDecoration } from './TagDecoration';
 import { SketchResize } from './SketchNodeView';
+import { FocusModeShortcuts } from './FocusModeShortcuts';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/theme/ThemeContext';
 import { resolveTextFontFamily, resolveCodeFontFamily } from '@/utils/fonts';
@@ -175,6 +176,7 @@ export function TiptapEditor({
       }),
       TagDecoration,
       SketchResize,
+      FocusModeShortcuts,
     ],
     content: initialContent ? tryParseJson(initialContent) : undefined,
     onUpdate: ({ editor }) => {
