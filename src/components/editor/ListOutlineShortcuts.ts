@@ -3,6 +3,7 @@ import { isEditorSuggestionMenuOpen } from "@/utils/editorSuggestionMenu";
 import {
   getOutlineListItemType,
   isEditorFocusedForOutline,
+  shouldDeferTabToSuggestionMenu,
 } from "./listOutlineUtils";
 
 export const ListOutlineShortcuts = Extension.create({
@@ -12,6 +13,10 @@ export const ListOutlineShortcuts = Extension.create({
   addKeyboardShortcuts() {
     const handleTab = (sink: boolean) => {
       if (!isEditorFocusedForOutline(this.editor)) {
+        return false;
+      }
+
+      if (shouldDeferTabToSuggestionMenu(sink, isEditorSuggestionMenuOpen())) {
         return false;
       }
 

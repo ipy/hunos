@@ -1,12 +1,29 @@
 import { describe, expect, it } from "vitest";
 import type { Editor } from "@tiptap/core";
-import { getOutlineListItemType } from "./listOutlineUtils";
+import {
+  getOutlineListItemType,
+  shouldDeferTabToSuggestionMenu,
+} from "./listOutlineUtils";
 
 function mockEditor(activeNodes: string[]): Editor {
   return {
     isActive: (name: string) => activeNodes.includes(name),
   } as Editor;
 }
+
+describe("shouldDeferTabToSuggestionMenu", () => {
+  it("defers Tab when a suggestion menu is open", () => {
+    expect(shouldDeferTabToSuggestionMenu(true, true)).toBe(true);
+  });
+
+  it("does not defer Shift+Tab when a suggestion menu is open", () => {
+    expect(shouldDeferTabToSuggestionMenu(false, true)).toBe(false);
+  });
+
+  it("does not defer Tab when the suggestion menu is closed", () => {
+    expect(shouldDeferTabToSuggestionMenu(true, false)).toBe(false);
+  });
+});
 
 describe("getOutlineListItemType", () => {
   it("returns listItem when active in a bullet or ordered list", () => {

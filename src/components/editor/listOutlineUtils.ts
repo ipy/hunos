@@ -19,6 +19,14 @@ function isInBlockedOutlineContext(editor: Editor): boolean {
   return false;
 }
 
+/** When true, Tab should not indent and must fall through to suggestion menus. */
+export function shouldDeferTabToSuggestionMenu(
+  sink: boolean,
+  isSuggestionMenuOpen: boolean,
+): boolean {
+  return sink && isSuggestionMenuOpen;
+}
+
 /** Active list item node type when Tab / Shift+Tab outlining is allowed, else null. */
 export function getOutlineListItemType(
   editor: Editor,
