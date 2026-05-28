@@ -87,6 +87,16 @@ export function extractPlainTextFromTiptap(json: unknown): string {
       if (n.type === 'codeBlock') {
         return extractPlainTextFromTiptap(n) + '\n';
       }
+      if (n.type === 'table') {
+        return extractPlainTextFromTiptap(n) + '\n';
+      }
+      if (n.type === 'tableRow') {
+        const rowText = extractPlainTextFromTiptap(n).trim();
+        return rowText ? rowText + '\n' : '';
+      }
+      if (n.type === 'tableCell' || n.type === 'tableHeader') {
+        return extractPlainTextFromTiptap(n) + '\t';
+      }
       return extractPlainTextFromTiptap(n);
     })
     .join('');

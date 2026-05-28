@@ -1,6 +1,6 @@
 import type { Note } from '@/types/note';
 
-function tiptapToMarkdown(json: unknown): string {
+function tiptapToMarkdown(json: unknown, context?: { orderedIndex?: number; inOrderedList?: boolean }): string {
   if (!json || typeof json !== 'object') return '';
   const doc = json as { type?: string; content?: unknown[]; text?: string; attrs?: Record<string, unknown>; marks?: { type: string }[] };
 
@@ -21,19 +21,31 @@ function tiptapToMarkdown(json: unknown): string {
     return text;
   }
 
-  const children = (doc.content || []).map((c: unknown) => tiptapToMarkdown(c)).join('');
+  const childContext = { ...context };
+  let children = '';
+
+  if (doc.type === 'orderedList' && Array.isArray(doc.content)) {
+    children = doc.content
+      .map((item, index) => tiptapToMarkdown(item, { inOrderedList: true, orderedIndex: index + 1 }))
+      .join('');
+  } else if (Array.isArray(doc.content)) {
+    children = doc.content.map((c: unknown) => tiptapToMarkdown(c, childContext)).join('');
+  }
 
   switch (doc.type) {
     case 'doc': return children;
     case 'paragraph': return children + '\n\n';
     case 'heading': {
       const level = (doc.attrs?.level as number) || 1;
-      return '#'.repeat(level) + ' ' + children + '\n\n';
+      return '#'.repeat(level) + ' ' + children.trim() + '\n\n';
     }
-    case 'bulletList': return children;
-    case 'orderedList': return children;
-    case 'listItem': return '- ' + children.trim() + '\n';
-    case 'taskList': return children;
+    case 'bulletList': return children + '\n';
+    case 'orderedList': return children + '\n';
+    case 'listItem': {
+      const prefix = context?.inOrderedList ? `${context.orderedIndex ?? 1}. ` : '- ';
+      return prefix + children.trim() + '\n';
+    }
+    case 'taskList': return children + '\n';
     case 'taskItem': {
       const checked = doc.attrs?.checked ? 'x' : ' ';
       return `- [${checked}] ` + children.trim() + '\n';
@@ -41,6 +53,19 @@ function tiptapToMarkdown(json: unknown): string {
     case 'blockquote': return '> ' + children.trim().replace(/\n/g, '\n> ') + '\n\n';
     case 'codeBlock': return '```\n' + children + '```\n\n';
     case 'horizontalRule': return '---\n\n';
+    case 'table': {
+      const rows = (doc.content || []).map((c: unknown) => tiptapToMarkdown(c, childContext).trimEnd());
+      if (rows.length === 0) return '';
+      const colCount = rows[0].split('|').filter(c => c.trim()).length;
+      const separator = '| ' + Array(colCount).fill('---').join(' | ') + ' |\n';
+      return rows[0] + '\n' + separator + rows.slice(1).join('\n') + '\n\n';
+    }
+    case 'tableRow': {
+      const cells = (doc.content || []).map((c: unknown) => tiptapToMarkdown(c, childContext).trim());
+      return '| ' + cells.join(' | ') + ' |\n';
+    }
+    case 'tableHeader':
+    case 'tableCell': return children;
     default: return children;
   }
 }

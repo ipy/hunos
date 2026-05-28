@@ -1,6 +1,7 @@
 import { noteStorage } from './noteStorage';
 import { db } from './database';
 import { graphEngine } from '@/graph/graphEngine';
+import { createFormatPlaygroundNote, resolveSeedLocale } from './formatPlaygroundNote';
 
 const WELCOME_CONTENT_EN = {
   type: 'doc',
@@ -76,7 +77,7 @@ export async function createWelcomeNotesIfNeeded(): Promise<void> {
   const existingNotes = await db.notes.count();
   if (existingNotes > 0) return;
 
-  const locale = navigator.language.startsWith('zh') ? 'zh' : 'en';
+  const locale = resolveSeedLocale();
   const content = locale === 'zh' ? WELCOME_CONTENT_ZH : WELCOME_CONTENT_EN;
 
   const note = await noteStorage.create({
@@ -88,4 +89,5 @@ export async function createWelcomeNotesIfNeeded(): Promise<void> {
   });
 
   await graphEngine.syncNoteLinks(note.id, note.content);
+  await createFormatPlaygroundNote(locale);
 }

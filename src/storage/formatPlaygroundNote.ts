@@ -1,0 +1,287 @@
+import { noteStorage } from './noteStorage';
+import { graphEngine } from '@/graph/graphEngine';
+import { extractPlainTextFromTiptap } from '@/graph/linkExtractor';
+
+type Locale = 'en' | 'zh';
+
+interface PlaygroundStrings {
+  title: string;
+  intro: string;
+  sectionHeadings: string;
+  sectionInline: string;
+  sectionLists: string;
+  sectionBlocks: string;
+  sectionTable: string;
+  sectionTags: string;
+  sectionTry: string;
+  h1Sample: string;
+  h2Sample: string;
+  h3Sample: string;
+  inlinePrefix: string;
+  inlineSuffix: string;
+  bullet1: string;
+  bullet2: string;
+  bullet3: string;
+  ordered1: string;
+  ordered2: string;
+  ordered3: string;
+  taskOpen: string;
+  taskDone: string;
+  taskPending: string;
+  quote: string;
+  codeSample: string;
+  tableH1: string;
+  tableH2: string;
+  tableH3: string;
+  tableA1: string;
+  tableA2: string;
+  tableA3: string;
+  tableB1: string;
+  tableB2: string;
+  tableB3: string;
+  tagsText: string;
+  tag: string;
+  wikiLink: string;
+  tryHint: string;
+}
+
+const STRINGS: Record<Locale, PlaygroundStrings> = {
+  en: {
+    title: 'Format Playground',
+    intro: 'Test every format in this single note — headings, marks, lists, blocks, tables, tags, and wiki links. Scroll through each section or use the TOC in the info panel.',
+    sectionHeadings: 'Headings',
+    sectionInline: 'Inline Marks',
+    sectionLists: 'Lists',
+    sectionBlocks: 'Blocks',
+    sectionTable: 'Table',
+    sectionTags: 'Tags & Links',
+    sectionTry: 'Try Your Own',
+    h1Sample: 'Heading 1',
+    h2Sample: 'Heading 2',
+    h3Sample: 'Heading 3',
+    inlinePrefix: 'Mix ',
+    inlineSuffix: ' in one line.',
+    bullet1: 'Unordered item one',
+    bullet2: 'Unordered item two',
+    bullet3: 'Unordered item three',
+    ordered1: 'First ordered item',
+    ordered2: 'Second ordered item',
+    ordered3: 'Third ordered item',
+    taskOpen: 'Open task',
+    taskDone: 'Completed task',
+    taskPending: 'Pending task',
+    quote: 'A blockquote for emphasis or citations.',
+    codeSample: 'const hello = "world";',
+    tableH1: 'Name',
+    tableH2: 'Type',
+    tableH3: 'Status',
+    tableA1: 'Bold',
+    tableA2: 'Mark',
+    tableA3: 'Ready',
+    tableB1: 'Lists',
+    tableB2: 'Block',
+    tableB3: 'Done',
+    tagsText: 'Organize with ',
+    tag: '#format-test',
+    wikiLink: '[[Welcome to Hunos]]',
+    tryHint: 'Add new blocks below — type # / ## / ### , - , 1. , - [ ] , > , ``` , or --- on a fresh line.',
+  },
+  zh: {
+    title: '格式试炼场',
+    intro: '在这一篇笔记里测试所有格式——标题、行内样式、列表、块级元素、表格、标签与双向链接。可滚动各分区，或在信息面板的目录中快速跳转。',
+    sectionHeadings: '标题',
+    sectionInline: '行内样式',
+    sectionLists: '列表',
+    sectionBlocks: '块级元素',
+    sectionTable: '表格',
+    sectionTags: '标签与链接',
+    sectionTry: '自由试炼',
+    h1Sample: '一级标题',
+    h2Sample: '二级标题',
+    h3Sample: '三级标题',
+    inlinePrefix: '混排 ',
+    inlineSuffix: ' 于同一行。',
+    bullet1: '无序列表第一项',
+    bullet2: '无序列表第二项',
+    bullet3: '无序列表第三项',
+    ordered1: '有序列表第一项',
+    ordered2: '有序列表第二项',
+    ordered3: '有序列表第三项',
+    taskOpen: '未完成任务',
+    taskDone: '已完成任务',
+    taskPending: '待办任务',
+    quote: '引用块，用于强调或引用。',
+    codeSample: 'const hello = "world";',
+    tableH1: '名称',
+    tableH2: '类型',
+    tableH3: '状态',
+    tableA1: '粗体',
+    tableA2: '样式',
+    tableA3: '就绪',
+    tableB1: '列表',
+    tableB2: '块',
+    tableB3: '完成',
+    tagsText: '用 ',
+    tag: '#格式测试',
+    wikiLink: '[[欢迎使用 Hunos]]',
+    tryHint: '在下方空行试输入 # / ## / ### 、- 、1. 、- [ ] 、> 、``` 或 --- 等快捷键。',
+  },
+};
+
+function text(value: string, marks?: { type: string }[]) {
+  return marks ? { type: 'text', marks, text: value } : { type: 'text', text: value };
+}
+
+function heading(level: number, value: string) {
+  return { type: 'heading', attrs: { level }, content: [text(value)] };
+}
+
+function paragraph(...content: ReturnType<typeof text>[]) {
+  return { type: 'paragraph', content };
+}
+
+function listItem(...content: unknown[]) {
+  return { type: 'listItem', content };
+}
+
+function taskItem(checked: boolean, value: string) {
+  return {
+    type: 'taskItem',
+    attrs: { checked },
+    content: [paragraph(text(value))],
+  };
+}
+
+function tableCell(type: 'tableHeader' | 'tableCell', value: string) {
+  return { type, content: [paragraph(text(value))] };
+}
+
+function tableRow(cells: ReturnType<typeof tableCell>[]) {
+  return { type: 'tableRow', content: cells };
+}
+
+function buildPlaygroundContent(locale: Locale) {
+  const s = STRINGS[locale];
+
+  return {
+    type: 'doc',
+    content: [
+      heading(1, s.title),
+      paragraph(text(s.intro)),
+
+      heading(2, s.sectionHeadings),
+      heading(1, s.h1Sample),
+      heading(2, s.h2Sample),
+      heading(3, s.h3Sample),
+
+      heading(2, s.sectionInline),
+      paragraph(
+        text(s.inlinePrefix),
+        text('bold', [{ type: 'bold' }]),
+        text(', '),
+        text('italic', [{ type: 'italic' }]),
+        text(', '),
+        text('code', [{ type: 'code' }]),
+        text(', '),
+        text('strike', [{ type: 'strike' }]),
+        text(', '),
+        text('underline', [{ type: 'underline' }]),
+        text(', '),
+        text('highlight', [{ type: 'highlight' }]),
+        text(s.inlineSuffix),
+      ),
+
+      heading(2, s.sectionLists),
+      {
+        type: 'bulletList',
+        content: [
+          listItem(paragraph(text(s.bullet1))),
+          listItem(paragraph(text(s.bullet2))),
+          listItem(paragraph(text(s.bullet3))),
+        ],
+      },
+      {
+        type: 'orderedList',
+        content: [
+          listItem(paragraph(text(s.ordered1))),
+          listItem(paragraph(text(s.ordered2))),
+          listItem(paragraph(text(s.ordered3))),
+        ],
+      },
+      {
+        type: 'taskList',
+        content: [
+          taskItem(false, s.taskOpen),
+          taskItem(true, s.taskDone),
+          taskItem(false, s.taskPending),
+        ],
+      },
+
+      heading(2, s.sectionBlocks),
+      {
+        type: 'blockquote',
+        content: [paragraph(text(s.quote))],
+      },
+      {
+        type: 'codeBlock',
+        content: [text(s.codeSample)],
+      },
+      { type: 'horizontalRule' },
+
+      heading(2, s.sectionTable),
+      {
+        type: 'table',
+        content: [
+          tableRow([
+            tableCell('tableHeader', s.tableH1),
+            tableCell('tableHeader', s.tableH2),
+            tableCell('tableHeader', s.tableH3),
+          ]),
+          tableRow([
+            tableCell('tableCell', s.tableA1),
+            tableCell('tableCell', s.tableA2),
+            tableCell('tableCell', s.tableA3),
+          ]),
+          tableRow([
+            tableCell('tableCell', s.tableB1),
+            tableCell('tableCell', s.tableB2),
+            tableCell('tableCell', s.tableB3),
+          ]),
+        ],
+      },
+
+      heading(2, s.sectionTags),
+      paragraph(
+        text(s.tagsText),
+        text(s.tag),
+        text(' and link to '),
+        text(s.wikiLink),
+        text('.'),
+      ),
+
+      heading(2, s.sectionTry),
+      paragraph(text(s.tryHint)),
+      paragraph(),
+      paragraph(),
+    ],
+  };
+}
+
+export async function createFormatPlaygroundNote(locale: Locale): Promise<void> {
+  const content = buildPlaygroundContent(locale);
+  const contentPlain = extractPlainTextFromTiptap(content);
+  const s = STRINGS[locale];
+
+  const note = await noteStorage.create({
+    content: JSON.stringify(content),
+    title: s.title,
+    contentPlain,
+    isPinned: true,
+  });
+
+  await graphEngine.syncNoteLinks(note.id, note.content);
+}
+
+export function resolveSeedLocale(): Locale {
+  return navigator.language.startsWith('zh') ? 'zh' : 'en';
+}
