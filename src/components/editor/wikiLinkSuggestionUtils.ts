@@ -3,6 +3,7 @@ import type { EditorState } from '@tiptap/pm/state';
 import type { Note } from '@/types/note';
 
 export const WIKI_LINK_TRIGGER_REGEX = /\[\[([^\]]*)$/;
+export const WIKI_LINK_COMPLETE_REGEX = /\[\[([^\]]+)\]\]/g;
 
 export interface WikiLinkSuggestionMatch {
   range: { from: number; to: number };
@@ -18,6 +19,28 @@ export function isInCodeContext($from: ResolvedPos): boolean {
   return $from.marks().some(m => m.type.name === 'code');
 }
 
+/** True when pos lies inside a closed `[[title]]` span (not while composing a new link). */
+export function isInsideCompleteWikiLink(state: EditorState, pos: number): boolean {
+  const $pos = state.doc.resolve(pos);
+  if (isInCodeContext($pos)) return false;
+
+  const blockStart = $pos.start();
+  const blockEnd = $pos.end();
+  const blockText = state.doc.textBetween(blockStart, blockEnd, '\n', '\n');
+  const offset = pos - blockStart;
+
+  WIKI_LINK_COMPLETE_REGEX.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = WIKI_LINK_COMPLETE_REGEX.exec(blockText)) !== null) {
+    const linkStart = match.index;
+    const linkEnd = match.index + match[0].length;
+    if (offset > linkStart && offset < linkEnd) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function findWikiLinkSuggestionMatch(
   state: EditorState,
 ): WikiLinkSuggestionMatch | null {
@@ -26,6 +49,7 @@ export function findWikiLinkSuggestionMatch(
 
   const $from = selection.$from;
   if (isInCodeContext($from)) return null;
+  if (isInsideCompleteWikiLink(state, $from.pos)) return null;
 
   const blockStart = $from.start();
   const textBefore = state.doc.textBetween(blockStart, $from.pos, '\n', '\n');
