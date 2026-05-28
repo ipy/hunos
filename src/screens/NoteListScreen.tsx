@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/theme/ThemeContext';
 import { useNoteStore } from '@/store/noteStore';
@@ -179,9 +179,31 @@ export function NoteListScreen({ layout = 'mobile' }: NoteListScreenProps) {
   const { t } = useTranslation();
   const theme = useTheme();
   const { notes, activeNoteId, setActiveNote, createNote, pinNote, trashNote, restoreNote, permanentlyDelete } = useNoteStore();
-  const { currentScreen, navigate, goBack, showSidebar, performSearch, searchQuery, searchResults, setSearchQuery, clearSearch } = useUIStore();
+  const {
+    currentScreen,
+    navigate,
+    goBack,
+    showSidebar,
+    performSearch,
+    searchQuery,
+    searchResults,
+    setSearchQuery,
+    clearSearch,
+    noteSearchOpen,
+    clearNoteSearchOpen,
+  } = useUIStore();
   const { activeTagId, tags } = useTagStore();
   const [showSearch, setShowSearch] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!noteSearchOpen) return;
+    setShowSearch(true);
+    clearNoteSearchOpen();
+    requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
+  }, [noteSearchOpen, clearNoteSearchOpen]);
 
   const activeTag = tags.find(t => t.id === activeTagId);
   const title = activeTag ? `#${activeTag.displayName}` : t('tags.sections.allNotes');
@@ -300,6 +322,7 @@ export function NoteListScreen({ layout = 'mobile' }: NoteListScreenProps) {
         }}>
           <Icon name="search" size={15} color={theme.colors.textTertiary} />
           <input
+            ref={searchInputRef}
             type="text"
             value={searchQuery}
             onChange={(e) => {

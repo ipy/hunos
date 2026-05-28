@@ -110,6 +110,10 @@
       "exit": "Salir del modo enfoque",
       "entered": "Modo enfoque activado",
       "exited": "Modo enfoque desactivado"
+    },
+    "link": {
+      "prompt": "URL del enlace",
+      "invalidUrl": "Introduce una URL válida (p. ej. https://example.com)"
     }
   },
   "settings": {

@@ -25,6 +25,8 @@ import { TagSuggestion } from './TagSuggestion';
 import { TagDecoration } from './TagDecoration';
 import { SketchResize } from './SketchNodeView';
 import { FocusModeShortcuts } from './FocusModeShortcuts';
+import { EditorKeyboardShortcuts } from './EditorKeyboardShortcuts';
+import Strike from '@tiptap/extension-strike';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/theme/ThemeContext';
 import { resolveTextFontFamily, resolveCodeFontFamily } from '@/utils/fonts';
@@ -113,6 +115,12 @@ export function TiptapEditor({
         heading: { levels: [1, 2, 3] },
         bold: false,
         bulletList: false,
+        strike: false,
+      }),
+      Strike.extend({
+        addKeyboardShortcuts() {
+          return {};
+        },
       }),
       MarkdownBold,
       MarkdownShortcuts,
@@ -177,6 +185,7 @@ export function TiptapEditor({
       TagDecoration,
       SketchResize,
       FocusModeShortcuts,
+      EditorKeyboardShortcuts,
     ],
     content: initialContent ? tryParseJson(initialContent) : undefined,
     onUpdate: ({ editor }) => {

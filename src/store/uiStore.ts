@@ -18,6 +18,7 @@ interface UIStore {
   isSearching: boolean;
   sidebarVisible: boolean;
   focusMode: boolean;
+  noteSearchOpen: boolean;
   toasts: Toast[];
 
   navigate: (screen: Screen) => void;
@@ -30,6 +31,8 @@ interface UIStore {
   toggleSidebar: () => void;
   setFocusMode: (enabled: boolean) => void;
   toggleFocusMode: () => void;
+  openNoteSearch: () => void;
+  clearNoteSearchOpen: () => void;
   showToast: (message: string, type?: Toast['type']) => void;
   dismissToast: (id: string) => void;
 }
@@ -42,6 +45,7 @@ export const useUIStore = create<UIStore>((set, get) => ({
   isSearching: false,
   sidebarVisible: false,
   focusMode: false,
+  noteSearchOpen: false,
   toasts: [],
 
   navigate: (screen) => {
@@ -83,6 +87,9 @@ export const useUIStore = create<UIStore>((set, get) => ({
 
   setFocusMode: (enabled) => set({ focusMode: enabled }),
   toggleFocusMode: () => set(s => ({ focusMode: !s.focusMode })),
+
+  openNoteSearch: () => set({ focusMode: false, noteSearchOpen: true }),
+  clearNoteSearchOpen: () => set({ noteSearchOpen: false }),
 
   showToast: (message, type = 'info') => {
     const id = Date.now().toString();

@@ -110,6 +110,10 @@
       "exit": "Exit focus mode",
       "entered": "Focus mode on",
       "exited": "Focus mode off"
+    },
+    "link": {
+      "prompt": "Link URL",
+      "invalidUrl": "Please enter a valid URL (e.g. https://example.com)"
     }
   },
   "settings": {

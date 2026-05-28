@@ -110,6 +110,10 @@
       "exit": "退出专注模式",
       "entered": "已开启专注模式",
       "exited": "已退出专注模式"
+    },
+    "link": {
+      "prompt": "链接地址",
+      "invalidUrl": "请输入有效 URL（例如 https://example.com）"
     }
   },
   "settings": {

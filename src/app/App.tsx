@@ -6,6 +6,7 @@ import { useTagStore } from '@/store/tagStore';
 import { useNoteStore } from '@/store/noteStore';
 import { useUIStore } from '@/store/uiStore';
 import { useAdaptiveLayout } from '@/hooks/useAdaptiveLayout';
+import { useAppKeyboardShortcuts } from '@/hooks/useAppKeyboardShortcuts';
 import { TagsScreen } from '@/screens/TagsScreen';
 import { NoteListScreen } from '@/screens/NoteListScreen';
 import { EditorScreen } from '@/screens/EditorScreen';
@@ -24,6 +25,8 @@ function AppContent() {
   const { locale } = useSettingsStore();
   const theme = useTheme();
   const borderColor = theme.colors.border;
+
+  useAppKeyboardShortcuts();
 
   useEffect(() => {
     async function init() {
