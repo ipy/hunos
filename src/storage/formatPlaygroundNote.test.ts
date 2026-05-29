@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   PLAYGROUND_CONTENT_VERSION,
   buildPlaygroundContent,
+  getFormatPlaygroundTitle,
   isFormatPlaygroundNote,
   migratePlaygroundContentIfStale,
 } from "./formatPlaygroundNote";
@@ -33,10 +34,99 @@ describe("isFormatPlaygroundNote", () => {
   });
 });
 
+describe("buildPlaygroundContent", () => {
+  it("stores locale in doc attrs", () => {
+    const en = buildPlaygroundContent("en") as {
+      attrs?: { playgroundContentLocale?: string };
+    };
+    const zh = buildPlaygroundContent("zh") as {
+      attrs?: { playgroundContentLocale?: string };
+    };
+    expect(en.attrs?.playgroundContentLocale).toBe("en");
+    expect(zh.attrs?.playgroundContentLocale).toBe("zh");
+  });
+
+  it("seeds zh title and intro for AC1", () => {
+    const content = buildPlaygroundContent("zh") as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    expect(content.content[0]?.content?.[0]?.text).toBe("格式试炼场");
+    expect(content.content[1]?.content?.[0]?.text).toMatch(/^在这一篇笔记里/);
+  });
+
+  it("uses localized tags wiki link glue in zh seed", () => {
+    const content = buildPlaygroundContent("zh") as {
+      content: Array<{
+        type: string;
+        content?: Array<{ text?: string }>;
+      }>;
+    };
+    const tagsSectionIndex = content.content.findIndex(
+      (node) =>
+        node.type === "heading" && node.content?.[0]?.text === "标签与链接",
+    );
+    const tagsParagraph = content.content[tagsSectionIndex + 1];
+    const joined = (tagsParagraph?.content ?? [])
+      .map((node) => node.text ?? "")
+      .join("");
+    expect(joined).not.toContain(" and link to ");
+    expect(joined).toContain("并链接");
+  });
+});
+
+describe("getFormatPlaygroundTitle", () => {
+  it("returns localized playground title", () => {
+    expect(getFormatPlaygroundTitle("en")).toBe("Format Playground");
+    expect(getFormatPlaygroundTitle("zh")).toBe("格式试炼场");
+  });
+});
+
 describe("migratePlaygroundContentIfStale", () => {
-  it("returns null when playground content version is current", () => {
+  it("returns null when playground content version and locale are current", () => {
     const content = JSON.stringify(buildPlaygroundContent("en"));
     expect(migratePlaygroundContentIfStale(content, "en")).toBeNull();
+  });
+
+  it("migrates playground content to zh when settings locale is zh", () => {
+    const content = JSON.stringify(buildPlaygroundContent("en"));
+    const migrated = migratePlaygroundContentIfStale(content, "zh");
+    expect(migrated).not.toBeNull();
+
+    const parsed = JSON.parse(migrated!) as {
+      attrs?: { playgroundContentLocale?: string };
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    expect(parsed.attrs?.playgroundContentLocale).toBe("zh");
+    expect(parsed.content[0]?.content?.[0]?.text).toBe("格式试炼场");
+    expect(parsed.content[1]?.content?.[0]?.text).toMatch(/^在这一篇笔记里/);
+
+    const listsSectionIndex = parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
+    );
+    expect(listsSectionIndex).toBeGreaterThan(-1);
+  });
+
+  it("preserves user-added blocks after the seed when migrating locale", () => {
+    const base = buildPlaygroundContent("en") as {
+      type: "doc";
+      attrs?: Record<string, unknown>;
+      content: unknown[];
+    };
+    base.content.push({
+      type: "paragraph",
+      content: [{ type: "text", text: "User test block" }],
+    });
+    const migrated = migratePlaygroundContentIfStale(
+      JSON.stringify(base),
+      "zh",
+    );
+    expect(migrated).not.toBeNull();
+
+    const parsed = JSON.parse(migrated!) as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    const last = parsed.content[parsed.content.length - 1];
+    expect(last?.content?.[0]?.text).toBe("User test block");
   });
 
   it("updates tryHint and version for stale playground notes", () => {
@@ -271,7 +361,9 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(tryHintNode?.content?.[0]?.text).toContain(
       "Cmd+Shift+F 搜索全部笔记",
     );
-    expect(tryHintNode?.content?.[0]?.text).toContain("空引用行按 Enter 退出引用");
+    expect(tryHintNode?.content?.[0]?.text).toContain(
+      "空引用行按 Enter 退出引用",
+    );
     expect(tryHintNode?.content?.[0]?.text).toContain(
       "Mod+Enter（或代码块末尾空行连按 Enter）离开代码块",
     );

@@ -17,6 +17,8 @@ import type { LayoutMode } from "@/hooks/useAdaptiveLayout";
 import { shouldSuppressFocusModeEscape } from "@/utils/editorSuggestionMenu";
 import { editorHasNonEmptySelection } from "@/utils/editorSelection";
 import {
+  FORMAT_PLAYGROUND_TITLES,
+  getFormatPlaygroundTitle,
   isFormatPlaygroundNote,
   migratePlaygroundContentIfStale,
 } from "@/storage/formatPlaygroundNote";
@@ -122,10 +124,18 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       note.content,
       settings.locale,
     );
+    const expectedTitle = getFormatPlaygroundTitle(settings.locale);
+    const titleNeedsUpdate =
+      FORMAT_PLAYGROUND_TITLES.includes(note.title) &&
+      note.title !== expectedTitle;
+
     if (migrated) {
       void saveNoteContent(note.id, migrated);
     }
-  }, [note, settings.locale, saveNoteContent]);
+    if (titleNeedsUpdate) {
+      void saveNoteTitle(note.id, expectedTitle);
+    }
+  }, [note, settings.locale, saveNoteContent, saveNoteTitle]);
 
   useEffect(() => {
     setFindOpen(false);

@@ -53,7 +53,9 @@ interface PlaygroundStrings {
   tableB3: string;
   tagsText: string;
   tag: string;
+  tagsWikiLinkGlue: string;
   wikiLink: string;
+  tagsWikiLinkEnd: string;
   tagsExternalPrefix: string;
   tagsExternalLabel: string;
   tagsExternalSuffix: string;
@@ -104,7 +106,9 @@ const STRINGS: Record<PlaygroundLocale, PlaygroundStrings> = {
     tableB3: "Done",
     tagsText: "Organize with ",
     tag: "#format-test",
+    tagsWikiLinkGlue: " and link to ",
     wikiLink: "[[Welcome to Hunos]]",
+    tagsWikiLinkEnd: ".",
     tagsExternalPrefix: " See ",
     tagsExternalLabel: "project docs",
     tagsExternalSuffix: " for more.",
@@ -153,7 +157,9 @@ const STRINGS: Record<PlaygroundLocale, PlaygroundStrings> = {
     tableB3: "完成",
     tagsText: "用 ",
     tag: "#格式测试",
+    tagsWikiLinkGlue: " 并链接 ",
     wikiLink: "[[欢迎使用 Hunos]]",
+    tagsWikiLinkEnd: "。",
     tagsExternalPrefix: " 详见 ",
     tagsExternalLabel: "项目文档",
     tagsExternalSuffix: "。",
@@ -234,9 +240,14 @@ export function isFormatPlaygroundNote(
 export function buildPlaygroundContent(locale: Locale) {
   const s = STRINGS[resolvePlaygroundLocale(locale)];
 
+  const playgroundLocale = resolvePlaygroundLocale(locale);
+
   return {
     type: "doc",
-    attrs: { playgroundContentVersion: PLAYGROUND_CONTENT_VERSION },
+    attrs: {
+      playgroundContentVersion: PLAYGROUND_CONTENT_VERSION,
+      playgroundContentLocale: playgroundLocale,
+    },
     content: [
       heading(1, s.title),
       paragraph(text(s.intro)),
@@ -337,9 +348,9 @@ export function buildPlaygroundContent(locale: Locale) {
       paragraph(
         text(s.tagsText),
         text(s.tag),
-        text(" and link to "),
+        text(s.tagsWikiLinkGlue),
         text(s.wikiLink),
-        text("."),
+        text(s.tagsWikiLinkEnd),
         text(s.tagsExternalPrefix),
         externalLinkText(s.tagsExternalLabel, "https://example.com"),
         text(s.tagsExternalSuffix),
@@ -390,6 +401,10 @@ export function resolveSeedLocale(): PlaygroundLocale {
   return navigator.language.startsWith("zh") ? "zh" : "en";
 }
 
+export function getFormatPlaygroundTitle(locale: Locale): string {
+  return STRINGS[resolvePlaygroundLocale(locale)].title;
+}
+
 type PlaygroundDocNode = {
   type: string;
   attrs?: Record<string, unknown>;
@@ -399,9 +414,60 @@ type PlaygroundDocNode = {
 
 type PlaygroundDoc = {
   type: "doc";
-  attrs?: { playgroundContentVersion?: number };
+  attrs?: {
+    playgroundContentVersion?: number;
+    playgroundContentLocale?: PlaygroundLocale;
+  };
   content: PlaygroundDocNode[];
 };
+
+const TRY_SECTION_HEADINGS = new Set([
+  STRINGS.en.sectionTry,
+  STRINGS.zh.sectionTry,
+]);
+
+function readPlaygroundContentLocale(
+  parsed: PlaygroundDoc,
+): PlaygroundLocale | null {
+  const locale = parsed.attrs?.playgroundContentLocale;
+  return locale === "zh" || locale === "en" ? locale : null;
+}
+
+function inferPlaygroundLocaleFromContent(
+  parsed: PlaygroundDoc,
+): PlaygroundLocale {
+  const h1 = parsed.content[0];
+  if (h1?.type === "heading" && headingText(h1) === STRINGS.zh.title) {
+    return "zh";
+  }
+  return "en";
+}
+
+function findPlaygroundSeedEndIndex(nodes: PlaygroundDocNode[]): number {
+  const tryIndex = nodes.findIndex(
+    (node) =>
+      node.type === "heading" &&
+      node.attrs?.level === 2 &&
+      TRY_SECTION_HEADINGS.has(headingText(node)),
+  );
+  if (tryIndex === -1) {
+    return nodes.length;
+  }
+  return Math.min(tryIndex + 4, nodes.length);
+}
+
+function applyPlaygroundLocaleMigration(
+  parsed: PlaygroundDoc,
+  locale: Locale,
+): PlaygroundDoc {
+  const fresh = buildPlaygroundContent(locale) as PlaygroundDoc;
+  const seedEnd = findPlaygroundSeedEndIndex(parsed.content);
+  const userSuffix = parsed.content.slice(seedEnd);
+  return {
+    ...fresh,
+    content: [...fresh.content, ...userSuffix],
+  };
+}
 
 function headingText(node: PlaygroundDocNode): string {
   return (node.content ?? []).map((child) => child.text ?? "").join("");
@@ -419,13 +485,13 @@ function readPlaygroundContentVersion(content: string): number | null {
   }
 }
 
-/** Refresh stale tryHint copy when playground seed version lags; preserves user edits elsewhere. */
+/** Refresh stale seed copy or realign locale when settings language changes. */
 export function migratePlaygroundContentIfStale(
   content: string,
   locale: Locale,
 ): string | null {
   const version = readPlaygroundContentVersion(content);
-  if (version === null || version >= PLAYGROUND_CONTENT_VERSION) {
+  if (version === null) {
     return null;
   }
 
@@ -440,7 +506,22 @@ export function migratePlaygroundContentIfStale(
     return null;
   }
 
-  const s = STRINGS[resolvePlaygroundLocale(locale)];
+  const targetLocale = resolvePlaygroundLocale(locale);
+  const storedLocale =
+    readPlaygroundContentLocale(parsed) ??
+    inferPlaygroundLocaleFromContent(parsed);
+  const needsLocaleMigration = storedLocale !== targetLocale;
+  const needsVersionMigration = version < PLAYGROUND_CONTENT_VERSION;
+
+  if (!needsLocaleMigration && !needsVersionMigration) {
+    return null;
+  }
+
+  if (needsLocaleMigration) {
+    return JSON.stringify(applyPlaygroundLocaleMigration(parsed, locale));
+  }
+
+  const s = STRINGS[targetLocale];
   const contentNodes = [...parsed.content];
 
   const introNode = contentNodes[1];
@@ -496,9 +577,9 @@ export function migratePlaygroundContentIfStale(
         contentNodes[i + 1] = paragraph(
           text(s.tagsText),
           text(s.tag),
-          text(" and link to "),
+          text(s.tagsWikiLinkGlue),
           text(s.wikiLink),
-          text("."),
+          text(s.tagsWikiLinkEnd),
           text(s.tagsExternalPrefix),
           externalLinkText(s.tagsExternalLabel, "https://example.com"),
           text(s.tagsExternalSuffix),
@@ -547,6 +628,7 @@ export function migratePlaygroundContentIfStale(
     attrs: {
       ...parsed.attrs,
       playgroundContentVersion: PLAYGROUND_CONTENT_VERSION,
+      playgroundContentLocale: targetLocale,
     },
     content: contentNodes,
   };
