@@ -7,6 +7,7 @@ import {
   getSelectedBlockImagePos,
   handleBlockImageClick,
   handleBlockImageClickFromTarget,
+  handleBlockImageMousedown,
   isResizableBlockImage,
   syncEditorImageSelectionAttributes,
 } from "./imageResizeUtils";
@@ -50,7 +51,10 @@ export const SketchResize = Extension.create({
                   selectedImagePos === pos,
                 );
                 decorations.push(
-                  Decoration.widget(endPos, handle, { side: -1 }),
+                  Decoration.widget(endPos, handle, {
+                    side: -1,
+                    key: `image-resize-${pos}-${selectedImagePos === pos ? "active" : "idle"}`,
+                  }),
                 );
               }
             });
@@ -60,7 +64,11 @@ export const SketchResize = Extension.create({
 
           handleDOMEvents: {
             mousedown(view, event) {
-              return handleDragStart(view, event, event.clientY);
+              const target = event.target as HTMLElement;
+              if (target.classList.contains("sketch-resize-handle")) {
+                return handleDragStart(view, event, event.clientY);
+              }
+              return handleBlockImageMousedown(view, event);
             },
             touchstart(view, event) {
               const target = event.target as HTMLElement;

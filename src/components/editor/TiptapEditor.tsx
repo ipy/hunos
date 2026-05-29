@@ -204,6 +204,7 @@ export function TiptapEditor({
       }),
       LinkAutolinkGuards,
       Image.extend({
+        selectable: true,
         addAttributes() {
           return {
             src: { default: null },

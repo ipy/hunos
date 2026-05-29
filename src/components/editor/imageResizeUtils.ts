@@ -58,6 +58,72 @@ export function createImageResizeHandle(
   return handle;
 }
 
+function isElementTarget(target: EventTarget | null): target is Element {
+  return (
+    target !== null &&
+    typeof target === "object" &&
+    "closest" in target &&
+    typeof (target as Element).closest === "function"
+  );
+}
+
+/** Resolve a block image node from a DOM event target. */
+export function resolveBlockImageFromEventTarget(
+  view: EditorView,
+  target: EventTarget | null,
+): { node: Node; nodePos: number } | null {
+  if (!isElementTarget(target)) return null;
+
+  const img = target.closest("img.editor-image");
+  if (!img || !view.dom.contains(img)) return null;
+
+  const nodePos = view.posAtDOM(img, 0);
+  const node = view.state.doc.nodeAt(nodePos);
+  if (!node || !isResizableBlockImage(node)) return null;
+
+  return { node, nodePos };
+}
+
+/** Select a block image node; returns whether selection changed. */
+export function selectBlockImageNode(
+  view: EditorView,
+  nodePos: number,
+): boolean {
+  const node = view.state.doc.nodeAt(nodePos);
+  if (!node || !isResizableBlockImage(node)) return false;
+
+  const { selection } = view.state;
+  if (selection instanceof NodeSelection && selection.from === nodePos) {
+    return false;
+  }
+
+  view.dispatch(
+    view.state.tr.setSelection(NodeSelection.create(view.state.doc, nodePos)),
+  );
+  return true;
+}
+
+/** Sync resize handle `data-active` when widget DOM is reused by ProseMirror. */
+export function syncImageResizeHandleAttributes(view: EditorView): void {
+  const selectedPos = getSelectedBlockImagePos(view.state);
+  const handles = view.dom.querySelectorAll<HTMLElement>(
+    '[data-testid="image-resize-handle"]',
+  );
+
+  for (const handle of handles) {
+    const posStr = handle.getAttribute("data-image-resize-pos");
+    if (!posStr) continue;
+
+    const pos = parseInt(posStr, 10);
+    const active = selectedPos === pos;
+    if (active) {
+      handle.setAttribute("data-active", "true");
+    } else {
+      handle.removeAttribute("data-active");
+    }
+  }
+}
+
 /** Sync editor DOM attributes automation can read for image selection. */
 export function syncEditorImageSelectionAttributes(view: EditorView): void {
   const pos = getSelectedBlockImagePos(view.state);
@@ -71,6 +137,20 @@ export function syncEditorImageSelectionAttributes(view: EditorView): void {
       dom.removeAttribute("data-selection-type");
     }
   }
+  syncImageResizeHandleAttributes(view);
+}
+
+/** Select a block image on mousedown before default TextSelection. */
+export function handleBlockImageMousedown(
+  view: EditorView,
+  event: Event,
+): boolean {
+  const resolved = resolveBlockImageFromEventTarget(view, event.target);
+  if (!resolved) return false;
+
+  selectBlockImageNode(view, resolved.nodePos);
+  event.preventDefault();
+  return true;
 }
 
 /** Select a block image on click so the resize handle becomes visible. */
@@ -80,16 +160,7 @@ export function handleBlockImageClick(
   nodePos: number,
 ): boolean {
   if (!isResizableBlockImage(node)) return false;
-
-  const { selection } = view.state;
-  if (selection instanceof NodeSelection && selection.from === nodePos) {
-    return false;
-  }
-
-  view.dispatch(
-    view.state.tr.setSelection(NodeSelection.create(view.state.doc, nodePos)),
-  );
-  return true;
+  return selectBlockImageNode(view, nodePos);
 }
 
 /** Fallback when handleClickOn does not run (e.g. DOM wrapper mismatch). */
@@ -97,17 +168,9 @@ export function handleBlockImageClickFromTarget(
   view: EditorView,
   event: Event,
 ): boolean {
-  const target = event.target;
-  if (!(target instanceof Element)) return false;
-
-  const img = target.closest("img.editor-image");
-  if (!img || !view.dom.contains(img)) return false;
-
-  const nodePos = view.posAtDOM(img, 0);
-  const node = view.state.doc.nodeAt(nodePos);
-  if (!node || !isResizableBlockImage(node)) return false;
-
-  return handleBlockImageClick(view, node, nodePos);
+  const resolved = resolveBlockImageFromEventTarget(view, event.target);
+  if (!resolved) return false;
+  return selectBlockImageNode(view, resolved.nodePos);
 }
 
 export function computeImageResizeHeight(
