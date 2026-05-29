@@ -107,6 +107,14 @@
       "menuLabel": "标签建议",
       "create": "标签「{{name}}」"
     },
+    "find": {
+      "placeholder": "在笔记中查找…",
+      "noResults": "无结果",
+      "matchCount": "{{current}} / {{total}}",
+      "next": "下一个匹配",
+      "previous": "上一个匹配",
+      "close": "关闭查找"
+    },
     "focusMode": {
       "enter": "进入专注模式",
       "exit": "退出专注模式",

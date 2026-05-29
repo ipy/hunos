@@ -7,6 +7,7 @@ import { useSettingsStore } from "@/store/settingsStore";
 import { Icon } from "@/components/common/Icon";
 import { TiptapEditor } from "@/components/editor/TiptapEditor";
 import { EditorToolbar } from "@/components/editor/EditorToolbar";
+import { EditorFindBar } from "@/components/editor/EditorFindBar";
 import { BacklinksPanel } from "@/components/backlinks/BacklinksPanel";
 import { InfoPanel } from "@/components/editor/InfoPanel";
 import { exportAndDownload } from "@/utils/export";
@@ -39,11 +40,18 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     permanentlyDelete,
     restoreFormatPlayground,
   } = useNoteStore();
-  const { goBack, showToast, focusMode, toggleFocusMode, setFocusMode } =
-    useUIStore();
+  const {
+    goBack,
+    showToast,
+    focusMode,
+    toggleFocusMode,
+    setFocusMode,
+    findInNoteSignal,
+  } = useUIStore();
   const settings = useSettingsStore();
   const [showActions, setShowActions] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [findOpen, setFindOpen] = useState(false);
   const [editorInstance, setEditorInstance] = useState<Editor | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -94,7 +102,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   }, []);
 
   useEffect(() => {
-    if (!note || !isFormatPlaygroundNote(note.title)) return;
+    if (!note || !isFormatPlaygroundNote(note.title, note.content)) return;
     const migrated = migratePlaygroundContentIfStale(
       note.content,
       settings.locale,
@@ -103,6 +111,16 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       saveNoteContent(note.id, migrated);
     }
   }, [note?.id, note?.title, note?.content, settings.locale, saveNoteContent]);
+
+  useEffect(() => {
+    setFindOpen(false);
+  }, [note?.id]);
+
+  useEffect(() => {
+    if (findInNoteSignal === 0) return;
+    if (layout !== "desktop") return;
+    setFindOpen(true);
+  }, [findInNoteSignal, layout]);
 
   useEffect(() => {
     if (prevFocusModeRef.current === focusMode) return;
@@ -441,6 +459,14 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         )}
       </header>
 
+      {findOpen && editorInstance && layout === "desktop" && (
+        <EditorFindBar
+          key={findInNoteSignal}
+          editor={editorInstance}
+          onClose={() => setFindOpen(false)}
+        />
+      )}
+
       {/* Action menu with backdrop */}
       {showActions && (
         <>
@@ -511,7 +537,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
                     danger: false,
                     action: handleArchive,
                   },
-                  ...(isFormatPlaygroundNote(note.title)
+                  ...(isFormatPlaygroundNote(note.title, note.content)
                     ? [
                         {
                           label: t("notes.actions.restorePlayground"),
@@ -623,6 +649,17 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
             data-field="note-title"
             value={titleValue}
             onChange={(e) => handleTitleChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (layout !== "desktop") return;
+              if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
+              if (e.key.toLowerCase() !== "f") return;
+              e.preventDefault();
+              if (e.shiftKey) {
+                useUIStore.getState().openNoteSearch();
+              } else {
+                setFindOpen(true);
+              }
+            }}
             placeholder={t("editor.titlePlaceholder")}
             style={{
               width: "100%",

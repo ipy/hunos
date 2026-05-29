@@ -107,6 +107,14 @@
       "menuLabel": "Tag suggestions",
       "create": "Tag \"{{name}}\""
     },
+    "find": {
+      "placeholder": "Find in note…",
+      "noResults": "No results",
+      "matchCount": "{{current}} / {{total}}",
+      "next": "Next match",
+      "previous": "Previous match",
+      "close": "Close find"
+    },
     "focusMode": {
       "enter": "Enter focus mode",
       "exit": "Exit focus mode",

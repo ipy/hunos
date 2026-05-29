@@ -105,6 +105,14 @@
       "menuLabel": "Sugerencias de etiquetas",
       "create": "Etiqueta «{{name}}»"
     },
+    "find": {
+      "placeholder": "Buscar en la nota…",
+      "noResults": "Sin resultados",
+      "matchCount": "{{current}} / {{total}}",
+      "next": "Coincidencia siguiente",
+      "previous": "Coincidencia anterior",
+      "close": "Cerrar búsqueda"
+    },
     "focusMode": {
       "enter": "Modo enfoque",
       "exit": "Salir del modo enfoque",

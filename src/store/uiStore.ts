@@ -1,13 +1,13 @@
-import { create } from 'zustand';
-import type { Note } from '@/types/note';
-import { noteStorage } from '@/storage/noteStorage';
+import { create } from "zustand";
+import type { Note } from "@/types/note";
+import { noteStorage } from "@/storage/noteStorage";
 
-type Screen = 'tags' | 'noteList' | 'editor' | 'settings';
+type Screen = "tags" | "noteList" | "editor" | "settings";
 
 interface Toast {
   id: string;
   message: string;
-  type: 'info' | 'success' | 'error';
+  type: "info" | "success" | "error";
 }
 
 interface UIStore {
@@ -19,6 +19,7 @@ interface UIStore {
   sidebarVisible: boolean;
   focusMode: boolean;
   noteSearchOpen: boolean;
+  findInNoteSignal: number;
   toasts: Toast[];
 
   navigate: (screen: Screen) => void;
@@ -33,19 +34,21 @@ interface UIStore {
   toggleFocusMode: () => void;
   openNoteSearch: () => void;
   clearNoteSearchOpen: () => void;
-  showToast: (message: string, type?: Toast['type']) => void;
+  requestFindInNote: () => void;
+  showToast: (message: string, type?: Toast["type"]) => void;
   dismissToast: (id: string) => void;
 }
 
 export const useUIStore = create<UIStore>((set, get) => ({
-  currentScreen: 'noteList',
-  screenStack: ['noteList'],
-  searchQuery: '',
+  currentScreen: "noteList",
+  screenStack: ["noteList"],
+  searchQuery: "",
   searchResults: [],
   isSearching: false,
   sidebarVisible: false,
   focusMode: false,
   noteSearchOpen: false,
+  findInNoteSignal: 0,
   toasts: [],
 
   navigate: (screen) => {
@@ -53,7 +56,7 @@ export const useUIStore = create<UIStore>((set, get) => ({
     set({
       currentScreen: screen,
       screenStack: [...screenStack, screen],
-      ...(screen === 'settings' ? { focusMode: false } : {}),
+      ...(screen === "settings" ? { focusMode: false } : {}),
     });
   },
 
@@ -79,23 +82,27 @@ export const useUIStore = create<UIStore>((set, get) => ({
     set({ searchResults: results, isSearching: false });
   },
 
-  clearSearch: () => set({ searchQuery: '', searchResults: [], isSearching: false }),
+  clearSearch: () =>
+    set({ searchQuery: "", searchResults: [], isSearching: false }),
 
   showSidebar: () => set({ sidebarVisible: true }),
   hideSidebar: () => set({ sidebarVisible: false }),
-  toggleSidebar: () => set(s => ({ sidebarVisible: !s.sidebarVisible })),
+  toggleSidebar: () => set((s) => ({ sidebarVisible: !s.sidebarVisible })),
 
   setFocusMode: (enabled) => set({ focusMode: enabled }),
-  toggleFocusMode: () => set(s => ({ focusMode: !s.focusMode })),
+  toggleFocusMode: () => set((s) => ({ focusMode: !s.focusMode })),
 
   openNoteSearch: () => set({ focusMode: false, noteSearchOpen: true }),
   clearNoteSearchOpen: () => set({ noteSearchOpen: false }),
+  requestFindInNote: () =>
+    set((s) => ({ findInNoteSignal: s.findInNoteSignal + 1 })),
 
-  showToast: (message, type = 'info') => {
+  showToast: (message, type = "info") => {
     const id = Date.now().toString();
-    set(s => ({ toasts: [...s.toasts, { id, message, type }] }));
+    set((s) => ({ toasts: [...s.toasts, { id, message, type }] }));
     setTimeout(() => get().dismissToast(id), 3000);
   },
 
-  dismissToast: (id) => set(s => ({ toasts: s.toasts.filter(t => t.id !== id) })),
+  dismissToast: (id) =>
+    set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 }));

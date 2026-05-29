@@ -31,6 +31,7 @@ import { ListKeyboardShortcuts } from "./ListKeyboardShortcuts";
 import { BlockLineShortcuts } from "./BlockLineShortcuts";
 import { BlockMoveShortcuts } from "./BlockMoveShortcuts";
 import { HistoryKeyboardShortcuts } from "./HistoryKeyboardShortcuts";
+import { FindInNoteExtension } from "./FindInNoteExtension";
 import ListItem from "@tiptap/extension-list-item";
 import { SelectionBubbleMenu } from "./SelectionBubbleMenu";
 import Strike from "@tiptap/extension-strike";
@@ -222,6 +223,7 @@ export function TiptapEditor({
       BlockMoveShortcuts,
       BlockLineShortcuts,
       HistoryKeyboardShortcuts,
+      FindInNoteExtension,
     ],
     content: initialContent ? tryParseJson(initialContent) : undefined,
     onUpdate: ({ editor }) => {
@@ -499,6 +501,17 @@ export function TiptapEditor({
           text-decoration: underline;
           text-decoration-style: dotted;
           cursor: pointer;
+        }
+        .find-match-inactive {
+          background: ${theme.colors.accentLight};
+          border-radius: 2px;
+          padding: 0.05em 0;
+        }
+        .find-match-active {
+          background: ${theme.colors.accent};
+          color: ${theme.colors.accentText};
+          border-radius: 2px;
+          padding: 0.05em 0;
         }
       `}</style>
       <EditorContent editor={editor} />
