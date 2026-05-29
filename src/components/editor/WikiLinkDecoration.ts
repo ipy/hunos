@@ -4,6 +4,7 @@ import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import type { EditorState } from "@tiptap/pm/state";
 import { suppressWikiLinkSuggestionBriefly } from "./wikiLinkEditGuard";
+import { shouldNavigateWikiLinkClick } from "./wikiLinkClickUtils";
 
 const WIKI_LINK_REGEX = /\[\[([^\]]+)\]\]/g;
 const wikiLinkKey = new PluginKey("wikiLinkDecoration");
@@ -97,6 +98,10 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
   addProseMirrorPlugins() {
     const { onWikiLinkClick } = this.options;
 
+    let preClickSelectionFrom: number | null = null;
+    let preClickLinkSpan: { start: number; end: number } | null = null;
+    let navigationInFlight = false;
+
     return [
       new Plugin({
         key: wikiLinkKey,
@@ -105,17 +110,53 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
             return buildDecorations(state);
           },
           handleDOMEvents: {
-            mousedown(_view, event) {
+            mousedown(view, event) {
               const target = event.target as HTMLElement;
-              if (!target.closest(".wiki-link-content")) return false;
+              const linkEl = target.closest(".wiki-link-content");
+              if (!linkEl) {
+                preClickSelectionFrom = null;
+                preClickLinkSpan = null;
+                return false;
+              }
+
               suppressWikiLinkSuggestionBriefly();
+
+              const coords = view.posAtCoords({
+                left: event.clientX,
+                top: event.clientY,
+              });
+              if (!coords) {
+                preClickSelectionFrom = null;
+                preClickLinkSpan = null;
+                return false;
+              }
+
+              const wikiLinks = findWikiLinks(view.state.doc);
+              const linkAtPos = wikiLinks.find(
+                (wl) => coords.pos >= wl.start && coords.pos <= wl.end,
+              );
+              if (!linkAtPos) {
+                preClickSelectionFrom = null;
+                preClickLinkSpan = null;
+                return false;
+              }
+
+              preClickSelectionFrom = view.state.selection.from;
+              preClickLinkSpan = {
+                start: linkAtPos.start,
+                end: linkAtPos.end,
+              };
               return false;
             },
           },
           handleClick(view, pos, event) {
             const target = event.target as HTMLElement;
             const linkEl = target.closest(".wiki-link-content");
-            if (!linkEl) return false;
+            if (!linkEl) {
+              preClickSelectionFrom = null;
+              preClickLinkSpan = null;
+              return false;
+            }
 
             const title = linkEl.getAttribute("data-wiki-title");
             if (!title) return false;
@@ -124,14 +165,33 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
             const linkAtPos = wikiLinks.find(
               (wl) => pos >= wl.start && pos <= wl.end,
             );
-            if (linkAtPos) {
-              const { from } = view.state.selection;
-              const cursorInside =
-                from >= linkAtPos.start && from <= linkAtPos.end;
-              if (cursorInside) return false;
+            if (!linkAtPos) return false;
+
+            const selectionFromBeforeClick =
+              preClickLinkSpan?.start === linkAtPos.start &&
+              preClickLinkSpan?.end === linkAtPos.end &&
+              preClickSelectionFrom !== null
+                ? preClickSelectionFrom
+                : view.state.selection.from;
+
+            preClickSelectionFrom = null;
+            preClickLinkSpan = null;
+
+            if (
+              !shouldNavigateWikiLinkClick(
+                selectionFromBeforeClick,
+                linkAtPos,
+              )
+            ) {
+              return false;
             }
 
-            onWikiLinkClick(title);
+            if (navigationInFlight) return true;
+
+            navigationInFlight = true;
+            void Promise.resolve(onWikiLinkClick(title)).finally(() => {
+              navigationInFlight = false;
+            });
             return true;
           },
         },
