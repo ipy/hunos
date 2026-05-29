@@ -31,6 +31,8 @@ import { EditorKeyboardShortcuts } from "./EditorKeyboardShortcuts";
 import { ListOutlineShortcuts } from "./ListOutlineShortcuts";
 import { ListKeyboardShortcuts } from "./ListKeyboardShortcuts";
 import { BlockLineShortcuts } from "./BlockLineShortcuts";
+import { BlockExitKeyboardShortcuts } from "./BlockExitKeyboardShortcuts";
+import { CodeBlockExitKeyboardShortcuts } from "./CodeBlockExitKeyboardShortcuts";
 import { BlockMoveShortcuts } from "./BlockMoveShortcuts";
 import { HistoryKeyboardShortcuts } from "./HistoryKeyboardShortcuts";
 import { FindInNoteExtension } from "./FindInNoteExtension";
@@ -245,6 +247,8 @@ export function TiptapEditor({
       ListOutlineShortcuts,
       TableKeyboardShortcuts,
       ListKeyboardShortcuts,
+      BlockExitKeyboardShortcuts,
+      CodeBlockExitKeyboardShortcuts,
       BlockMoveShortcuts,
       BlockLineShortcuts,
       HistoryKeyboardShortcuts,

@@ -77,6 +77,12 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(tryHintNode?.content?.[0]?.text).toContain(
       "Cmd+Shift+F search all notes",
     );
+    expect(tryHintNode?.content?.[0]?.text).toContain(
+      "Enter on empty blockquote lines to exit the quote",
+    );
+    expect(tryHintNode?.content?.[0]?.text).toContain(
+      "Mod+Enter (or Enter on an empty last code line) to leave code blocks",
+    );
   });
 
   it("updates code block sample and language for stale playground notes", () => {
@@ -264,6 +270,10 @@ describe("migratePlaygroundContentIfStale", () => {
     );
     expect(tryHintNode?.content?.[0]?.text).toContain(
       "Cmd+Shift+F 搜索全部笔记",
+    );
+    expect(tryHintNode?.content?.[0]?.text).toContain("空引用行按 Enter 退出引用");
+    expect(tryHintNode?.content?.[0]?.text).toContain(
+      "Mod+Enter（或代码块末尾空行连按 Enter）离开代码块",
     );
   });
 
