@@ -9,6 +9,7 @@ import type {
 } from "@/types/settings";
 import { DEFAULT_SETTINGS } from "@/types/settings";
 import { settingsStorage } from "@/storage/settingsStorage";
+import { bootstrapAppData } from "@/app/bootstrapAppData";
 import { syncFormatPlaygroundOnLocaleChange } from "@/storage/formatPlaygroundNote";
 import { flushEditorAutosave } from "@/store/editorAutosaveRegistry";
 import { readLocaleFromUrl, writeLocaleToUrl } from "@/utils/localeBootstrap";
@@ -46,8 +47,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       settings.locale = urlLocale;
     }
 
-    const flushedContent = await flushEditorAutosave();
-    await syncFormatPlaygroundOnLocaleChange(effectiveLocale, flushedContent);
+    await bootstrapAppData(effectiveLocale);
 
     set({ ...settings, isLoaded: true });
   },

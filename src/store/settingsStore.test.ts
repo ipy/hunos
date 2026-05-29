@@ -3,6 +3,7 @@ import { DEFAULT_SETTINGS } from "@/types/settings";
 
 const settingsStorageGetAll = vi.fn();
 const settingsStorageSet = vi.fn().mockResolvedValue(undefined);
+const bootstrapAppData = vi.fn().mockResolvedValue(undefined);
 const flushEditorAutosave = vi.fn().mockResolvedValue(null);
 const syncFormatPlaygroundOnLocaleChange = vi.fn().mockResolvedValue(undefined);
 const writeLocaleToUrl = vi.fn();
@@ -12,6 +13,10 @@ vi.mock("@/storage/settingsStorage", () => ({
     getAll: () => settingsStorageGetAll(),
     set: (...args: unknown[]) => settingsStorageSet(...args),
   },
+}));
+
+vi.mock("@/app/bootstrapAppData", () => ({
+  bootstrapAppData: (...args: unknown[]) => bootstrapAppData(...args),
 }));
 
 vi.mock("@/store/editorAutosaveRegistry", () => ({
@@ -39,6 +44,7 @@ describe("useSettingsStore", () => {
     settingsStorageGetAll.mockReset();
     settingsStorageSet.mockClear();
     flushEditorAutosave.mockClear();
+    bootstrapAppData.mockClear();
     syncFormatPlaygroundOnLocaleChange.mockClear();
     writeLocaleToUrl.mockClear();
     settingsStorageGetAll.mockResolvedValue({ ...DEFAULT_SETTINGS });
@@ -57,7 +63,7 @@ describe("useSettingsStore", () => {
     expect(useSettingsStore.getState().locale).toBe("en");
   });
 
-  it("loadSettings reconciles playground even when URL locale matches stored locale", async () => {
+  it("loadSettings bootstraps app data before marking loaded", async () => {
     const { readLocaleFromUrl } = await import("@/utils/localeBootstrap");
     vi.mocked(readLocaleFromUrl).mockReturnValue("zh");
     settingsStorageGetAll.mockResolvedValue({
@@ -68,7 +74,7 @@ describe("useSettingsStore", () => {
     const { useSettingsStore } = await import("./settingsStore");
     await useSettingsStore.getState().loadSettings();
 
-    expect(syncFormatPlaygroundOnLocaleChange).toHaveBeenCalledWith("zh", null);
+    expect(bootstrapAppData).toHaveBeenCalledWith("zh");
     expect(useSettingsStore.getState().isLoaded).toBe(true);
   });
 });

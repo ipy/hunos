@@ -119,4 +119,26 @@ describe("syncFormatPlaygroundOnLocaleChange", () => {
     expect(imagesSection).toBeGreaterThan(-1);
     expect(saveNoteTitle).toHaveBeenCalledWith("pg-1", "格式试炼场");
   });
+
+  it("prefers canonical playground title when another note has playground attrs", async () => {
+    mockNoteStoreState.activeNoteId = null;
+    mockNoteStoreState.notes = [];
+    noteStorageList.mockResolvedValue([
+      {
+        id: "welcome-1",
+        title: "欢迎使用 Hunos",
+        content: JSON.stringify(buildPlaygroundContent("zh")),
+      },
+      {
+        id: "pg-1",
+        title: "Format Playground",
+        content: JSON.stringify(buildPlaygroundContent("en")),
+      },
+    ]);
+
+    await syncFormatPlaygroundOnLocaleChange("zh");
+
+    expect(saveNoteTitle).toHaveBeenCalledWith("pg-1", "格式试炼场");
+    expect(saveNoteTitle).not.toHaveBeenCalledWith("welcome-1", expect.anything());
+  });
 });

@@ -714,6 +714,19 @@ export function migratePlaygroundContentIfStale(
   return JSON.stringify(updated);
 }
 
+function pickFormatPlaygroundNote<
+  T extends { id: string; title: string; content: string },
+>(candidates: T[]): T | undefined {
+  const matches = candidates.filter((n) =>
+    isFormatPlaygroundNote(n.title, n.content),
+  );
+  if (matches.length === 0) return undefined;
+  return (
+    matches.find((n) => FORMAT_PLAYGROUND_TITLES.includes(n.title)) ??
+    matches[0]
+  );
+}
+
 async function findFormatPlaygroundNoteForSync() {
   const { activeNoteId, notes } = useNoteStore.getState();
 
@@ -724,11 +737,11 @@ async function findFormatPlaygroundNoteForSync() {
     }
   }
 
-  const inStore = notes.find((n) => isFormatPlaygroundNote(n.title, n.content));
+  const inStore = pickFormatPlaygroundNote(notes);
   if (inStore) return inStore;
 
   const storedNotes = await noteStorage.list();
-  return storedNotes.find((n) => isFormatPlaygroundNote(n.title, n.content));
+  return pickFormatPlaygroundNote(storedNotes);
 }
 
 /** Flush-aware playground sync when settings locale changes (Settings or URL bootstrap). */

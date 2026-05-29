@@ -2,8 +2,6 @@ import React, { useEffect } from "react";
 import "@/i18n";
 import { ThemeProvider, useTheme } from "@/theme/ThemeContext";
 import { useSettingsStore } from "@/store/settingsStore";
-import { useTagStore } from "@/store/tagStore";
-import { useNoteStore } from "@/store/noteStore";
 import { useUIStore } from "@/store/uiStore";
 import { useAdaptiveLayout } from "@/hooks/useAdaptiveLayout";
 import { useAppKeyboardShortcuts } from "@/hooks/useAppKeyboardShortcuts";
@@ -13,31 +11,17 @@ import { EditorScreen } from "@/screens/EditorScreen";
 import { SettingsScreen } from "@/screens/SettingsScreen";
 import { ToastContainer } from "@/components/common/Toast";
 import { useTranslation } from "react-i18next";
-import { noteStorage } from "@/storage/noteStorage";
-import { createWelcomeNotesIfNeeded } from "@/storage/welcomeNotes";
 
 function AppContent() {
   const layout = useAdaptiveLayout();
   const { currentScreen, showSidebar, sidebarVisible, hideSidebar, focusMode } =
     useUIStore();
-  const { loadTags } = useTagStore();
-  const { loadNotes } = useNoteStore();
   const { i18n } = useTranslation();
   const { locale } = useSettingsStore();
   const theme = useTheme();
   const borderColor = theme.colors.border;
 
   useAppKeyboardShortcuts();
-
-  useEffect(() => {
-    async function init() {
-      await createWelcomeNotesIfNeeded(locale);
-      loadTags();
-      loadNotes({ status: "active" });
-      noteStorage.purgeTrash(30 * 24 * 60 * 60 * 1000);
-    }
-    init();
-  }, []);
 
   useEffect(() => {
     i18n.changeLanguage(locale);
