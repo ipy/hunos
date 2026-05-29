@@ -162,6 +162,67 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(last?.content?.[0]?.text).toBe("User test block");
   });
 
+  it("preserves user-resized sample image height during locale migration", () => {
+    const resizeAndMigrate = (
+      fromLocale: "en" | "zh",
+      toLocale: "en" | "zh",
+      resizedHeight: number,
+    ) => {
+      const stale = buildPlaygroundContent(fromLocale) as {
+        type: "doc";
+        content: Array<{
+          type: string;
+          attrs?: { src?: string; height?: number };
+          content?: Array<{ text?: string }>;
+        }>;
+      };
+      const imagesSectionIndex = stale.content.findIndex(
+        (node) =>
+          node.type === "heading" &&
+          node.content?.[0]?.text ===
+            (fromLocale === "zh" ? "图片" : "Images"),
+      );
+      const imageNode = stale.content[imagesSectionIndex + 2];
+      if (imageNode?.attrs) {
+        imageNode.attrs.height = resizedHeight;
+      }
+
+      const migrated = migratePlaygroundContentIfStale(
+        JSON.stringify(stale),
+        toLocale,
+      );
+      expect(migrated).not.toBeNull();
+
+      const parsed = JSON.parse(migrated!) as {
+        attrs?: { playgroundContentLocale?: string };
+        content: Array<{
+          type: string;
+          attrs?: { src?: string; height?: number; alt?: string };
+          content?: Array<{ text?: string }>;
+        }>;
+      };
+      expect(parsed.attrs?.playgroundContentLocale).toBe(toLocale);
+
+      const migratedImagesSectionIndex = parsed.content.findIndex(
+        (node) =>
+          node.type === "heading" &&
+          node.content?.[0]?.text === (toLocale === "zh" ? "图片" : "Images"),
+      );
+      expect(migratedImagesSectionIndex).toBeGreaterThan(-1);
+
+      const migratedImage = parsed.content[migratedImagesSectionIndex + 2];
+      expect(migratedImage?.type).toBe("image");
+      expect(migratedImage?.attrs?.src).toBe(PLAYGROUND_SAMPLE_IMAGE_SRC);
+      expect(migratedImage?.attrs?.height).toBe(resizedHeight);
+      expect(migratedImage?.attrs?.alt).toBe(
+        toLocale === "zh" ? "示例" : "Sample",
+      );
+    };
+
+    resizeAndMigrate("en", "zh", 215);
+    resizeAndMigrate("zh", "en", 228);
+  });
+
   it("updates tryHint and version for stale playground notes", () => {
     const stale = buildPlaygroundContent("en") as {
       type: "doc";

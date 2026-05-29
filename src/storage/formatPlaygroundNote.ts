@@ -462,6 +462,22 @@ function findPlaygroundSeedEndIndex(nodes: PlaygroundDocNode[]): number {
   return Math.min(tryIndex + 4, nodes.length);
 }
 
+function findPlaygroundSampleImageIndex(nodes: PlaygroundDocNode[]): number {
+  return nodes.findIndex(
+    (node) =>
+      node.type === "image" &&
+      node.attrs?.src === PLAYGROUND_SAMPLE_IMAGE_SRC,
+  );
+}
+
+function readPlaygroundSampleImageHeight(
+  nodes: PlaygroundDocNode[],
+): number | undefined {
+  const imageNode = nodes[findPlaygroundSampleImageIndex(nodes)];
+  const height = imageNode?.attrs?.height;
+  return typeof height === "number" ? height : undefined;
+}
+
 function applyPlaygroundLocaleMigration(
   parsed: PlaygroundDoc,
   locale: Locale,
@@ -469,9 +485,26 @@ function applyPlaygroundLocaleMigration(
   const fresh = buildPlaygroundContent(locale) as PlaygroundDoc;
   const seedEnd = findPlaygroundSeedEndIndex(parsed.content);
   const userSuffix = parsed.content.slice(seedEnd);
+  const preservedHeight = readPlaygroundSampleImageHeight(parsed.content);
+  const freshContent = [...fresh.content];
+
+  if (preservedHeight != null) {
+    const sampleIndex = findPlaygroundSampleImageIndex(freshContent);
+    if (sampleIndex !== -1) {
+      const sampleNode = freshContent[sampleIndex];
+      freshContent[sampleIndex] = {
+        ...sampleNode,
+        attrs: {
+          ...sampleNode.attrs,
+          height: preservedHeight,
+        },
+      };
+    }
+  }
+
   return {
     ...fresh,
-    content: [...fresh.content, ...userSuffix],
+    content: [...freshContent, ...userSuffix],
   };
 }
 
