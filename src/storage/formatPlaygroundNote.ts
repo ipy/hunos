@@ -5,7 +5,7 @@ import type { Locale } from "@/types/settings";
 
 type PlaygroundLocale = "en" | "zh";
 
-export const PLAYGROUND_CONTENT_VERSION = 8;
+export const PLAYGROUND_CONTENT_VERSION = 9;
 
 export const FORMAT_PLAYGROUND_TITLES: readonly string[] = [
   "Format Playground",
@@ -95,7 +95,7 @@ const STRINGS: Record<PlaygroundLocale, PlaygroundStrings> = {
     tag: "#format-test",
     wikiLink: "[[Welcome to Hunos]]",
     tryHint:
-      "Add new blocks below — type # / ## / ### , - , 1. , - [ ] , > , ``` , --- , type # for tag autocomplete, or [[ to link notes with autocomplete. Desktop shortcuts: Cmd+B/I/Shift+X/K, Cmd+Enter for tasks, Tab / Shift+Tab to nest lists, Cmd+Alt+↑/↓ to move lines, Cmd+D to duplicate line, Cmd+Shift+K to delete line, Cmd+Z / Cmd+Shift+Z to undo and redo, Enter on empty list items to outdent or exit, Backspace at line start to outdent nested items, Cmd+N new note, Cmd+F find in note, Cmd+Option+F find and replace, Cmd+Shift+F search all notes.",
+      "Add new blocks below — type # / ## / ### , - , 1. , - [ ] , > , ``` , --- , | Name | Type | for tables, type # for tag autocomplete, or [[ to link notes with autocomplete. Desktop shortcuts: Cmd+B/I/Shift+X/K, Cmd+Enter for tasks (or add table row in cells), Tab / Shift+Tab to nest lists or move between table cells, Mod+Shift+Enter add table column, Mod+Backspace delete table row, Mod+Shift+Backspace delete table column, Cmd+Alt+↑/↓ to move lines, Cmd+D to duplicate line, Cmd+Shift+K to delete line, Cmd+Z / Cmd+Shift+Z to undo and redo, Enter on empty list items to outdent or exit, Backspace at line start to outdent nested items, Cmd+N new note, Cmd+F find in note, Cmd+Option+F find and replace, Cmd+Shift+F search all notes.",
   },
   zh: {
     title: "格式试炼场",
@@ -138,7 +138,7 @@ const STRINGS: Record<PlaygroundLocale, PlaygroundStrings> = {
     tag: "#格式测试",
     wikiLink: "[[欢迎使用 Hunos]]",
     tryHint:
-      "在下方空行试输入 # / ## / ### 、- 、1. 、- [ ] 、> 、``` 、--- ，输入 # 可用标签自动完成，或输入 [[ 链接笔记。桌面快捷键：Cmd+B/I/Shift+X/K、Cmd+Enter 切换任务、Tab / Shift+Tab 嵌套列表、Cmd+Alt+↑/↓ 移动行、Cmd+D 复制行、Cmd+Shift+K 删除行、Cmd+Z / Cmd+Shift+Z 撤销与重做、空列表项按 Enter 降级或退出列表、行首 Backspace 降级嵌套项、Cmd+N 新建笔记、Cmd+F 在笔记内查找、Cmd+Option+F 查找并替换、Cmd+Shift+F 搜索全部笔记。",
+      "在下方空行试输入 # / ## / ### 、- 、1. 、- [ ] 、> 、``` 、--- 、| 名称 | 类型 | 创建表格，输入 # 可用标签自动完成，或输入 [[ 链接笔记。桌面快捷键：Cmd+B/I/Shift+X/K、Cmd+Enter 切换任务（或在表格单元格内添加行）、Tab / Shift+Tab 嵌套列表或在表格单元格间移动、Mod+Shift+Enter 添加表格列、Mod+Backspace 删除表格行、Mod+Shift+Backspace 删除表格列、Cmd+Alt+↑/↓ 移动行、Cmd+D 复制行、Cmd+Shift+K 删除行、Cmd+Z / Cmd+Shift+Z 撤销与重做、空列表项按 Enter 降级或退出列表、行首 Backspace 降级嵌套项、Cmd+N 新建笔记、Cmd+F 在笔记内查找、Cmd+Option+F 查找并替换、Cmd+Shift+F 搜索全部笔记。",
   },
 };
 

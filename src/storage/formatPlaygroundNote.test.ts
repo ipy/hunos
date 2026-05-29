@@ -108,6 +108,52 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(codeBlock?.content?.[0]?.text).toContain("function greet");
   });
 
+  it("includes table hints in en seed", () => {
+    const content = buildPlaygroundContent("en") as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    const trySectionIndex = content.content.findIndex(
+      (node) =>
+        node.type === "heading" && node.content?.[0]?.text === "Try Your Own",
+    );
+    const tryHintNode = content.content[trySectionIndex + 1];
+    expect(tryHintNode?.content?.[0]?.text).toContain("| Name | Type |");
+    expect(tryHintNode?.content?.[0]?.text).toContain(
+      "Mod+Backspace delete table row",
+    );
+  });
+
+  it("updates tryHint with table syntax for stale playground notes", () => {
+    const stale = buildPlaygroundContent("en") as {
+      type: "doc";
+      attrs?: { playgroundContentVersion?: number };
+      content: unknown[];
+    };
+    stale.attrs = { playgroundContentVersion: 8 };
+    const staleContent = JSON.stringify(stale);
+
+    const migrated = migratePlaygroundContentIfStale(staleContent, "en");
+    expect(migrated).not.toBeNull();
+
+    const parsed = JSON.parse(migrated!) as {
+      attrs?: { playgroundContentVersion?: number };
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    expect(parsed.attrs?.playgroundContentVersion).toBe(
+      PLAYGROUND_CONTENT_VERSION,
+    );
+
+    const trySectionIndex = parsed.content.findIndex(
+      (node) =>
+        node.type === "heading" && node.content?.[0]?.text === "Try Your Own",
+    );
+    const tryHintNode = parsed.content[trySectionIndex + 1];
+    expect(tryHintNode?.content?.[0]?.text).toContain("| Name | Type |");
+    expect(tryHintNode?.content?.[0]?.text).toContain(
+      "move between table cells",
+    );
+  });
+
   it("includes undo/redo hints in zh seed", () => {
     const content = buildPlaygroundContent("zh") as {
       content: Array<{ type: string; content?: Array<{ text?: string }> }>;
@@ -118,6 +164,10 @@ describe("migratePlaygroundContentIfStale", () => {
     );
     const tryHintNode = content.content[trySectionIndex + 1];
     expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+Z");
+    expect(tryHintNode?.content?.[0]?.text).toContain("| 名称 | 类型 |");
+    expect(tryHintNode?.content?.[0]?.text).toContain(
+      "Mod+Backspace 删除表格行",
+    );
     expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+Shift+Z");
     expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+F 在笔记内查找");
     expect(tryHintNode?.content?.[0]?.text).toContain(

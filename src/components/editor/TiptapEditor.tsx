@@ -32,6 +32,8 @@ import { BlockLineShortcuts } from "./BlockLineShortcuts";
 import { BlockMoveShortcuts } from "./BlockMoveShortcuts";
 import { HistoryKeyboardShortcuts } from "./HistoryKeyboardShortcuts";
 import { FindInNoteExtension } from "./FindInNoteExtension";
+import { MarkdownTableInput } from "./MarkdownTableInput";
+import { TableKeyboardShortcuts } from "./TableKeyboardShortcuts";
 import { getHunosCodeBlockExtension } from "./HunosCodeBlock";
 import { getCodeBlockHighlightStyles } from "./codeBlockHighlightStyles";
 import ListItem from "@tiptap/extension-list-item";
@@ -158,6 +160,7 @@ export function TiptapEditor({
       }),
       MarkdownBold,
       MarkdownShortcuts,
+      MarkdownTableInput,
       MarkdownBulletList,
       Placeholder.configure({
         placeholder: t("editor.placeholder"),
@@ -223,6 +226,7 @@ export function TiptapEditor({
       FocusModeShortcuts,
       EditorKeyboardShortcuts,
       ListOutlineShortcuts,
+      TableKeyboardShortcuts,
       ListKeyboardShortcuts,
       BlockMoveShortcuts,
       BlockLineShortcuts,
@@ -426,10 +430,13 @@ export function TiptapEditor({
         .hunos-editor img[data-sketch="true"]:hover + .sketch-resize-handle {
           opacity: 1;
         }
+        .hunos-editor .tableWrapper {
+          overflow-x: auto;
+          margin: 0.6em 0;
+        }
         .hunos-editor table {
           border-collapse: collapse;
           width: 100%;
-          margin: 0.6em 0;
           overflow: hidden;
           border-radius: 6px;
           border: 1px solid ${theme.colors.border};

@@ -54,3 +54,131 @@ describe("exportNote markdown code blocks", () => {
     );
   });
 });
+
+describe("exportNote markdown tables", () => {
+  it("exports header row, separator, and data rows", () => {
+    const note = makeNote({
+      type: "doc",
+      content: [
+        {
+          type: "table",
+          content: [
+            {
+              type: "tableRow",
+              content: [
+                {
+                  type: "tableHeader",
+                  content: [
+                    {
+                      type: "paragraph",
+                      content: [{ type: "text", text: "Name" }],
+                    },
+                  ],
+                },
+                {
+                  type: "tableHeader",
+                  content: [
+                    {
+                      type: "paragraph",
+                      content: [{ type: "text", text: "Type" }],
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              type: "tableRow",
+              content: [
+                {
+                  type: "tableCell",
+                  content: [
+                    {
+                      type: "paragraph",
+                      content: [{ type: "text", text: "Alpha" }],
+                    },
+                  ],
+                },
+                {
+                  type: "tableCell",
+                  content: [
+                    {
+                      type: "paragraph",
+                      content: [{ type: "text", text: "Beta" }],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(exportNote(note, "markdown")).toBe(
+      "| Name | Type |\n| --- | --- |\n| Alpha | Beta |",
+    );
+  });
+
+  it("exports edited multi-row tables", () => {
+    const note = makeNote({
+      type: "doc",
+      content: [
+        {
+          type: "table",
+          content: [
+            {
+              type: "tableRow",
+              content: [
+                {
+                  type: "tableHeader",
+                  content: [
+                    {
+                      type: "paragraph",
+                      content: [{ type: "text", text: "Bold" }],
+                    },
+                  ],
+                },
+                {
+                  type: "tableHeader",
+                  content: [
+                    {
+                      type: "paragraph",
+                      content: [{ type: "text", text: "Mark" }],
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              type: "tableRow",
+              content: [
+                {
+                  type: "tableCell",
+                  content: [
+                    {
+                      type: "paragraph",
+                      content: [{ type: "text", text: "Edited" }],
+                    },
+                  ],
+                },
+                {
+                  type: "tableCell",
+                  content: [
+                    {
+                      type: "paragraph",
+                      content: [{ type: "text", text: "Italic" }],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(exportNote(note, "markdown")).toContain("| Bold | Mark |");
+    expect(exportNote(note, "markdown")).toContain("| --- | --- |");
+    expect(exportNote(note, "markdown")).toContain("| Edited | Italic |");
+  });
+});
