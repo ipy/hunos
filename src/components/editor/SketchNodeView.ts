@@ -3,8 +3,12 @@ import { Plugin, PluginKey } from "prosemirror-state";
 import { Decoration, DecorationSet } from "prosemirror-view";
 import {
   computeImageResizeHeight,
+  createImageResizeHandle,
+  getSelectedBlockImagePos,
   handleBlockImageClick,
+  handleBlockImageClickFromTarget,
   isResizableBlockImage,
+  syncEditorImageSelectionAttributes,
 } from "./imageResizeUtils";
 
 const IMAGE_RESIZE_KEY = new PluginKey("imageResize");
@@ -16,21 +20,35 @@ export const SketchResize = Extension.create({
     return [
       new Plugin({
         key: IMAGE_RESIZE_KEY,
+        view(editorView) {
+          syncEditorImageSelectionAttributes(editorView);
+          return {
+            update(view) {
+              syncEditorImageSelectionAttributes(view);
+            },
+          };
+        },
         props: {
           handleClickOn(view, _pos, node, nodePos) {
             return handleBlockImageClick(view, node, nodePos);
           },
 
+          handleClick(view, _pos, event) {
+            return handleBlockImageClickFromTarget(view, event);
+          },
+
           decorations(state) {
             const { doc } = state;
+            const selectedImagePos = getSelectedBlockImagePos(state);
             const decorations: Decoration[] = [];
 
             doc.descendants((node, pos) => {
               if (isResizableBlockImage(node)) {
                 const endPos = pos + node.nodeSize;
-                const handle = document.createElement("div");
-                handle.className = "sketch-resize-handle";
-                handle.setAttribute("data-image-resize-pos", String(pos));
+                const handle = createImageResizeHandle(
+                  pos,
+                  selectedImagePos === pos,
+                );
                 decorations.push(
                   Decoration.widget(endPos, handle, { side: -1 }),
                 );

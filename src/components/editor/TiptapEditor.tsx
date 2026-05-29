@@ -465,6 +465,9 @@ export function TiptapEditor({
           opacity: 0;
           transition: opacity 0.15s ease;
         }
+        .sketch-resize-handle[data-active="true"] {
+          opacity: 1;
+        }
         .sketch-resize-handle:hover,
         .sketch-resize-handle:active {
           opacity: 1;

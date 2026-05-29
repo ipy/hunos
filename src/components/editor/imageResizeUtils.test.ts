@@ -3,7 +3,10 @@ import { Schema } from "@tiptap/pm/model";
 import { EditorState, NodeSelection, TextSelection } from "@tiptap/pm/state";
 import {
   computeImageResizeHeight,
+  getSelectedBlockImagePos,
   handleBlockImageClick,
+  imageResizeHandleAttributes,
+  isImageResizeHandleActive,
   isResizableBlockImage,
   MIN_BLOCK_IMAGE_HEIGHT,
 } from "./imageResizeUtils";
@@ -30,6 +33,61 @@ describe("isResizableBlockImage", () => {
   it("returns false for non-image nodes", () => {
     const paragraph = schema.nodes.paragraph.create();
     expect(isResizableBlockImage(paragraph)).toBe(false);
+  });
+});
+
+describe("getSelectedBlockImagePos", () => {
+  it("returns position when a block image is node-selected", () => {
+    const image = schema.nodes.image.create({ src: "test.png" });
+    const doc = schema.node("doc", null, [image]);
+    const state = EditorState.create({
+      doc,
+      schema,
+      selection: NodeSelection.create(doc, 0),
+    });
+
+    expect(getSelectedBlockImagePos(state)).toBe(0);
+  });
+
+  it("returns null for text selection", () => {
+    const image = schema.nodes.image.create({ src: "test.png" });
+    const doc = schema.node("doc", null, [image]);
+    const state = EditorState.create({
+      doc,
+      schema,
+      selection: TextSelection.create(doc, 1),
+    });
+
+    expect(getSelectedBlockImagePos(state)).toBeNull();
+  });
+});
+
+describe("isImageResizeHandleActive", () => {
+  it("is true only for the selected image position", () => {
+    const image = schema.nodes.image.create({ src: "test.png" });
+    const doc = schema.node("doc", null, [image]);
+    const state = EditorState.create({
+      doc,
+      schema,
+      selection: NodeSelection.create(doc, 0),
+    });
+
+    expect(isImageResizeHandleActive(state, 0)).toBe(true);
+    expect(isImageResizeHandleActive(state, 1)).toBe(false);
+  });
+});
+
+describe("imageResizeHandleAttributes", () => {
+  it("marks active handles for automation", () => {
+    expect(imageResizeHandleAttributes(3, true)).toEqual({
+      "data-testid": "image-resize-handle",
+      "data-image-resize-pos": "3",
+      "data-active": "true",
+    });
+    expect(imageResizeHandleAttributes(3, false)).toEqual({
+      "data-testid": "image-resize-handle",
+      "data-image-resize-pos": "3",
+    });
   });
 });
 
