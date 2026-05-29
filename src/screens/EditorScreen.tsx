@@ -132,9 +132,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
     const json =
       pendingContentRef.current ??
-      (editorInstance
-        ? JSON.stringify(editorInstance.getJSON())
-        : null);
+      (editorInstance ? JSON.stringify(editorInstance.getJSON()) : null);
 
     if (!json) return null;
 
@@ -146,8 +144,13 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   useEffect(() => {
     registerEditorAutosaveFlush(flushPendingAutosave);
     return () => {
-      void flushPendingAutosave();
-      unregisterEditorAutosaveFlush(flushPendingAutosave);
+      void (async () => {
+        try {
+          await flushPendingAutosave();
+        } finally {
+          unregisterEditorAutosaveFlush(flushPendingAutosave);
+        }
+      })();
       if (titleTimeoutRef.current) clearTimeout(titleTimeoutRef.current);
     };
   }, [flushPendingAutosave]);

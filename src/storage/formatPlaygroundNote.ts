@@ -466,8 +466,7 @@ function findPlaygroundSeedEndIndex(nodes: PlaygroundDocNode[]): number {
 function findPlaygroundSampleImageIndex(nodes: PlaygroundDocNode[]): number {
   return nodes.findIndex(
     (node) =>
-      node.type === "image" &&
-      node.attrs?.src === PLAYGROUND_SAMPLE_IMAGE_SRC,
+      node.type === "image" && node.attrs?.src === PLAYGROUND_SAMPLE_IMAGE_SRC,
   );
 }
 
@@ -693,19 +692,35 @@ export function migratePlaygroundContentIfStale(
   return JSON.stringify(updated);
 }
 
+async function findFormatPlaygroundNoteForSync() {
+  const { activeNoteId, notes } = useNoteStore.getState();
+
+  if (activeNoteId) {
+    const active = notes.find((n) => n.id === activeNoteId);
+    if (active && isFormatPlaygroundNote(active.title, active.content)) {
+      return active;
+    }
+  }
+
+  const inStore = notes.find((n) => isFormatPlaygroundNote(n.title, n.content));
+  if (inStore) return inStore;
+
+  const storedNotes = await noteStorage.list();
+  return storedNotes.find((n) => isFormatPlaygroundNote(n.title, n.content));
+}
+
 /** Flush-aware playground sync when settings locale changes (Settings or URL bootstrap). */
 export async function syncFormatPlaygroundOnLocaleChange(
   locale: Locale,
   flushedContent?: string | null,
 ): Promise<void> {
-  const { activeNoteId, notes, saveNoteContent, saveNoteTitle } =
+  const note = await findFormatPlaygroundNoteForSync();
+  if (!note) return;
+
+  const { activeNoteId, saveNoteContent, saveNoteTitle } =
     useNoteStore.getState();
-  if (!activeNoteId) return;
-
-  const note = notes.find((n) => n.id === activeNoteId);
-  if (!note || !isFormatPlaygroundNote(note.title, note.content)) return;
-
-  const sourceContent = flushedContent ?? note.content;
+  const sourceContent =
+    flushedContent && activeNoteId === note.id ? flushedContent : note.content;
   const migrated = migratePlaygroundContentIfStale(sourceContent, locale);
   const expectedTitle = getFormatPlaygroundTitle(locale);
   const titleNeedsUpdate =

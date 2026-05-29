@@ -11,7 +11,7 @@ import { DEFAULT_SETTINGS } from "@/types/settings";
 import { settingsStorage } from "@/storage/settingsStorage";
 import { syncFormatPlaygroundOnLocaleChange } from "@/storage/formatPlaygroundNote";
 import { flushEditorAutosave } from "@/store/editorAutosaveRegistry";
-import { readLocaleFromUrl } from "@/utils/localeBootstrap";
+import { readLocaleFromUrl, writeLocaleToUrl } from "@/utils/localeBootstrap";
 
 interface SettingsStore extends AppSettings {
   isLoaded: boolean;
@@ -39,12 +39,16 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   loadSettings: async () => {
     const settings = await settingsStorage.getAll();
     const urlLocale = readLocaleFromUrl();
+    const effectiveLocale = urlLocale ?? settings.locale;
+
     if (urlLocale && urlLocale !== settings.locale) {
-      const flushedContent = await flushEditorAutosave();
-      await syncFormatPlaygroundOnLocaleChange(urlLocale, flushedContent);
       await settingsStorage.set("locale", urlLocale);
       settings.locale = urlLocale;
     }
+
+    const flushedContent = await flushEditorAutosave();
+    await syncFormatPlaygroundOnLocaleChange(effectiveLocale, flushedContent);
+
     set({ ...settings, isLoaded: true });
   },
 
@@ -61,6 +65,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     await syncFormatPlaygroundOnLocaleChange(locale, flushedContent);
 
     await settingsStorage.set("locale", locale);
+    writeLocaleToUrl(locale);
     set({ locale });
   },
 
