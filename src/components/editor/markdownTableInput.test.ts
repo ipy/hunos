@@ -3,11 +3,13 @@ import { EditorState, TextSelection } from "@tiptap/pm/state";
 import { describe, expect, it } from "vitest";
 import {
   applyPipeTableInputRule,
+  createTableFromPipeTable,
   createTableWithHeaderRow,
   findPipeTableInputMatch,
   isBlockedForTableInput,
   isTableSeparatorRow,
   parsePipeTableRow,
+  parsePipeTableText,
   PIPE_TABLE_INPUT_REGEX,
 } from "./markdownTableUtils";
 
@@ -49,6 +51,104 @@ describe("findPipeTableInputMatch", () => {
 
   it("ignores inline pipe text without line-start pipes", () => {
     expect(findPipeTableInputMatch("see | Alpha | Beta |\n")).toBeNull();
+  });
+});
+
+describe("parsePipeTableText", () => {
+  it("parses a full GFM pipe table", () => {
+    const text = [
+      "| 名称 | 类型 |",
+      "| --- | --- |",
+      "| 粗体 | 样式 |",
+      "| 列表 | 块 |",
+    ].join("\n");
+
+    expect(parsePipeTableText(text)).toEqual({
+      headerCells: ["名称", "类型"],
+      dataRows: [
+        ["粗体", "样式"],
+        ["列表", "块"],
+      ],
+    });
+  });
+
+  it("parses header and separator only", () => {
+    const text = ["| Alpha | Beta |", "| --- | --- |"].join("\n");
+
+    expect(parsePipeTableText(text)).toEqual({
+      headerCells: ["Alpha", "Beta"],
+      dataRows: [],
+    });
+  });
+
+  it("ignores surrounding blank lines", () => {
+    const text = "\n| Alpha | Beta |\n| --- | --- |\n\n";
+
+    expect(parsePipeTableText(text)).toEqual({
+      headerCells: ["Alpha", "Beta"],
+      dataRows: [],
+    });
+  });
+
+  it("returns null for non-table text", () => {
+    expect(parsePipeTableText("plain text")).toBeNull();
+    expect(parsePipeTableText("| Alpha | Beta |")).toBeNull();
+    expect(
+      parsePipeTableText(
+        ["intro", "| Alpha | Beta |", "| --- | --- |"].join("\n"),
+      ),
+    ).toBeNull();
+  });
+
+  it("returns null when column counts mismatch", () => {
+    const text = ["| Alpha | Beta |", "| --- | --- |", "| only-one |"].join(
+      "\n",
+    );
+
+    expect(parsePipeTableText(text)).toBeNull();
+  });
+});
+
+describe("createTableFromPipeTable", () => {
+  const schema = new Schema({
+    nodes: {
+      doc: { content: "block+" },
+      paragraph: { group: "block", content: "inline*" },
+      text: { group: "inline" },
+      table: { content: "tableRow+", group: "block" },
+      tableRow: { content: "(tableCell | tableHeader)+", tableRole: "row" },
+      tableHeader: { content: "block+", tableRole: "header_cell" },
+      tableCell: { content: "block+", tableRole: "cell" },
+    },
+  });
+
+  it("creates header plus multiple data rows", () => {
+    const table = createTableFromPipeTable(schema, {
+      headerCells: ["名称", "类型"],
+      dataRows: [
+        ["粗体", "样式"],
+        ["列表", "块"],
+      ],
+    });
+
+    expect(table.childCount).toBe(3);
+    expect(table.child(0).child(0).textContent).toBe("名称");
+    expect(table.child(0).child(1).textContent).toBe("类型");
+    expect(table.child(1).child(0).textContent).toBe("粗体");
+    expect(table.child(1).child(1).textContent).toBe("样式");
+    expect(table.child(2).child(0).textContent).toBe("列表");
+    expect(table.child(2).child(1).textContent).toBe("块");
+  });
+
+  it("adds one empty data row when body is omitted", () => {
+    const table = createTableFromPipeTable(schema, {
+      headerCells: ["Alpha", "Beta"],
+      dataRows: [],
+    });
+
+    expect(table.childCount).toBe(2);
+    expect(table.child(1).child(0).textContent).toBe("");
+    expect(table.child(1).child(1).textContent).toBe("");
   });
 });
 
@@ -137,7 +237,9 @@ const tableSchema = new Schema({
 
 function pipeRowEnterState(line: string) {
   const { doc, paragraph } = tableSchema.nodes;
-  const document = doc.create({}, [paragraph.create({}, tableSchema.text(line))]);
+  const document = doc.create({}, [
+    paragraph.create({}, tableSchema.text(line)),
+  ]);
   const cursorPos = 1 + line.length;
   const match = PIPE_TABLE_INPUT_REGEX.exec(`${line}\n`);
   if (!match) {

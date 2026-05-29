@@ -129,27 +129,94 @@ export function isBlockedForTableInput($pos: ResolvedPos): boolean {
   return !$pos.parent.isTextblock || $pos.parent.type.name !== "paragraph";
 }
 
-export function createTableWithHeaderRow(
+export type ParsedPipeTable = {
+  headerCells: string[];
+  dataRows: string[][];
+};
+
+/** Parse multi-line GFM pipe table text; null when the clipboard is not a pipe table. */
+export function parsePipeTableText(text: string): ParsedPipeTable | null {
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  if (lines.length < 2) {
+    return null;
+  }
+
+  const headerCells = parsePipeTableRow(lines[0]!);
+  if (!headerCells || isTableSeparatorRow(headerCells)) {
+    return null;
+  }
+
+  const separatorCells = parsePipeTableRow(lines[1]!);
+  if (!separatorCells || !isTableSeparatorRow(separatorCells)) {
+    return null;
+  }
+
+  if (separatorCells.length !== headerCells.length) {
+    return null;
+  }
+
+  const dataRows: string[][] = [];
+  for (let i = 2; i < lines.length; i += 1) {
+    const cells = parsePipeTableRow(lines[i]!);
+    if (!cells || isTableSeparatorRow(cells)) {
+      return null;
+    }
+    if (cells.length !== headerCells.length) {
+      return null;
+    }
+    dataRows.push(cells);
+  }
+
+  return { headerCells, dataRows };
+}
+
+function createTableDataCell(schema: Schema, value: string): ProseMirrorNode {
+  const { tableCell, paragraph } = schema.nodes;
+  if (!value) {
+    return tableCell.createAndFill()!;
+  }
+  return tableCell.create(null, [paragraph.create(null, schema.text(value))]);
+}
+
+export function createTableFromPipeTable(
   schema: Schema,
-  headerCells: string[],
+  parsed: ParsedPipeTable,
 ): ProseMirrorNode {
-  const { table, tableRow, tableHeader, tableCell, paragraph } = schema.nodes;
+  const { table, tableRow, tableHeader, paragraph } = schema.nodes;
 
   const headerRow = tableRow.create(
     null,
-    headerCells.map((value) =>
+    parsed.headerCells.map((value) =>
       tableHeader.create(null, [
         paragraph.create(null, value ? schema.text(value) : undefined),
       ]),
     ),
   );
 
-  const dataRow = tableRow.create(
-    null,
-    headerCells.map(() => tableCell.createAndFill()!),
+  const bodyRows =
+    parsed.dataRows.length > 0
+      ? parsed.dataRows
+      : [parsed.headerCells.map(() => "")];
+
+  const dataRows = bodyRows.map((cells) =>
+    tableRow.create(
+      null,
+      cells.map((value) => createTableDataCell(schema, value)),
+    ),
   );
 
-  return table.create(null, [headerRow, dataRow]);
+  return table.create(null, [headerRow, ...dataRows]);
+}
+
+export function createTableWithHeaderRow(
+  schema: Schema,
+  headerCells: string[],
+): ProseMirrorNode {
+  return createTableFromPipeTable(schema, { headerCells, dataRows: [] });
 }
 
 export function setSelectionInTableCell(
