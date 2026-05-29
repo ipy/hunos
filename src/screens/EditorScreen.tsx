@@ -48,6 +48,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     setFocusMode,
     findInNoteSignal,
     findInNoteReplaceMode,
+    requestFindInNote,
   } = useUIStore();
   const settings = useSettingsStore();
   const [showActions, setShowActions] = useState(false);
@@ -465,7 +466,10 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           key={findInNoteSignal}
           editor={editorInstance}
           showReplace={findInNoteReplaceMode}
-          onClose={() => setFindOpen(false)}
+          onClose={() => {
+            setFindOpen(false);
+            useUIStore.setState({ findInNoteReplaceMode: false });
+          }}
         />
       )}
 
@@ -659,7 +663,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
               if (e.shiftKey) {
                 useUIStore.getState().openNoteSearch();
               } else {
-                setFindOpen(true);
+                requestFindInNote();
               }
             }}
             placeholder={t("editor.titlePlaceholder")}
