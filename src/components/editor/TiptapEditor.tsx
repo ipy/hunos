@@ -411,6 +411,14 @@ export function TiptapEditor({
           accent-color: ${theme.colors.accent};
           cursor: pointer;
         }
+        .hunos-editor ul[data-type="taskList"] li[data-checked="true"] > div {
+          color: ${theme.colors.textTertiary};
+          text-decoration: line-through;
+        }
+        .hunos-editor ul[data-type="taskList"] li[data-checked="true"] > div .editor-link,
+        .hunos-editor ul[data-type="taskList"] li[data-checked="true"] > div a {
+          color: ${theme.colors.textTertiary};
+        }
         .hunos-editor .editor-link {
           color: ${theme.colors.accent};
           text-decoration: underline;
