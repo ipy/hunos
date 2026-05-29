@@ -476,7 +476,8 @@ export function TiptapEditor({
           border-radius: 2px;
           background: ${theme.colors.textTertiary};
         }
-        .hunos-editor img[data-sketch="true"]:hover + .sketch-resize-handle {
+        .hunos-editor .editor-image:hover + .sketch-resize-handle,
+        .hunos-editor img.ProseMirror-selectednode + .sketch-resize-handle {
           opacity: 1;
         }
         .hunos-editor .tableWrapper {
