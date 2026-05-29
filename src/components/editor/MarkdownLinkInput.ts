@@ -35,9 +35,7 @@ function tryApplyMarkdownLinkAtCursor(editor: {
   };
 
   if (!isValidLinkUrl(match[2])) {
-    useUIStore
-      .getState()
-      .showToast(i18n.t("editor.link.invalidUrl"), "error");
+    useUIStore.getState().showToast(i18n.t("editor.link.invalidUrl"), "error");
     return false;
   }
 
@@ -65,7 +63,10 @@ export const MarkdownLinkInput = Extension.create({
             return null;
           }
 
-          applyMarkdownLinkInputToTransaction(state, state.tr, range, match);
+          const tr = state.tr;
+          if (!applyMarkdownLinkInputToTransaction(state, tr, range, match)) {
+            return null;
+          }
         },
       }),
     ];

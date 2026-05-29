@@ -1,5 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { BubbleMenu } from "@tiptap/react";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import type { Editor } from "@tiptap/react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/theme/ThemeContext";
@@ -8,9 +13,9 @@ import { useUIStore } from "@/store/uiStore";
 import {
   applyLinkUrl,
   getLinkEditorInitialUrl,
-  prepareLinkEditor,
   removeLinkFromEditor,
 } from "./inlineFormatActions";
+import { getLinkEditorAnchorRect } from "./linkEditorSelection";
 
 interface LinkEditorBubbleProps {
   editor: Editor | null;
@@ -23,35 +28,93 @@ export function LinkEditorBubble({ editor }: LinkEditorBubbleProps) {
   const closeLinkEditor = useUIStore((s) => s.closeLinkEditor);
   const [url, setUrl] = useState("");
   const [showRemove, setShowRemove] = useState(false);
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const updateAnchor = useCallback(() => {
+    if (!editor || editor.isDestroyed || !linkEditorOpen) {
+      setAnchorRect(null);
+      return;
+    }
+    setAnchorRect(getLinkEditorAnchorRect(editor));
+  }, [editor, linkEditorOpen]);
 
   useEffect(() => {
     if (!editor || !linkEditorOpen) return;
-    prepareLinkEditor(editor);
     setShowRemove(editor.isActive("link"));
     setUrl(getLinkEditorInitialUrl(editor));
+    updateAnchor();
     const timer = window.setTimeout(() => {
       inputRef.current?.focus();
       inputRef.current?.select();
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [editor, linkEditorOpen]);
+  }, [editor, linkEditorOpen, updateAnchor]);
+
+  useEffect(() => {
+    if (!editor || !linkEditorOpen) return;
+    updateAnchor();
+    editor.on("transaction", updateAnchor);
+    editor.on("selectionUpdate", updateAnchor);
+    window.addEventListener("scroll", updateAnchor, true);
+    window.addEventListener("resize", updateAnchor);
+    return () => {
+      editor.off("transaction", updateAnchor);
+      editor.off("selectionUpdate", updateAnchor);
+      window.removeEventListener("scroll", updateAnchor, true);
+      window.removeEventListener("resize", updateAnchor);
+    };
+  }, [editor, linkEditorOpen, updateAnchor]);
+
+  useLayoutEffect(() => {
+    const panel = panelRef.current;
+    if (!panel || !anchorRect) return;
+
+    const margin = 8;
+    let top = anchorRect.bottom + margin;
+    let left = anchorRect.left;
+
+    const panelRect = panel.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    if (left + panelRect.width > vw - margin) {
+      left = Math.max(margin, vw - panelRect.width - margin);
+    }
+    if (left < margin) left = margin;
+
+    if (top + panelRect.height > vh - margin) {
+      const above = anchorRect.top - panelRect.height - margin;
+      top =
+        above >= margin
+          ? above
+          : Math.max(margin, vh - panelRect.height - margin);
+    }
+
+    panel.style.top = `${top}px`;
+    panel.style.left = `${left}px`;
+  }, [anchorRect, url, showRemove]);
 
   const handleClose = useCallback(() => {
     closeLinkEditor();
-    editor?.commands.focus();
+    if (editor && !editor.isDestroyed) {
+      editor.commands.focus();
+    }
   }, [closeLinkEditor, editor]);
 
   const handleApply = useCallback(() => {
-    if (!editor) return;
+    if (!editor || editor.isDestroyed) return;
     if (!applyLinkUrl(editor, url)) return;
     closeLinkEditor();
+    editor.commands.focus();
   }, [closeLinkEditor, editor, url]);
 
   const handleRemove = useCallback(() => {
-    if (!editor) return;
+    if (!editor || editor.isDestroyed) return;
     removeLinkFromEditor(editor);
     closeLinkEditor();
+    editor.commands.focus();
   }, [closeLinkEditor, editor]);
 
   useEffect(() => {
@@ -68,125 +131,96 @@ export function LinkEditorBubble({ editor }: LinkEditorBubbleProps) {
     return () => window.removeEventListener("keydown", onKeyDown, true);
   }, [handleClose, linkEditorOpen]);
 
-  if (!editor || !linkEditorOpen) return null;
+  if (!editor || !linkEditorOpen || !anchorRect) return null;
 
   return (
-    <BubbleMenu
-      editor={editor}
-      pluginKey="linkEditorBubble"
-      updateDelay={0}
-      shouldShow={() => linkEditorOpen}
-      tippyOptions={{
-        duration: 150,
-        placement: "bottom",
-        offset: [0, 8],
-        zIndex: 210,
-        onHide: () => {
-          if (useUIStore.getState().linkEditorOpen) {
-            closeLinkEditor();
-          }
-        },
-        popperOptions: {
-          modifiers: [
-            {
-              name: "flip",
-              options: { fallbackPlacements: ["top", "bottom"] },
-            },
-            {
-              name: "preventOverflow",
-              options: {
-                boundary: "viewport",
-                padding: 8,
-                altAxis: true,
-              },
-            },
-          ],
-        },
+    <div
+      ref={panelRef}
+      data-hunos-link-editor="true"
+      data-testid="link-editor-bubble"
+      role="dialog"
+      aria-label={t("editor.link.prompt")}
+      style={{
+        position: "fixed",
+        zIndex: 250,
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "6px 8px",
+        borderRadius: 10,
+        border: `1px solid ${theme.colors.borderLight}`,
+        backgroundColor: theme.isDark
+          ? "rgba(28,28,30,0.98)"
+          : "rgba(255,255,255,0.98)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        boxShadow: theme.isDark
+          ? "0 4px 20px rgba(0,0,0,0.45)"
+          : "0 4px 20px rgba(0,0,0,0.12)",
+        minWidth: 280,
+        maxWidth: "min(420px, calc(100vw - 24px))",
+      }}
+      onMouseDown={(e) => {
+        e.preventDefault();
       }}
     >
-      <div
-        data-hunos-link-editor="true"
-        data-testid="link-editor-bubble"
-        role="dialog"
+      <Icon name="link" size={16} color={theme.colors.textTertiary} />
+      <input
+        ref={inputRef}
+        type="text"
+        inputMode="url"
+        autoComplete="off"
+        spellCheck={false}
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            handleApply();
+          }
+          if (e.key === "Escape") {
+            e.preventDefault();
+            handleClose();
+          }
+        }}
+        placeholder={t("editor.link.placeholder")}
         aria-label={t("editor.link.prompt")}
+        data-testid="link-editor-input"
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          padding: "6px 8px",
-          borderRadius: 10,
-          border: `1px solid ${theme.colors.borderLight}`,
-          backgroundColor: theme.isDark
-            ? "rgba(28,28,30,0.98)"
-            : "rgba(255,255,255,0.98)",
-          backdropFilter: "blur(12px)",
-          WebkitBackdropFilter: "blur(12px)",
-          boxShadow: theme.isDark
-            ? "0 4px 20px rgba(0,0,0,0.45)"
-            : "0 4px 20px rgba(0,0,0,0.12)",
-          minWidth: 280,
-          maxWidth: "min(420px, calc(100vw - 24px))",
+          flex: 1,
+          border: "none",
+          outline: "none",
+          background: "transparent",
+          fontSize: 14,
+          color: theme.colors.text,
+          minWidth: 0,
         }}
-        onMouseDown={(e) => {
-          e.preventDefault();
-        }}
-      >
-        <Icon name="link" size={16} color={theme.colors.textTertiary} />
-        <input
-          ref={inputRef}
-          type="url"
-          inputMode="url"
-          autoComplete="off"
-          spellCheck={false}
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              handleApply();
-            }
-            if (e.key === "Escape") {
-              e.preventDefault();
-              handleClose();
-            }
-          }}
-          placeholder={t("editor.link.placeholder")}
-          aria-label={t("editor.link.prompt")}
-          data-testid="link-editor-input"
-          style={{
-            flex: 1,
-            border: "none",
-            outline: "none",
-            background: "transparent",
-            fontSize: 14,
-            color: theme.colors.text,
-            minWidth: 0,
-          }}
-        />
-        {showRemove && (
-          <button
-            type="button"
-            onClick={handleRemove}
-            aria-label={t("editor.link.remove")}
-            title={t("editor.link.remove")}
-            data-testid="link-editor-remove"
-            style={secondaryButtonStyle(theme)}
-          >
-            {t("editor.link.remove")}
-          </button>
-        )}
+      />
+      {showRemove && (
         <button
           type="button"
-          onClick={handleApply}
-          aria-label={t("editor.link.apply")}
-          title={t("editor.link.apply")}
-          data-testid="link-editor-apply"
-          style={primaryButtonStyle(theme)}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={handleRemove}
+          aria-label={t("editor.link.remove")}
+          title={t("editor.link.remove")}
+          data-testid="link-editor-remove"
+          style={secondaryButtonStyle(theme)}
         >
-          {t("editor.link.apply")}
+          {t("editor.link.remove")}
         </button>
-      </div>
-    </BubbleMenu>
+      )}
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={handleApply}
+        aria-label={t("editor.link.apply")}
+        title={t("editor.link.apply")}
+        data-testid="link-editor-apply"
+        style={primaryButtonStyle(theme)}
+      >
+        {t("editor.link.apply")}
+      </button>
+    </div>
   );
 }
 

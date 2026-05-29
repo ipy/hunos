@@ -4,6 +4,7 @@ import { describe, expect, it, beforeEach } from "vitest";
 import {
   captureLinkEditorSelection,
   clearLinkEditorSelection,
+  getLinkEditorAnchorRect,
   getSavedLinkEditorSelection,
   restoreLinkEditorSelection,
 } from "./linkEditorSelection";
@@ -80,5 +81,15 @@ describe("linkEditorSelection", () => {
     captureLinkEditorSelection(createEditorLike(state) as never);
     clearLinkEditorSelection();
     expect(getSavedLinkEditorSelection()).toBeNull();
+  });
+});
+
+describe("getLinkEditorAnchorRect", () => {
+  beforeEach(() => {
+    clearLinkEditorSelection();
+  });
+
+  it("returns null for destroyed editors", () => {
+    expect(getLinkEditorAnchorRect({ isDestroyed: true } as never)).toBeNull();
   });
 });

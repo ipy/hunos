@@ -20,10 +20,11 @@ export function isEditorSuggestionMenuOpen(): boolean {
   return menu.getBoundingClientRect().height > 0;
 }
 
+import { useUIStore } from "@/store/uiStore";
+
 /** True when the inline link URL editor bubble is open. */
 export function isLinkEditorOpen(): boolean {
-  const el = document.querySelector('[data-hunos-link-editor="true"]');
-  return el instanceof HTMLElement && el.isConnected;
+  return useUIStore.getState().linkEditorOpen;
 }
 
 /** True when the window-level Escape handler should not exit focus mode. */

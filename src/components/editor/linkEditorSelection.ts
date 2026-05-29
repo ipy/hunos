@@ -21,7 +21,7 @@ export function clearLinkEditorSelection(): void {
 }
 
 export function restoreLinkEditorSelection(editor: Editor): boolean {
-  if (!savedSelection) return false;
+  if (!savedSelection || editor.isDestroyed) return false;
 
   const { doc } = editor.state;
   const maxPos = doc.content.size;
@@ -30,4 +30,24 @@ export function restoreLinkEditorSelection(editor: Editor): boolean {
 
   editor.commands.setTextSelection({ from, to });
   return true;
+}
+
+export function getLinkEditorAnchorRect(editor: Editor): DOMRect | null {
+  if (editor.isDestroyed) return null;
+
+  const pos = savedSelection
+    ? Math.max(savedSelection.from, savedSelection.to)
+    : editor.state.selection.to;
+
+  try {
+    const coords = editor.view.coordsAtPos(pos);
+    return new DOMRect(
+      coords.left,
+      coords.top,
+      Math.max(coords.right - coords.left, 1),
+      Math.max(coords.bottom - coords.top, 1),
+    );
+  } catch {
+    return null;
+  }
 }

@@ -60,15 +60,15 @@ export function getLinkEditorInitialUrl(editor: Editor): string {
 export function prepareLinkEditor(editor: Editor): void {
   const chain = editor.chain().focus();
   if (editor.isActive("link")) {
-    chain.extendMarkRange("link").run();
-  } else {
-    chain.run();
+    chain.extendMarkRange("link");
   }
+  chain.run();
   captureLinkEditorSelection(editor);
 }
 
 /** Apply or clear a link mark. Returns false when the URL is invalid. */
 export function applyLinkUrl(editor: Editor, url: string): boolean {
+  if (editor.isDestroyed) return false;
   restoreLinkEditorSelection(editor);
 
   const trimmed = url.trim();
@@ -95,6 +95,7 @@ export function applyLinkUrl(editor: Editor, url: string): boolean {
 }
 
 export function removeLinkFromEditor(editor: Editor): void {
+  if (editor.isDestroyed) return;
   restoreLinkEditorSelection(editor);
   if (!editor.isActive("link")) {
     clearLinkEditorSelection();
@@ -104,7 +105,8 @@ export function removeLinkFromEditor(editor: Editor): void {
   clearLinkEditorSelection();
 }
 
-export function openLinkEditor(_editor: Editor): void {
+export function openLinkEditor(editor: Editor): void {
+  prepareLinkEditor(editor);
   useUIStore.getState().openLinkEditor();
 }
 
