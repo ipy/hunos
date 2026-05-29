@@ -609,6 +609,10 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(tryHintNode?.content?.[0]?.text).toContain(
       "Mod+Enter（或代码块末尾空行连按 Enter）离开代码块",
     );
+    expect(tryHintNode?.content?.[0]?.text).toContain("80px 最小高度");
+    expect(tryHintNode?.content?.[0]?.text).toContain("点击或轻触内嵌图片");
+    expect(tryHintNode?.content?.[0]?.text).toContain("拖动手柄调整大小");
+    expect(tryHintNode?.content?.[0]?.text).toContain("[[ 和 ]] 括号");
   });
 
   it("updates intro, images section, and tryHint for stale v10 playground notes", () => {
@@ -895,6 +899,92 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(zhTryHint).toContain("复选框获得焦点");
     expect(zhTryHint).toContain("错误提示");
     expect(zhTryHint).toContain("空引用行按 Enter 或行首 Backspace 退出引用");
+  });
+
+  it("updates tryHint to v19 for stale v18 playground notes", () => {
+    const staleEn = buildPlaygroundContent("en") as {
+      type: "doc";
+      attrs?: { playgroundContentVersion?: number };
+      content: unknown[];
+    };
+    staleEn.attrs = { playgroundContentVersion: 18 };
+    staleEn.content = [
+      ...(staleEn.content as unknown[]),
+      {
+        type: "paragraph",
+        content: [{ type: "text", text: "user-added block after seed" }],
+      },
+    ];
+
+    const migratedEn = migratePlaygroundContentIfStale(
+      JSON.stringify(staleEn),
+      "en",
+    );
+    expect(migratedEn).not.toBeNull();
+
+    const parsedEn = JSON.parse(migratedEn!) as {
+      attrs?: { playgroundContentVersion?: number };
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    expect(parsedEn.attrs?.playgroundContentVersion).toBe(
+      PLAYGROUND_CONTENT_VERSION,
+    );
+
+    const enTryIndex = parsedEn.content.findIndex(
+      (node) =>
+        node.type === "heading" && node.content?.[0]?.text === "Try Your Own",
+    );
+    const enTryHint = parsedEn.content[enTryIndex + 1]?.content?.[0]?.text;
+    expect(enTryHint).toContain("minimum height of 80px");
+    expect(enTryHint).toContain("click or tap embedded images");
+    expect(enTryHint).toContain("resize handle");
+    expect(enTryHint).toContain("[[ and ]] brackets reveal at the caret");
+    expect(
+      parsedEn.content[parsedEn.content.length - 1]?.content?.[0]?.text,
+    ).toBe("user-added block after seed");
+
+    const staleZh = buildPlaygroundContent("zh") as {
+      type: "doc";
+      attrs?: { playgroundContentVersion?: number };
+      content: unknown[];
+    };
+    staleZh.attrs = { playgroundContentVersion: 18 };
+    const migratedZh = migratePlaygroundContentIfStale(
+      JSON.stringify(staleZh),
+      "zh",
+    );
+    expect(migratedZh).not.toBeNull();
+
+    const parsedZh = JSON.parse(migratedZh!) as {
+      attrs?: { playgroundContentVersion?: number };
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    expect(parsedZh.attrs?.playgroundContentVersion).toBe(
+      PLAYGROUND_CONTENT_VERSION,
+    );
+
+    const zhTryIndex = parsedZh.content.findIndex(
+      (node) =>
+        node.type === "heading" && node.content?.[0]?.text === "自由试炼",
+    );
+    const zhTryHint = parsedZh.content[zhTryIndex + 1]?.content?.[0]?.text;
+    expect(zhTryHint).toContain("80px 最小高度");
+    expect(zhTryHint).toContain("点击或轻触内嵌图片");
+    expect(zhTryHint).toContain("拖动手柄调整大小");
+    expect(zhTryHint).toContain("[[ 和 ]] 括号");
+  });
+
+  it("seeds v19 tryHint topics in fresh en and zh content", () => {
+    const enTryHint = findTryHintText(buildPlaygroundContent("en"));
+    expect(enTryHint).toContain("minimum height of 80px");
+    expect(enTryHint).toContain("resize handle");
+    expect(enTryHint).toContain("[[ and ]] brackets reveal at the caret");
+
+    const zhTryHint = findTryHintText(buildPlaygroundContent("zh"));
+    expect(zhTryHint).toContain("80px 最小高度");
+    expect(zhTryHint).toContain("点击或轻触内嵌图片");
+    expect(zhTryHint).toContain("拖动手柄调整大小");
+    expect(zhTryHint).toContain("[[ 和 ]] 括号");
   });
 
   it("seeds v16 tryHint topics in fresh en and zh content", () => {
