@@ -1,6 +1,11 @@
 import i18n from "@/i18n";
 import { useUIStore } from "@/store/uiStore";
 import type { Editor } from "@tiptap/react";
+import {
+  captureLinkEditorSelection,
+  clearLinkEditorSelection,
+  restoreLinkEditorSelection,
+} from "./linkEditorSelection";
 
 export interface InlineFormatItem {
   icon: string;
@@ -56,18 +61,22 @@ export function prepareLinkEditor(editor: Editor): void {
   const chain = editor.chain().focus();
   if (editor.isActive("link")) {
     chain.extendMarkRange("link").run();
-    return;
+  } else {
+    chain.run();
   }
-  chain.run();
+  captureLinkEditorSelection(editor);
 }
 
 /** Apply or clear a link mark. Returns false when the URL is invalid. */
 export function applyLinkUrl(editor: Editor, url: string): boolean {
+  restoreLinkEditorSelection(editor);
+
   const trimmed = url.trim();
   if (!trimmed) {
     if (editor.isActive("link")) {
       editor.chain().focus().extendMarkRange("link").unsetLink().run();
     }
+    clearLinkEditorSelection();
     return true;
   }
 
@@ -81,12 +90,18 @@ export function applyLinkUrl(editor: Editor, url: string): boolean {
     chain.extendMarkRange("link");
   }
   chain.setLink({ href: normalizeLinkUrl(trimmed) }).run();
+  clearLinkEditorSelection();
   return true;
 }
 
 export function removeLinkFromEditor(editor: Editor): void {
-  if (!editor.isActive("link")) return;
+  restoreLinkEditorSelection(editor);
+  if (!editor.isActive("link")) {
+    clearLinkEditorSelection();
+    return;
+  }
   editor.chain().focus().extendMarkRange("link").unsetLink().run();
+  clearLinkEditorSelection();
 }
 
 export function openLinkEditor(_editor: Editor): void {

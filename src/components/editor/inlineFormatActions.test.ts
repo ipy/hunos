@@ -3,7 +3,9 @@ import {
   applyLinkUrl,
   isValidLinkUrl,
   normalizeLinkUrl,
+  prepareLinkEditor,
 } from "./inlineFormatActions";
+import { clearLinkEditorSelection } from "./linkEditorSelection";
 
 const showToast = vi.fn();
 
@@ -17,10 +19,16 @@ vi.mock("@/i18n", () => ({
   default: { t: (key: string) => key },
 }));
 
-function createMockEditor(options?: { isLink?: boolean; href?: string }) {
+function createMockEditor(options?: {
+  isLink?: boolean;
+  href?: string;
+  selection?: { from: number; to: number };
+}) {
+  const selection = options?.selection ?? { from: 0, to: 5 };
   const chain = {
     focus: vi.fn().mockReturnThis(),
     extendMarkRange: vi.fn().mockReturnThis(),
+    setTextSelection: vi.fn().mockReturnThis(),
     setLink: vi.fn().mockReturnThis(),
     unsetLink: vi.fn().mockReturnThis(),
     run: vi.fn(),
@@ -29,6 +37,13 @@ function createMockEditor(options?: { isLink?: boolean; href?: string }) {
   return {
     isActive: vi.fn((mark: string) => mark === "link" && !!options?.isLink),
     getAttributes: vi.fn(() => ({ href: options?.href ?? "" })),
+    state: {
+      selection,
+      doc: { content: { size: 100 } },
+    },
+    commands: {
+      setTextSelection: vi.fn(),
+    },
     chain: vi.fn(() => chain),
     _chain: chain,
   };
@@ -37,6 +52,7 @@ function createMockEditor(options?: { isLink?: boolean; href?: string }) {
 describe("link editor helpers", () => {
   beforeEach(() => {
     showToast.mockReset();
+    clearLinkEditorSelection();
   });
 
   it("validates and normalizes URLs", () => {
@@ -69,10 +85,27 @@ describe("link editor helpers", () => {
 
   it("extends link range when editing an existing link", () => {
     const editor = createMockEditor({ isLink: true, href: "https://a.test" });
+    prepareLinkEditor(editor as never);
+    expect(editor._chain.extendMarkRange).toHaveBeenCalledWith("link");
     expect(applyLinkUrl(editor as never, "https://b.test")).toBe(true);
     expect(editor._chain.extendMarkRange).toHaveBeenCalledWith("link");
     expect(editor._chain.setLink).toHaveBeenCalledWith({
       href: "https://b.test",
+    });
+  });
+
+  it("restores captured selection before applying a new link", () => {
+    const editor = createMockEditor({ selection: { from: 2, to: 7 } });
+    prepareLinkEditor(editor as never);
+    expect(applyLinkUrl(editor as never, "https://docs.example.com")).toBe(
+      true,
+    );
+    expect(editor.commands.setTextSelection).toHaveBeenCalledWith({
+      from: 2,
+      to: 7,
+    });
+    expect(editor._chain.setLink).toHaveBeenCalledWith({
+      href: "https://docs.example.com",
     });
   });
 });

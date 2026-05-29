@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { Note } from "@/types/note";
 import { noteStorage } from "@/storage/noteStorage";
 import { isMobileViewport } from "@/hooks/useAdaptiveLayout";
+import { clearLinkEditorSelection } from "@/components/editor/linkEditorSelection";
 
 type Screen = "tags" | "noteList" | "editor" | "settings";
 
@@ -114,7 +115,10 @@ export const useUIStore = create<UIStore>((set, get) => ({
     })),
 
   openLinkEditor: () => set({ linkEditorOpen: true }),
-  closeLinkEditor: () => set({ linkEditorOpen: false }),
+  closeLinkEditor: () => {
+    clearLinkEditorSelection();
+    set({ linkEditorOpen: false });
+  },
 
   showToast: (message, type = "info") => {
     const id = Date.now().toString();
