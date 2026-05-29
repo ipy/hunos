@@ -157,6 +157,33 @@ export function floatTaskItemBeforeCompletedBlock(
   return reorderTaskItemInList(tr, taskItemPos, targetIndex);
 }
 
+/** Apply checked state and reorder within the same transaction. */
+export function applyTaskItemToggleReorder(
+  tr: Transaction,
+  taskItemPos: number,
+  checked: boolean,
+): boolean {
+  const node = tr.doc.nodeAt(taskItemPos);
+  if (!node || node.type.name !== "taskItem") {
+    return false;
+  }
+
+  if (Boolean(node.attrs.checked) === checked) {
+    return false;
+  }
+
+  tr.setNodeMarkup(taskItemPos, undefined, {
+    ...node.attrs,
+    checked,
+  });
+
+  if (checked) {
+    return sinkTaskItemToListBottom(tr, taskItemPos);
+  }
+
+  return floatTaskItemBeforeCompletedBlock(tr, taskItemPos);
+}
+
 /** Sink every newly checked task item to the bottom of its task list. */
 export function applyCompletedTaskSink(
   tr: Transaction,

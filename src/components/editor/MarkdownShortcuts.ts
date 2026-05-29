@@ -7,13 +7,7 @@ import {
 import Bold, { starInputRegex } from "@tiptap/extension-bold";
 import BulletList from "@tiptap/extension-bullet-list";
 import TaskItem from "@tiptap/extension-task-item";
-import { Plugin, PluginKey } from "@tiptap/pm/state";
-import {
-  applyCompletedTaskSink,
-  applyOpenTaskFloat,
-  findTaskItemsNewlyChecked,
-  findTaskItemsNewlyUnchecked,
-} from "./taskSinkUtils";
+import { applyTaskItemToggleReorder } from "./taskSinkUtils";
 import { findWrapping } from "@tiptap/pm/transform";
 import type { Node, NodeType, ResolvedPos } from "@tiptap/pm/model";
 import type { Transaction } from "@tiptap/pm/state";
@@ -23,6 +17,14 @@ const UNDERLINE_INPUT_REGEX = /(?:^|\s)(__(?!\s+__)((?:[^_]+))__(?!\s+__))$/;
 const TASK_BRACKET_INPUT_REGEX = /^\s*(\[([ x])?\])\s$/;
 const TASK_ITEM_INPUT_REGEX = /^\s*-\s*\[([ x])\]\s$/;
 const TASK_PREFIX_REGEX = /^\s*-\s*\[/;
+
+declare module "@tiptap/core" {
+  interface Commands<ReturnType> {
+    taskItem: {
+      toggleTaskItemWithReorder: () => ReturnType;
+    };
+  }
+}
 
 function isCheckedTaskMatch(match: RegExpMatchArray): boolean {
   return match[2] === "x";
@@ -209,7 +211,17 @@ export const MarkdownBulletList = BulletList.extend({
   },
 });
 
-const taskItemSinkPluginKey = new PluginKey("taskItemSink");
+function findTaskItemPosFromSelection(
+  $from: ResolvedPos,
+  taskItemName: string,
+): number | null {
+  for (let depth = $from.depth; depth > 0; depth -= 1) {
+    if ($from.node(depth).type.name === taskItemName) {
+      return $from.before(depth);
+    }
+  }
+  return null;
+}
 
 export const MarkdownTaskItem = TaskItem.extend({
   addInputRules() {
@@ -222,41 +234,116 @@ export const MarkdownTaskItem = TaskItem.extend({
     };
   },
 
-  addProseMirrorPlugins() {
-    return [
-      new Plugin({
-        key: taskItemSinkPluginKey,
-        appendTransaction(transactions, oldState, newState) {
-          if (!transactions.some((tr) => tr.docChanged)) {
-            return null;
-          }
-
-          const checkedPositions = findTaskItemsNewlyChecked(
-            oldState.doc,
-            newState.doc,
+  addCommands() {
+    return {
+      toggleTaskItemWithReorder:
+        () =>
+        ({ state, dispatch }) => {
+          const taskItemPos = findTaskItemPosFromSelection(
+            state.selection.$from,
+            this.name,
           );
-          const uncheckedPositions = findTaskItemsNewlyUnchecked(
-            oldState.doc,
-            newState.doc,
-          );
-          if (
-            checkedPositions.length === 0 &&
-            uncheckedPositions.length === 0
-          ) {
-            return null;
+          if (taskItemPos === null) {
+            return false;
           }
 
-          const tr = newState.tr;
-          const sank = applyCompletedTaskSink(tr, checkedPositions);
-          const floated = applyOpenTaskFloat(tr, uncheckedPositions);
-          if (!sank && !floated) {
-            return null;
+          const node = state.doc.nodeAt(taskItemPos);
+          if (!node) {
+            return false;
           }
 
-          return tr;
+          const checked = !Boolean(node.attrs.checked);
+          const tr = state.tr;
+          if (!applyTaskItemToggleReorder(tr, taskItemPos, checked)) {
+            return false;
+          }
+
+          dispatch?.(tr);
+          return true;
         },
-      }),
-    ];
+    };
+  },
+
+  addNodeView() {
+    return ({ node, HTMLAttributes, getPos, editor }) => {
+      const listItem = document.createElement("li");
+      const checkboxWrapper = document.createElement("label");
+      const checkboxStyler = document.createElement("span");
+      const checkbox = document.createElement("input");
+      const content = document.createElement("div");
+
+      const updateA11Y = (currentNode: typeof node) => {
+        checkbox.ariaLabel =
+          this.options.a11y?.checkboxLabel?.(currentNode, checkbox.checked) ||
+          `Task item checkbox for ${currentNode.textContent || "empty task item"}`;
+      };
+
+      updateA11Y(node);
+
+      checkboxWrapper.contentEditable = "false";
+      checkbox.type = "checkbox";
+      checkbox.addEventListener("mousedown", (event) => event.preventDefault());
+      checkbox.addEventListener("change", (event) => {
+        if (!editor.isEditable && !this.options.onReadOnlyChecked) {
+          checkbox.checked = !checkbox.checked;
+          return;
+        }
+
+        const { checked } = event.target as HTMLInputElement;
+
+        if (editor.isEditable && typeof getPos === "function") {
+          editor
+            .chain()
+            .focus(undefined, { scrollIntoView: false })
+            .command(({ tr }) => {
+              const position = getPos();
+              if (typeof position !== "number") {
+                return false;
+              }
+              return applyTaskItemToggleReorder(tr, position, checked);
+            })
+            .run();
+        }
+
+        if (!editor.isEditable && this.options.onReadOnlyChecked) {
+          if (!this.options.onReadOnlyChecked(node, checked)) {
+            checkbox.checked = !checkbox.checked;
+          }
+        }
+      });
+
+      Object.entries(this.options.HTMLAttributes).forEach(([key, value]) => {
+        listItem.setAttribute(key, value);
+      });
+
+      listItem.dataset.checked = node.attrs.checked ? "true" : "false";
+      checkbox.checked = node.attrs.checked;
+
+      checkboxWrapper.append(checkbox, checkboxStyler);
+      listItem.append(checkboxWrapper, content);
+
+      Object.entries(HTMLAttributes).forEach(([key, value]) => {
+        listItem.setAttribute(key, value);
+      });
+
+      return {
+        dom: listItem,
+        contentDOM: content,
+        update: (updatedNode) => {
+          if (updatedNode.type !== this.type) {
+            return false;
+          }
+
+          listItem.dataset.checked = updatedNode.attrs.checked
+            ? "true"
+            : "false";
+          checkbox.checked = updatedNode.attrs.checked;
+          updateA11Y(updatedNode);
+
+          return true;
+        },
+      };
+    };
   },
 });
 
