@@ -28,8 +28,8 @@ export function isLastParagraphInBlockquote($from: ResolvedPos): boolean {
   return $from.index(depth) === blockquote.childCount - 1;
 }
 
-/** Enter on an empty trailing blockquote line should exit below the quote. */
-export function shouldExitBlockquoteOnEnter(editor: Editor): boolean {
+/** Empty trailing blockquote line — shared by Enter and Backspace exit. */
+function shouldExitBlockquoteOnEmptyTrailingLine(editor: Editor): boolean {
   if (!editor.isActive("blockquote")) {
     return false;
   }
@@ -40,6 +40,21 @@ export function shouldExitBlockquoteOnEnter(editor: Editor): boolean {
   }
 
   return isLastParagraphInBlockquote($from);
+}
+
+/** Enter on an empty trailing blockquote line should exit below the quote. */
+export function shouldExitBlockquoteOnEnter(editor: Editor): boolean {
+  return shouldExitBlockquoteOnEmptyTrailingLine(editor);
+}
+
+/** Backspace at line start on an empty trailing blockquote line should exit below the quote. */
+export function shouldExitBlockquoteOnBackspace(editor: Editor): boolean {
+  if (!shouldExitBlockquoteOnEmptyTrailingLine(editor)) {
+    return false;
+  }
+
+  const { $from } = editor.state.selection;
+  return $from.parentOffset === 0;
 }
 
 /** True when the caret is on an empty line inside a code block. */

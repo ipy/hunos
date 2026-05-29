@@ -8,6 +8,7 @@ import {
   isEmptyTextblock,
   isLastParagraphInBlockquote,
   isOnEmptyCodeLine,
+  shouldExitBlockquoteOnBackspace,
   shouldExitBlockquoteOnEnter,
   shouldExitCodeBlockOnEnter,
   shouldExitCodeBlockOnModEnter,
@@ -161,6 +162,39 @@ describe("shouldExitBlockquoteOnEnter", () => {
     const plainDoc = doc.create({}, [paragraph.create({}, textNode("plain"))]);
     const editor = mockEditor(["paragraph"], plainDoc, 1);
     expect(shouldExitBlockquoteOnEnter(editor)).toBe(false);
+  });
+});
+
+describe("shouldExitBlockquoteOnBackspace", () => {
+  it("returns true for empty trailing blockquote line at line start (AC1)", () => {
+    const document = buildBlockquoteWithTrailingEmptyLine();
+    const pos = findEmptyParagraphPos(document);
+    const editor = mockEditor(["blockquote"], document, pos);
+    expect(shouldExitBlockquoteOnBackspace(editor)).toBe(true);
+  });
+
+  it("returns false when blockquote line has text (AC2 regression guard)", () => {
+    const document = buildBlockquoteWithContentOnly();
+    const editor = mockEditor(["blockquote"], document, 2);
+    expect(shouldExitBlockquoteOnBackspace(editor)).toBe(false);
+  });
+
+  it("returns false outside blockquote", () => {
+    const plainDoc = doc.create({}, [paragraph.create({}, textNode("plain"))]);
+    const editor = mockEditor(["paragraph"], plainDoc, 1);
+    expect(shouldExitBlockquoteOnBackspace(editor)).toBe(false);
+  });
+
+  it("returns false for empty non-trailing blockquote line", () => {
+    const document = doc.create({}, [
+      blockquote.create({}, [
+        paragraph.create(),
+        paragraph.create({}, textNode("second")),
+      ]),
+    ]);
+    const pos = findEmptyParagraphPos(document);
+    const editor = mockEditor(["blockquote"], document, pos);
+    expect(shouldExitBlockquoteOnBackspace(editor)).toBe(false);
   });
 });
 
