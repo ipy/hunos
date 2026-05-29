@@ -188,7 +188,7 @@ export function SettingsScreen({ layout = 'mobile' }: SettingsScreenProps) {
               value={t('settings.downloads.download', { defaultValue: 'Download' })}
               onClick={() => {
               const link = document.createElement('a');
-              link.href = '/downloads/hunos-1d364d4a.hap';
+              link.href = '/downloads/hunos-999909cf.hap';
               link.download = 'hunos.hap';
               link.click();
               }}
