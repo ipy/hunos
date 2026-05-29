@@ -155,7 +155,8 @@
       "fontSize": "Font Size",
       "sans": "Sans Serif",
       "serif": "Serif",
-      "mono": "Monospace"
+      "mono": "Monospace",
+      "hideCompletedTasks": "Hide completed tasks"
     },
     "typography": {
       "title": "Typography",

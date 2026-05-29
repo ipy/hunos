@@ -1,8 +1,8 @@
-export type ThemeMode = 'light' | 'dark' | 'system';
-export type Locale = 'en' | 'es' | 'zh';
+export type ThemeMode = "light" | "dark" | "system";
+export type Locale = "en" | "es" | "zh";
 export type EditorFont = string;
-export type SortBy = 'modifiedAt' | 'createdAt' | 'title';
-export type SortOrder = 'asc' | 'desc';
+export type SortBy = "modifiedAt" | "createdAt" | "title";
+export type SortOrder = "asc" | "desc";
 
 export interface AppSettings {
   theme: ThemeMode;
@@ -17,19 +17,21 @@ export interface AppSettings {
   paragraphIndent: number;
   sortBy: SortBy;
   sortOrder: SortOrder;
+  hideCompletedTasks: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  theme: 'system',
-  locale: 'en',
-  editorFont: 'sans',
-  headingsFont: 'sans',
-  codeFont: 'mono',
+  theme: "system",
+  locale: "en",
+  editorFont: "sans",
+  headingsFont: "sans",
+  codeFont: "mono",
   fontSize: 16,
   lineHeight: 1.5,
   lineWidth: 48,
   paragraphSpacing: 0,
   paragraphIndent: 0,
-  sortBy: 'modifiedAt',
-  sortOrder: 'desc',
+  sortBy: "modifiedAt",
+  sortOrder: "desc",
+  hideCompletedTasks: false,
 };

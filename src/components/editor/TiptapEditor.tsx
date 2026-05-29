@@ -75,6 +75,7 @@ interface TiptapEditorProps {
   lineHeight: number;
   lineWidth: number;
   paragraphSpacing: number;
+  hideCompletedTasks: boolean;
 }
 
 export function TiptapEditor({
@@ -89,6 +90,7 @@ export function TiptapEditor({
   lineHeight,
   lineWidth,
   paragraphSpacing,
+  hideCompletedTasks,
 }: TiptapEditorProps) {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -281,6 +283,15 @@ export function TiptapEditor({
 
   useEffect(() => {
     if (!editor) return;
+    if (hideCompletedTasks) {
+      editor.view.dom.setAttribute("data-hide-completed-tasks", "true");
+    } else {
+      editor.view.dom.removeAttribute("data-hide-completed-tasks");
+    }
+  }, [editor, hideCompletedTasks]);
+
+  useEffect(() => {
+    if (!editor) return;
 
     const noteChanged = prevNoteIdRef.current !== noteId;
     const contentChangedExternally =
@@ -418,6 +429,9 @@ export function TiptapEditor({
         .hunos-editor ul[data-type="taskList"] li[data-checked="true"] > div .editor-link,
         .hunos-editor ul[data-type="taskList"] li[data-checked="true"] > div a {
           color: ${theme.colors.textTertiary};
+        }
+        .hunos-editor[data-hide-completed-tasks="true"] ul[data-type="taskList"] li[data-checked="true"] {
+          display: none;
         }
         .hunos-editor .editor-link {
           color: ${theme.colors.accent};

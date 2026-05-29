@@ -781,6 +781,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           lineHeight={settings.lineHeight}
           lineWidth={settings.lineWidth}
           paragraphSpacing={settings.paragraphSpacing}
+          hideCompletedTasks={settings.hideCompletedTasks}
         />
         {!focusMode && <BacklinksPanel noteId={note.id} />}
       </div>

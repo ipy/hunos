@@ -26,6 +26,7 @@ interface SettingsStore extends AppSettings {
   setParagraphIndent: (val: number) => Promise<void>;
   setSortBy: (sortBy: SortBy) => Promise<void>;
   setSortOrder: (order: SortOrder) => Promise<void>;
+  setHideCompletedTasks: (hide: boolean) => Promise<void>;
   resetTypography: () => Promise<void>;
 }
 
@@ -101,6 +102,11 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   setSortOrder: async (sortOrder) => {
     await settingsStorage.set("sortOrder", sortOrder);
     set({ sortOrder });
+  },
+
+  setHideCompletedTasks: async (hideCompletedTasks) => {
+    await settingsStorage.set("hideCompletedTasks", hideCompletedTasks);
+    set({ hideCompletedTasks });
   },
 
   resetTypography: async () => {

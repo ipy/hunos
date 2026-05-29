@@ -155,7 +155,8 @@
       "fontSize": "字号",
       "sans": "无衬线",
       "serif": "衬线",
-      "mono": "等宽"
+      "mono": "等宽",
+      "hideCompletedTasks": "隐藏已完成任务"
     },
     "typography": {
       "title": "排版",
