@@ -87,17 +87,16 @@ function collectWikiLinkRevealSymbolSpec(
   const blockEnd = $pos.end();
   const blockText = state.doc.textBetween(blockStart, blockEnd, "\n", "\n");
 
+  const blockOffset = from - blockStart;
   for (const span of findCompleteWikiLinksInBlock(blockText)) {
-    const contentStart = blockStart + span.start + 2;
-    const contentEnd = blockStart + span.end - 2;
-    if (from >= contentStart && from <= contentEnd) {
-      return {
-        rangeStart: contentStart,
-        rangeEnd: contentEnd,
-        open: "[[",
-        close: "]]",
-      };
-    }
+    if (blockOffset < span.start || blockOffset >= span.end) continue;
+
+    return {
+      rangeStart: blockStart + span.start + 2,
+      rangeEnd: blockStart + span.end - 2,
+      open: "[[",
+      close: "]]",
+    };
   }
 
   return null;

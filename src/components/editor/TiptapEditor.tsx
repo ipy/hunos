@@ -563,11 +563,6 @@ export function TiptapEditor({
           border-radius: 3px;
           padding: 0.05em 0.1em;
         }
-        .wiki-link-bracket-visible {
-          color: ${theme.colors.textTertiary};
-          opacity: 0.6;
-          font-size: 0.85em;
-        }
         .wiki-link-bracket-hidden {
           font-size: 0;
           overflow: hidden;

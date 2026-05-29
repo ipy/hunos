@@ -291,16 +291,47 @@ describe("wiki-link markdown reveal", () => {
 
   it("does not reveal wiki delimiters after the wiki link", () => {
     const caretAfterLink = prefix.length + 2 + label.length + 2;
-    const state = stateWithWikiParagraph(
-      prefix,
-      label,
-      suffix,
-      caretAfterLink,
-    );
+    const state = stateWithWikiParagraph(prefix, label, suffix, caretAfterLink);
 
     const texts = revealedSymbolTexts(state);
     expect(texts).not.toContain("[[");
     expect(texts).not.toContain("]]");
+  });
+
+  it("reveals [[ and ]] when caret is on the opening bracket pair", () => {
+    const caretOnOpenBracket = prefix.length;
+    const state = stateWithWikiParagraph(
+      prefix,
+      label,
+      suffix,
+      caretOnOpenBracket,
+    );
+
+    expect(revealedSymbolTexts(state)).toEqual(["[[", "]]"]);
+  });
+
+  it("reveals [[ and ]] when caret is on the second opening bracket", () => {
+    const caretOnSecondOpen = prefix.length + 1;
+    const state = stateWithWikiParagraph(
+      prefix,
+      label,
+      suffix,
+      caretOnSecondOpen,
+    );
+
+    expect(revealedSymbolTexts(state)).toEqual(["[[", "]]"]);
+  });
+
+  it("reveals [[ and ]] when caret is on the closing bracket pair", () => {
+    const caretOnCloseBracket = prefix.length + 2 + label.length + 1;
+    const state = stateWithWikiParagraph(
+      prefix,
+      label,
+      suffix,
+      caretOnCloseBracket,
+    );
+
+    expect(revealedSymbolTexts(state)).toEqual(["[[", "]]"]);
   });
 
   it("reveals wiki delimiters for English labels at boundary positions", () => {

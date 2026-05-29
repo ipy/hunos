@@ -45,47 +45,24 @@ function findWikiLinks(doc: ProseMirrorNode): WikiLinkMatch[] {
   return matches;
 }
 
-function buildDecorations(state: EditorState): DecorationSet {
-  const { doc, selection } = state;
-  const cursorPos = selection.from;
+export function buildWikiLinkDecorations(state: EditorState): DecorationSet {
+  const { doc } = state;
   const wikiLinks = findWikiLinks(doc);
   const decorations: Decoration[] = [];
 
   for (const wl of wikiLinks) {
-    const cursorInLabel =
-      cursorPos >= wl.contentStart && cursorPos <= wl.contentEnd;
-    const cursorOnBrackets =
-      cursorPos >= wl.start &&
-      cursorPos <= wl.end &&
-      !cursorInLabel;
-
-    if (cursorOnBrackets) {
-      decorations.push(
-        Decoration.inline(wl.start, wl.contentStart, {
-          class: "wiki-link-bracket-visible",
-        }),
-        Decoration.inline(wl.contentStart, wl.contentEnd, {
-          class: "wiki-link-content",
-          "data-wiki-title": wl.title,
-        }),
-        Decoration.inline(wl.contentEnd, wl.end, {
-          class: "wiki-link-bracket-visible",
-        }),
-      );
-    } else {
-      decorations.push(
-        Decoration.inline(wl.start, wl.contentStart, {
-          class: "wiki-link-bracket-hidden",
-        }),
-        Decoration.inline(wl.contentStart, wl.contentEnd, {
-          class: "wiki-link-content",
-          "data-wiki-title": wl.title,
-        }),
-        Decoration.inline(wl.contentEnd, wl.end, {
-          class: "wiki-link-bracket-hidden",
-        }),
-      );
-    }
+    decorations.push(
+      Decoration.inline(wl.start, wl.contentStart, {
+        class: "wiki-link-bracket-hidden",
+      }),
+      Decoration.inline(wl.contentStart, wl.contentEnd, {
+        class: "wiki-link-content",
+        "data-wiki-title": wl.title,
+      }),
+      Decoration.inline(wl.contentEnd, wl.end, {
+        class: "wiki-link-bracket-hidden",
+      }),
+    );
   }
 
   return DecorationSet.create(doc, decorations);
@@ -112,7 +89,7 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
         key: wikiLinkKey,
         props: {
           decorations(state) {
-            return buildDecorations(state);
+            return buildWikiLinkDecorations(state);
           },
           handleDOMEvents: {
             mousedown(view, event) {
