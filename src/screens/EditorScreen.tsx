@@ -61,6 +61,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const showBackButton = layout === "mobile";
   const isCompactChrome = focusMode && layout === "tablet";
   const prevFocusModeRef = useRef(focusMode);
+  const suppressFocusToastRef = useRef(false);
   const [titleValue, setTitleValue] = useState("");
   const titleTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -126,13 +127,18 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
   useEffect(() => {
     if (layout !== "mobile" || !focusMode) return;
-    prevFocusModeRef.current = false;
+    prevFocusModeRef.current = focusMode;
+    suppressFocusToastRef.current = true;
     setFocusMode(false);
   }, [layout, focusMode, setFocusMode]);
 
   useEffect(() => {
     if (prevFocusModeRef.current === focusMode) return;
     prevFocusModeRef.current = focusMode;
+    if (suppressFocusToastRef.current) {
+      suppressFocusToastRef.current = false;
+      return;
+    }
     showToast(
       focusMode ? t("editor.focusMode.entered") : t("editor.focusMode.exited"),
     );
