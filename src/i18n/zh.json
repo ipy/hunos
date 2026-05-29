@@ -48,6 +48,7 @@
       "deletePermanently": "永久删除",
       "export": "导出",
       "restorePlayground": "恢复格式试炼场",
+      "restorePlaygroundShort": "恢复",
       "restorePlaygroundDone": "格式试炼场已恢复"
     },
     "sort": {

@@ -48,6 +48,7 @@
       "deletePermanently": "Delete Permanently",
       "export": "Export",
       "restorePlayground": "Restore Format Playground",
+      "restorePlaygroundShort": "Restore",
       "restorePlaygroundDone": "Format Playground restored"
     },
     "sort": {

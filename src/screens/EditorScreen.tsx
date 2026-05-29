@@ -276,6 +276,11 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
   const isPlaygroundNote = isFormatPlaygroundNote(note.title, note.content);
   const restorePlaygroundLabel = t("notes.actions.restorePlayground");
+  const restorePlaygroundVisibleText =
+    layout === "mobile"
+      ? t("notes.actions.restorePlaygroundShort")
+      : restorePlaygroundLabel;
+  const isMobileRestoreChip = layout === "mobile";
 
   return (
     <div
@@ -333,16 +338,17 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
               background: theme.colors.surface,
               border: `1px solid ${theme.colors.borderLight}`,
               cursor: "pointer",
-              padding: "6px 12px",
+              padding: isMobileRestoreChip ? "6px 8px" : "6px 12px",
               borderRadius: theme.radius.full,
               display: "flex",
               alignItems: "center",
-              gap: 6,
+              gap: isMobileRestoreChip ? 4 : 6,
               minHeight: 44,
               fontSize: 13,
               fontWeight: 500,
               color: theme.colors.textSecondary,
               whiteSpace: "nowrap",
+              flexShrink: 0,
               transition: "background-color 0.15s ease",
             }}
             onMouseEnter={(e) =>
@@ -354,7 +360,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
             }
           >
             <Icon name="note" size={16} color={theme.colors.textSecondary} />
-            {restorePlaygroundLabel}
+            {restorePlaygroundVisibleText}
           </button>
         )}
         {focusMode && isCompactChrome ? (
