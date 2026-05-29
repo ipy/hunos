@@ -114,7 +114,7 @@ export function isTableSeparatorRow(cells: string[]): boolean {
   );
 }
 
-export function isBlockedForTableInput($pos: ResolvedPos): boolean {
+export function isInLiteralTableOrCodeContext($pos: ResolvedPos): boolean {
   for (let depth = $pos.depth; depth > 0; depth -= 1) {
     const name = $pos.node(depth).type.name;
     if (
@@ -124,6 +124,13 @@ export function isBlockedForTableInput($pos: ResolvedPos): boolean {
     ) {
       return true;
     }
+  }
+  return false;
+}
+
+export function isBlockedForTableInput($pos: ResolvedPos): boolean {
+  if (isInLiteralTableOrCodeContext($pos)) {
+    return true;
   }
 
   return !$pos.parent.isTextblock || $pos.parent.type.name !== "paragraph";
