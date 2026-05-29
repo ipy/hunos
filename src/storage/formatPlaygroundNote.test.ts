@@ -29,7 +29,32 @@ vi.mock("@/graph/graphEngine", () => ({
   },
 }));
 
-function findTryHintText(content: unknown): string {
+function extractTryHintText(
+  tryHintNode:
+    | {
+        type: string;
+        content?: Array<{
+          type?: string;
+          content?: Array<{ content?: Array<{ text?: string }> }>;
+          text?: string;
+        }>;
+      }
+    | undefined,
+): string {
+  if (!tryHintNode) return "";
+  if (tryHintNode.type === "bulletList") {
+    return (tryHintNode.content ?? [])
+      .flatMap((item) =>
+        (item.content ?? []).flatMap((block) =>
+          (block.content ?? []).map((t) => t.text ?? ""),
+        ),
+      )
+      .join(" ");
+  }
+  return tryHintNode.content?.[0]?.text ?? "";
+}
+
+function findTryHintNode(content: unknown) {
   const doc = content as {
     content: Array<{ type: string; content?: Array<{ text?: string }> }>;
   };
@@ -39,7 +64,11 @@ function findTryHintText(content: unknown): string {
       (node.content?.[0]?.text === "Try Your Own" ||
         node.content?.[0]?.text === "自由试炼"),
   );
-  return doc.content[trySectionIndex + 1]?.content?.[0]?.text ?? "";
+  return doc.content[trySectionIndex + 1];
+}
+
+function findTryHintText(content: unknown): string {
+  return extractTryHintText(findTryHintNode(content));
 }
 
 describe("isFormatPlaygroundNote", () => {
@@ -249,23 +278,19 @@ describe("migratePlaygroundContentIfStale", () => {
         node.type === "heading" && node.content?.[0]?.text === "Try Your Own",
     );
     expect(trySectionIndex).toBeGreaterThan(-1);
-    const tryHintNode = parsed.content[trySectionIndex + 1];
-    expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+Alt+↑/↓");
-    expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+D");
-    expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+Shift+K");
-    expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+Z");
-    expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+Shift+Z");
-    expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+F find in note");
-    expect(tryHintNode?.content?.[0]?.text).toContain(
-      "Cmd+Option+F find and replace",
-    );
-    expect(tryHintNode?.content?.[0]?.text).toContain(
-      "Cmd+Shift+F search all notes",
-    );
-    expect(tryHintNode?.content?.[0]?.text).toContain(
+    const tryHintText = findTryHintText(parsed);
+    expect(tryHintText).toContain("Cmd+Alt+↑/↓");
+    expect(tryHintText).toContain("Cmd+D");
+    expect(tryHintText).toContain("Cmd+Shift+K");
+    expect(tryHintText).toContain("Cmd+Z");
+    expect(tryHintText).toContain("Cmd+Shift+Z");
+    expect(tryHintText).toContain("Cmd+F find in note");
+    expect(tryHintText).toContain("Cmd+Option+F find and replace");
+    expect(tryHintText).toContain("Cmd+Shift+F search all notes");
+    expect(tryHintText).toContain(
       "Enter or Backspace at line start on empty blockquote lines to exit the quote",
     );
-    expect(tryHintNode?.content?.[0]?.text).toContain(
+    expect(tryHintText).toContain(
       "Mod+Enter (or Enter on an empty last code line) to leave code blocks",
     );
   });
@@ -300,25 +325,12 @@ describe("migratePlaygroundContentIfStale", () => {
   });
 
   it("includes table hints in en seed", () => {
-    const content = buildPlaygroundContent("en") as {
-      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
-    };
-    const trySectionIndex = content.content.findIndex(
-      (node) =>
-        node.type === "heading" && node.content?.[0]?.text === "Try Your Own",
-    );
-    const tryHintNode = content.content[trySectionIndex + 1];
-    expect(tryHintNode?.content?.[0]?.text).toContain("| Name | Type |");
-    expect(tryHintNode?.content?.[0]?.text).toContain(
-      "Mod+Backspace delete table row",
-    );
-    expect(tryHintNode?.content?.[0]?.text).toContain("[text](url)");
-    expect(tryHintNode?.content?.[0]?.text).toContain(
-      "Cmd+K links selected text",
-    );
-    expect(tryHintNode?.content?.[0]?.text).toContain(
-      "paste or drag-and-drop images",
-    );
+    const tryHintText = findTryHintText(buildPlaygroundContent("en"));
+    expect(tryHintText).toContain("| Name | Type |");
+    expect(tryHintText).toContain("Mod+Backspace delete table row");
+    expect(tryHintText).toContain("[text](url)");
+    expect(tryHintText).toContain("Cmd+K links selected text");
+    expect(tryHintText).toContain("Paste or drag-and-drop images");
   });
 
   it("seeds an Images section with embedded sample image", () => {
@@ -534,8 +546,8 @@ describe("migratePlaygroundContentIfStale", () => {
       (node) =>
         node.type === "heading" && node.content?.[0]?.text === "Try Your Own",
     );
-    const tryHintNode = parsed.content[trySectionIndex + 1];
-    expect(tryHintNode?.content?.[0]?.text).toContain("[text](url)");
+    const tryHintText = findTryHintText(parsed);
+    expect(tryHintText).toContain("[text](url)");
 
     const tagsSectionIndex = parsed.content.findIndex(
       (node) =>
@@ -573,46 +585,31 @@ describe("migratePlaygroundContentIfStale", () => {
       (node) =>
         node.type === "heading" && node.content?.[0]?.text === "Try Your Own",
     );
-    const tryHintNode = parsed.content[trySectionIndex + 1];
-    expect(tryHintNode?.content?.[0]?.text).toContain("| Name | Type |");
-    expect(tryHintNode?.content?.[0]?.text).toContain(
-      "move between table cells",
-    );
+    const tryHintText = findTryHintText(parsed);
+    expect(tryHintText).toContain("| Name | Type |");
+    expect(tryHintText).toContain("move between table cells");
   });
 
   it("includes undo/redo hints in zh seed", () => {
-    const content = buildPlaygroundContent("zh") as {
-      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
-    };
-    const trySectionIndex = content.content.findIndex(
-      (node) =>
-        node.type === "heading" && node.content?.[0]?.text === "自由试炼",
-    );
-    const tryHintNode = content.content[trySectionIndex + 1];
-    expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+Z");
-    expect(tryHintNode?.content?.[0]?.text).toContain("| 名称 | 类型 |");
-    expect(tryHintNode?.content?.[0]?.text).toContain(
-      "Mod+Backspace 删除表格行",
-    );
-    expect(tryHintNode?.content?.[0]?.text).toContain("[文字](url)");
-    expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+Shift+Z");
-    expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+F 在笔记内查找");
-    expect(tryHintNode?.content?.[0]?.text).toContain(
-      "Cmd+Option+F 查找并替换",
-    );
-    expect(tryHintNode?.content?.[0]?.text).toContain(
-      "Cmd+Shift+F 搜索全部笔记",
-    );
-    expect(tryHintNode?.content?.[0]?.text).toContain(
+    const tryHintText = findTryHintText(buildPlaygroundContent("zh"));
+    expect(tryHintText).toContain("Cmd+Z");
+    expect(tryHintText).toContain("| 名称 | 类型 |");
+    expect(tryHintText).toContain("Mod+Backspace 删除表格行");
+    expect(tryHintText).toContain("[文字](url)");
+    expect(tryHintText).toContain("Cmd+Shift+Z");
+    expect(tryHintText).toContain("Cmd+F 在笔记内查找");
+    expect(tryHintText).toContain("Cmd+Option+F 查找并替换");
+    expect(tryHintText).toContain("Cmd+Shift+F 搜索全部笔记");
+    expect(tryHintText).toContain(
       "空引用行按 Enter 或行首 Backspace 退出引用",
     );
-    expect(tryHintNode?.content?.[0]?.text).toContain(
+    expect(tryHintText).toContain(
       "Mod+Enter（或代码块末尾空行连按 Enter）离开代码块",
     );
-    expect(tryHintNode?.content?.[0]?.text).toContain("80px 最小高度");
-    expect(tryHintNode?.content?.[0]?.text).toContain("点击或轻触内嵌图片");
-    expect(tryHintNode?.content?.[0]?.text).toContain("拖动手柄调整大小");
-    expect(tryHintNode?.content?.[0]?.text).toContain("[[ 和 ]] 括号");
+    expect(tryHintText).toContain("80px 最小高度");
+    expect(tryHintText).toContain("点击或轻触内嵌图片");
+    expect(tryHintText).toContain("拖动手柄调整大小");
+    expect(tryHintText).toContain("[[ 和 ]] 括号");
   });
 
   it("updates intro, images section, and tryHint for stale v10 playground notes", () => {
@@ -669,9 +666,7 @@ describe("migratePlaygroundContentIfStale", () => {
       (node) =>
         node.type === "heading" && node.content?.[0]?.text === "Try Your Own",
     );
-    expect(parsed.content[trySectionIndex + 1]?.content?.[0]?.text).toContain(
-      "paste or drag-and-drop images",
-    );
+    expect(findTryHintText(parsed)).toContain("Paste or drag-and-drop images");
   });
 
   it("seeds highlighted javascript code block sample", () => {
@@ -810,8 +805,8 @@ describe("migratePlaygroundContentIfStale", () => {
       (node) =>
         node.type === "heading" && node.content?.[0]?.text === "Try Your Own",
     );
-    const tryHintNode = parsed.content[trySectionIndex + 1];
-    expect(tryHintNode?.content?.[0]?.text).toContain(
+    const tryHintText = findTryHintText(parsed);
+    expect(tryHintText).toContain(
       "Enter or Backspace at line start on empty blockquote lines to exit the quote",
     );
   });
@@ -849,7 +844,7 @@ describe("migratePlaygroundContentIfStale", () => {
       (node) =>
         node.type === "heading" && node.content?.[0]?.text === "Try Your Own",
     );
-    const enTryHint = parsedEn.content[enTryIndex + 1]?.content?.[0]?.text;
+    const enTryHint = findTryHintText(parsedEn);
     expect(enTryHint).toContain(
       "multi-line GFM pipe tables paste as native tables",
     );
@@ -889,7 +884,7 @@ describe("migratePlaygroundContentIfStale", () => {
       (node) =>
         node.type === "heading" && node.content?.[0]?.text === "自由试炼",
     );
-    const zhTryHint = parsedZh.content[zhTryIndex + 1]?.content?.[0]?.text;
+    const zhTryHint = findTryHintText(parsedZh);
     expect(zhTryHint).toContain("粘贴");
     expect(zhTryHint).toContain("表格");
     expect(zhTryHint).toContain("管道");
@@ -934,7 +929,7 @@ describe("migratePlaygroundContentIfStale", () => {
       (node) =>
         node.type === "heading" && node.content?.[0]?.text === "Try Your Own",
     );
-    const enTryHint = parsedEn.content[enTryIndex + 1]?.content?.[0]?.text;
+    const enTryHint = findTryHintText(parsedEn);
     expect(enTryHint).toContain("minimum height of 80px");
     expect(enTryHint).toContain("click or tap embedded images");
     expect(enTryHint).toContain("resize handle");
@@ -967,14 +962,14 @@ describe("migratePlaygroundContentIfStale", () => {
       (node) =>
         node.type === "heading" && node.content?.[0]?.text === "自由试炼",
     );
-    const zhTryHint = parsedZh.content[zhTryIndex + 1]?.content?.[0]?.text;
+    const zhTryHint = findTryHintText(parsedZh);
     expect(zhTryHint).toContain("80px 最小高度");
     expect(zhTryHint).toContain("点击或轻触内嵌图片");
     expect(zhTryHint).toContain("拖动手柄调整大小");
     expect(zhTryHint).toContain("[[ 和 ]] 括号");
   });
 
-  it("seeds v19 tryHint topics in fresh en and zh content", () => {
+  it("seeds tryHint topics in fresh en and zh content", () => {
     const enTryHint = findTryHintText(buildPlaygroundContent("en"));
     expect(enTryHint).toContain("minimum height of 80px");
     expect(enTryHint).toContain("resize handle");
@@ -985,6 +980,86 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(zhTryHint).toContain("点击或轻触内嵌图片");
     expect(zhTryHint).toContain("拖动手柄调整大小");
     expect(zhTryHint).toContain("[[ 和 ]] 括号");
+  });
+
+  it("seeds tryHint as bullet list with at least four items", () => {
+    for (const locale of ["en", "zh"] as const) {
+      const tryHintNode = findTryHintNode(buildPlaygroundContent(locale));
+      expect(tryHintNode?.type).toBe("bulletList");
+      expect((tryHintNode?.content ?? []).length).toBeGreaterThanOrEqual(4);
+    }
+  });
+
+  it("updates tryHint to v20 bullet list for stale v19 playground notes", () => {
+    const staleEn = buildPlaygroundContent("en") as {
+      type: "doc";
+      attrs?: { playgroundContentVersion?: number };
+      content: Array<{ type: string; content?: unknown[] }>;
+    };
+    staleEn.attrs = { playgroundContentVersion: 19 };
+    const enTryIndex = staleEn.content.findIndex(
+      (node) =>
+        node.type === "heading" &&
+        (node.content as Array<{ text?: string }> | undefined)?.[0]?.text ===
+          "Try Your Own",
+    );
+    staleEn.content[enTryIndex + 1] = {
+      type: "paragraph",
+      content: [{ type: "text", text: findTryHintText(staleEn) }],
+    };
+
+    const migratedEn = migratePlaygroundContentIfStale(
+      JSON.stringify(staleEn),
+      "en",
+    );
+    expect(migratedEn).not.toBeNull();
+
+    const parsedEn = JSON.parse(migratedEn!) as {
+      attrs?: { playgroundContentVersion?: number };
+      content: Array<{ type: string; content?: unknown[] }>;
+    };
+    expect(parsedEn.attrs?.playgroundContentVersion).toBe(
+      PLAYGROUND_CONTENT_VERSION,
+    );
+    const migratedTryNode = findTryHintNode(parsedEn);
+    expect(migratedTryNode?.type).toBe("bulletList");
+    expect((migratedTryNode?.content ?? []).length).toBeGreaterThanOrEqual(4);
+    expect(findTryHintText(parsedEn)).toContain("resize handle");
+
+    const staleZh = buildPlaygroundContent("zh") as {
+      type: "doc";
+      attrs?: { playgroundContentVersion?: number };
+      content: Array<{ type: string; content?: unknown[] }>;
+    };
+    staleZh.attrs = { playgroundContentVersion: 19 };
+    const zhTryIndex = staleZh.content.findIndex(
+      (node) =>
+        node.type === "heading" &&
+        (node.content as Array<{ text?: string }> | undefined)?.[0]?.text ===
+          "自由试炼",
+    );
+    staleZh.content[zhTryIndex + 1] = {
+      type: "paragraph",
+      content: [{ type: "text", text: findTryHintText(staleZh) }],
+    };
+
+    const migratedZh = migratePlaygroundContentIfStale(
+      JSON.stringify(staleZh),
+      "zh",
+    );
+    expect(migratedZh).not.toBeNull();
+
+    const parsedZh = JSON.parse(migratedZh!) as {
+      attrs?: { playgroundContentVersion?: number };
+      content: Array<{ type: string; content?: unknown[] }>;
+    };
+    expect(parsedZh.attrs?.playgroundContentVersion).toBe(
+      PLAYGROUND_CONTENT_VERSION,
+    );
+    expect(findTryHintNode(parsedZh)?.type).toBe("bulletList");
+    expect(findTryHintText(parsedZh)).toContain("80px 最小高度");
+    expect(findTryHintText(parsedZh)).toContain("点击或轻触内嵌图片");
+    expect(findTryHintText(parsedZh)).toContain("拖动手柄调整大小");
   });
 
   it("seeds v16 tryHint topics in fresh en and zh content", () => {

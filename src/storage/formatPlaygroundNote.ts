@@ -12,7 +12,7 @@ import type { Locale } from "@/types/settings";
 
 type PlaygroundLocale = "en" | "zh";
 
-export const PLAYGROUND_CONTENT_VERSION = 19;
+export const PLAYGROUND_CONTENT_VERSION = 20;
 
 export const FORMAT_PLAYGROUND_TITLES: readonly string[] = [
   "Format Playground",
@@ -65,7 +65,7 @@ interface PlaygroundStrings {
   tagsExternalPrefix: string;
   tagsExternalLabel: string;
   tagsExternalSuffix: string;
-  tryHint: string;
+  tryHintBullets: readonly string[];
 }
 
 const STRINGS: Record<PlaygroundLocale, PlaygroundStrings> = {
@@ -118,8 +118,14 @@ const STRINGS: Record<PlaygroundLocale, PlaygroundStrings> = {
     tagsExternalPrefix: " See ",
     tagsExternalLabel: "project docs",
     tagsExternalSuffix: " for more.",
-    tryHint:
-      "Add new blocks below — type # / ## / ### , - , 1. , - [ ] , > , ``` , --- , type or paste | Name | Type | for tables (multi-line GFM pipe tables paste as native tables), type [text](url) for external links (invalid URLs show an error toast; bare URLs linkify on space), paste or drag-and-drop images (PNG/JPG, max 5 MB; very small images display at a minimum height of 80px), click or tap embedded images to select them and drag the resize handle to adjust size, type # for tag autocomplete, or [[ to link notes with autocomplete ([[ and ]] brackets reveal at the caret when editing a wiki link). Checking a task moves it to the bottom of the list; unchecking moves it back above completed items — hide completed tasks in Settings or the info panel. Desktop shortcuts: Cmd+B/I/Shift+X/K (Cmd+K links selected text), Cmd+Enter toggles tasks (including when the checkbox is focused, or add table row in cells), Tab / Shift+Tab to nest lists or move between table cells, Mod+Shift+Enter add table column, Mod+Backspace delete table row, Mod+Shift+Backspace delete table column, Cmd+Alt+↑/↓ to move lines, Cmd+D to duplicate line, Cmd+Shift+K to delete line, Cmd+Z / Cmd+Shift+Z to undo and redo, Enter on empty list items to outdent or exit, Enter or Backspace at line start on empty blockquote lines to exit the quote, Mod+Enter (or Enter on an empty last code line) to leave code blocks, Backspace at line start to outdent nested items, Cmd+N new note, Cmd+F find in note, Cmd+Option+F find and replace, Cmd+Shift+F search all notes.",
+    tryHintBullets: [
+      "Add new blocks below — type # / ## / ### , - , 1. , - [ ] , > , ``` , --- for headings, lists, quotes, code, and dividers.",
+      "Type or paste | Name | Type | for tables (multi-line GFM pipe tables paste as native tables), type [text](url) for external links (invalid URLs show an error toast; bare URLs linkify on space).",
+      "Paste or drag-and-drop images (PNG/JPG, max 5 MB; very small images display at a minimum height of 80px), click or tap embedded images to select them and drag the resize handle to adjust size.",
+      "Type # for tag autocomplete, or [[ to link notes with autocomplete ([[ and ]] brackets reveal at the caret when editing a wiki link).",
+      "Checking a task moves it to the bottom of the list; unchecking moves it back above completed items — hide completed tasks in Settings or the info panel.",
+      "Desktop shortcuts: Cmd+B/I/Shift+X/K (Cmd+K links selected text), Cmd+Enter toggles tasks (including when the checkbox is focused, or add table row in cells), Tab / Shift+Tab to nest lists or move between table cells, Mod+Shift+Enter add table column, Mod+Backspace delete table row, Mod+Shift+Backspace delete table column, Cmd+Alt+↑/↓ to move lines, Cmd+D to duplicate line, Cmd+Shift+K to delete line, Cmd+Z / Cmd+Shift+Z to undo and redo, Enter on empty list items to outdent or exit, Enter or Backspace at line start on empty blockquote lines to exit the quote, Mod+Enter (or Enter on an empty last code line) to leave code blocks, Backspace at line start to outdent nested items, Cmd+N new note, Cmd+F find in note, Cmd+Option+F find and replace, Cmd+Shift+F search all notes.",
+    ],
   },
   zh: {
     title: "格式试炼场",
@@ -169,8 +175,14 @@ const STRINGS: Record<PlaygroundLocale, PlaygroundStrings> = {
     tagsExternalPrefix: " 详见 ",
     tagsExternalLabel: "项目文档",
     tagsExternalSuffix: "。",
-    tryHint:
-      "在下方空行试输入 # / ## / ### 、- 、1. 、- [ ] 、> 、``` 、--- 、| 名称 | 类型 | 创建表格，或直接粘贴多行 GFM 管道表格为原生表格，输入 [文字](url) 创建外部链接（无效 URL 会显示错误提示；裸 URL 输入空格后自动链接），粘贴或拖放图片（PNG/JPG，最大 5 MB；极小的图片会以 80px 最小高度显示），点击或轻触内嵌图片可选中并拖动手柄调整大小，输入 # 可用标签自动完成，或输入 [[ 链接笔记（编辑已有链接时光标处会显示 [[ 和 ]] 括号）。勾选任务会将其移到列表底部，取消勾选会移回已完成项上方；可在设置或信息面板开启隐藏已完成任务。桌面快捷键：Cmd+B/I/Shift+X/K（Cmd+K 为选中文本加链接）、Cmd+Enter 切换任务（复选框获得焦点时同样生效，或在表格单元格内添加行）、Tab / Shift+Tab 嵌套列表或在表格单元格间移动、Mod+Shift+Enter 添加表格列、Mod+Backspace 删除表格行、Mod+Shift+Backspace 删除表格列、Cmd+Alt+↑/↓ 移动行、Cmd+D 复制行、Cmd+Shift+K 删除行、Cmd+Z / Cmd+Shift+Z 撤销与重做、空列表项按 Enter 降级或退出列表、空引用行按 Enter 或行首 Backspace 退出引用、Mod+Enter（或代码块末尾空行连按 Enter）离开代码块、行首 Backspace 降级嵌套项、Cmd+N 新建笔记、Cmd+F 在笔记内查找、Cmd+Option+F 查找并替换、Cmd+Shift+F 搜索全部笔记。",
+    tryHintBullets: [
+      "在下方空行试输入 # / ## / ### 、- 、1. 、- [ ] 、> 、``` 、--- 创建标题、列表、引用、代码块与分隔线。",
+      "输入 | 名称 | 类型 | 创建表格，或直接粘贴多行 GFM 管道表格为原生表格，输入 [文字](url) 创建外部链接（无效 URL 会显示错误提示；裸 URL 输入空格后自动链接）。",
+      "粘贴或拖放图片（PNG/JPG，最大 5 MB；极小的图片会以 80px 最小高度显示），点击或轻触内嵌图片可选中并拖动手柄调整大小。",
+      "输入 # 可用标签自动完成，或输入 [[ 链接笔记（编辑已有链接时光标处会显示 [[ 和 ]] 括号）。",
+      "勾选任务会将其移到列表底部，取消勾选会移回已完成项上方；可在设置或信息面板开启隐藏已完成任务。",
+      "桌面快捷键：Cmd+B/I/Shift+X/K（Cmd+K 为选中文本加链接）、Cmd+Enter 切换任务（复选框获得焦点时同样生效，或在表格单元格内添加行）、Tab / Shift+Tab 嵌套列表或在表格单元格间移动、Mod+Shift+Enter 添加表格列、Mod+Backspace 删除表格行、Mod+Shift+Backspace 删除表格列、Cmd+Alt+↑/↓ 移动行、Cmd+D 复制行、Cmd+Shift+K 删除行、Cmd+Z / Cmd+Shift+Z 撤销与重做、空列表项按 Enter 降级或退出列表、空引用行按 Enter 或行首 Backspace 退出引用、Mod+Enter（或代码块末尾空行连按 Enter）离开代码块、行首 Backspace 降级嵌套项、Cmd+N 新建笔记、Cmd+F 在笔记内查找、Cmd+Option+F 查找并替换、Cmd+Shift+F 搜索全部笔记。",
+    ],
   },
 };
 
@@ -206,6 +218,13 @@ function paragraph(...content: ReturnType<typeof text>[]) {
 
 function listItem(...content: unknown[]) {
   return { type: "listItem", content };
+}
+
+function tryHintBulletList(bullets: readonly string[]) {
+  return {
+    type: "bulletList",
+    content: bullets.map((bullet) => listItem(paragraph(text(bullet)))),
+  };
 }
 
 function taskItem(checked: boolean, value: string) {
@@ -365,7 +384,7 @@ export function buildPlaygroundContent(locale: Locale) {
       ),
 
       heading(2, s.sectionTry),
-      paragraph(text(s.tryHint)),
+      tryHintBulletList(s.tryHintBullets),
       paragraph(),
       paragraph(),
     ],
@@ -641,8 +660,8 @@ export function migratePlaygroundContentIfStale(
     }
     if (headingText(node) === s.sectionTry) {
       const tryHintNode = contentNodes[i + 1];
-      if (tryHintNode?.type === "paragraph") {
-        contentNodes[i + 1] = paragraph(text(s.tryHint));
+      if (tryHintNode?.type === "paragraph" || tryHintNode?.type === "bulletList") {
+        contentNodes[i + 1] = tryHintBulletList(s.tryHintBullets);
       }
     }
     if (headingText(node) === s.sectionTags) {
