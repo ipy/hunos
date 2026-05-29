@@ -1,5 +1,6 @@
 import type { Editor } from "@tiptap/core";
 import type { ResolvedPos } from "@tiptap/pm/model";
+import type { Transaction } from "@tiptap/pm/state";
 
 const focusedTaskCheckboxByEditor = new WeakMap<Editor, number>();
 
@@ -17,6 +18,19 @@ export function setFocusedTaskCheckboxPos(
 
 export function getFocusedTaskCheckboxPos(editor: Editor): number | null {
   return focusedTaskCheckboxByEditor.get(editor) ?? null;
+}
+
+/** Remap stored checkbox position after a transaction that may reorder task items. */
+export function resyncFocusedTaskCheckboxPos(
+  editor: Editor,
+  tr: Transaction,
+): void {
+  const focusedPos = getFocusedTaskCheckboxPos(editor);
+  if (focusedPos === null) {
+    return;
+  }
+
+  setFocusedTaskCheckboxPos(editor, tr.mapping.map(focusedPos));
 }
 
 export function isTaskCheckboxFocused(editor: Editor): boolean {

@@ -1,17 +1,21 @@
-import React, { useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useTheme } from '@/theme/ThemeContext';
-import { Icon } from '@/components/common/Icon';
-import type { Note } from '@/types/note';
-import type { Editor } from '@tiptap/react';
-import { scrollToTocIndex } from '@/utils/tocNavigation';
+import React, { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useTheme } from "@/theme/ThemeContext";
+import { Icon } from "@/components/common/Icon";
+import { SettingToggle } from "@/components/settings/SettingToggle";
+import type { Note } from "@/types/note";
+import type { Editor } from "@tiptap/react";
+import { scrollToTocIndex } from "@/utils/tocNavigation";
 
-type Tab = 'stats' | 'toc';
+type Tab = "stats" | "toc";
 
 interface InfoPanelProps {
   note: Note;
   editor: Editor | null;
   onClose: () => void;
+  hideCompletedTasks: boolean;
+  onHideCompletedTasksChange: (hide: boolean) => void;
+  showHideCompletedToggle: boolean;
 }
 
 interface TocItem {
@@ -26,11 +30,19 @@ function extractToc(content: string): TocItem[] {
     const doc = JSON.parse(content);
     if (!doc?.content) return [];
     return doc.content
-      .filter((node: { type: string }) => node.type === 'heading')
-      .map((node: { attrs?: { level?: number }; content?: { text?: string }[] }) => ({
-        level: node.attrs?.level ?? 1,
-        text: node.content?.map((c: { text?: string }) => c.text ?? '').join('') ?? '',
-      }))
+      .filter((node: { type: string }) => node.type === "heading")
+      .map(
+        (node: {
+          attrs?: { level?: number };
+          content?: { text?: string }[];
+        }) => ({
+          level: node.attrs?.level ?? 1,
+          text:
+            node.content
+              ?.map((c: { text?: string }) => c.text ?? "")
+              .join("") ?? "",
+        }),
+      )
       .filter((item: TocItem) => item.text);
   } catch {
     return [];
@@ -40,17 +52,24 @@ function extractToc(content: string): TocItem[] {
 function formatDateTime(ts: number): string {
   const d = new Date(ts);
   const day = d.getDate();
-  const month = d.toLocaleString('en', { month: 'short' });
+  const month = d.toLocaleString("en", { month: "short" });
   const year = d.getFullYear();
-  const h = d.getHours().toString().padStart(2, '0');
-  const m = d.getMinutes().toString().padStart(2, '0');
+  const h = d.getHours().toString().padStart(2, "0");
+  const m = d.getMinutes().toString().padStart(2, "0");
   return `${day} ${month} ${year} at ${h}:${m}`;
 }
 
-export function InfoPanel({ note, editor, onClose }: InfoPanelProps) {
+export function InfoPanel({
+  note,
+  editor,
+  onClose,
+  hideCompletedTasks,
+  onHideCompletedTasksChange,
+  showHideCompletedToggle,
+}: InfoPanelProps) {
   const { t } = useTranslation();
   const theme = useTheme();
-  const [activeTab, setActiveTab] = useState<Tab>('stats');
+  const [activeTab, setActiveTab] = useState<Tab>("stats");
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartY = useRef<number | null>(null);
@@ -58,14 +77,16 @@ export function InfoPanel({ note, editor, onClose }: InfoPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
 
   const charCount = note.contentPlain.length;
-  const wordCount = note.wordCount || note.contentPlain.split(/\s+/).filter(Boolean).length;
-  const paragraphCount = note.contentPlain.split(/\n\s*\n/).filter(Boolean).length || 1;
+  const wordCount =
+    note.wordCount || note.contentPlain.split(/\s+/).filter(Boolean).length;
+  const paragraphCount =
+    note.contentPlain.split(/\n\s*\n/).filter(Boolean).length || 1;
   const readingTime = Math.max(1, Math.ceil(wordCount / 200));
   const toc = extractToc(note.content);
 
   const tabs: { id: Tab; icon: string }[] = [
-    { id: 'stats', icon: 'stats' },
-    { id: 'toc', icon: 'list' },
+    { id: "stats", icon: "stats" },
+    { id: "toc", icon: "list" },
   ];
 
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -103,10 +124,12 @@ export function InfoPanel({ note, editor, onClose }: InfoPanelProps) {
       <div
         onClick={onClose}
         style={{
-          position: 'fixed',
+          position: "fixed",
           inset: 0,
           zIndex: 59,
-          backgroundColor: theme.isDark ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.25)',
+          backgroundColor: theme.isDark
+            ? "rgba(0,0,0,0.45)"
+            : "rgba(0,0,0,0.25)",
         }}
       />
 
@@ -114,25 +137,32 @@ export function InfoPanel({ note, editor, onClose }: InfoPanelProps) {
       <div
         ref={panelRef}
         style={{
-          position: 'absolute',
+          position: "absolute",
           bottom: 0,
           left: 0,
           right: 0,
           zIndex: 60,
-          backgroundColor: theme.isDark ? 'rgba(28,28,30,0.96)' : 'rgba(255,255,255,0.96)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
+          backgroundColor: theme.isDark
+            ? "rgba(28,28,30,0.96)"
+            : "rgba(255,255,255,0.96)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
           borderTopLeftRadius: 16,
           borderTopRightRadius: 16,
           boxShadow: theme.isDark
-            ? '0 -4px 30px rgba(0,0,0,0.4)'
-            : '0 -4px 30px rgba(0,0,0,0.08)',
-          maxHeight: '60vh',
-          display: 'flex',
-          flexDirection: 'column',
-          animation: dragOffset === 0 && !isDragging ? 'sheetSlideUp 0.35s cubic-bezier(0.32, 0.72, 0, 1)' : undefined,
+            ? "0 -4px 30px rgba(0,0,0,0.4)"
+            : "0 -4px 30px rgba(0,0,0,0.08)",
+          maxHeight: "60vh",
+          display: "flex",
+          flexDirection: "column",
+          animation:
+            dragOffset === 0 && !isDragging
+              ? "sheetSlideUp 0.35s cubic-bezier(0.32, 0.72, 0, 1)"
+              : undefined,
           transform: dragOffset > 0 ? `translateY(${dragOffset}px)` : undefined,
-          transition: isDragging ? 'none' : 'transform 0.25s cubic-bezier(0.32, 0.72, 0, 1)',
+          transition: isDragging
+            ? "none"
+            : "transform 0.25s cubic-bezier(0.32, 0.72, 0, 1)",
         }}
       >
         {/* Drag handle + header — drag target */}
@@ -141,112 +171,180 @@ export function InfoPanel({ note, editor, onClose }: InfoPanelProps) {
           onPointerMove={handlePointerMove}
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
-          style={{ touchAction: 'none', cursor: 'grab', flexShrink: 0 }}
+          style={{ touchAction: "none", cursor: "grab", flexShrink: 0 }}
         >
-          <div style={{
-            display: 'flex', justifyContent: 'center', paddingTop: 8, paddingBottom: 4,
-          }}>
-            <div style={{
-              width: 36, height: 4, borderRadius: 2,
-              backgroundColor: theme.colors.textTertiary,
-              opacity: 0.3,
-            }} />
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              paddingTop: 8,
+              paddingBottom: 4,
+            }}
+          >
+            <div
+              style={{
+                width: 36,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: theme.colors.textTertiary,
+                opacity: 0.3,
+              }}
+            />
           </div>
 
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '6px 20px 10px',
-          }}>
-            <span style={{ fontSize: 15, fontWeight: '600', color: theme.colors.text, letterSpacing: -0.2 }}>
-              {activeTab === 'stats' ? t('editor.stats.title') : t('editor.toc.title')}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "6px 20px 10px",
+            }}
+          >
+            <span
+              style={{
+                fontSize: 15,
+                fontWeight: "600",
+                color: theme.colors.text,
+                letterSpacing: -0.2,
+              }}
+            >
+              {activeTab === "stats"
+                ? t("editor.stats.title")
+                : t("editor.toc.title")}
             </span>
           </div>
         </div>
 
         {/* Tab bar */}
-        <div style={{
-          display: 'flex', justifyContent: 'center', gap: 4,
-          padding: '0 40px 12px',
-          flexShrink: 0,
-        }}>
-          {tabs.map(tab => (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: 4,
+            padding: "0 40px 12px",
+            flexShrink: 0,
+          }}
+        >
+          {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               style={{
                 flex: 1,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                padding: '8px 0',
-                border: 'none', cursor: 'pointer',
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "8px 0",
+                border: "none",
+                cursor: "pointer",
                 borderRadius: 8,
-                backgroundColor: activeTab === tab.id ? theme.colors.surface : 'transparent',
-                transition: 'background-color 0.2s ease',
+                backgroundColor:
+                  activeTab === tab.id ? theme.colors.surface : "transparent",
+                transition: "background-color 0.2s ease",
               }}
             >
               <Icon
                 name={tab.icon}
                 size={17}
-                color={activeTab === tab.id ? theme.colors.accent : theme.colors.textTertiary}
+                color={
+                  activeTab === tab.id
+                    ? theme.colors.accent
+                    : theme.colors.textTertiary
+                }
               />
             </button>
           ))}
         </div>
 
         {/* Content */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 20px' }}>
-          {activeTab === 'stats' && (
+        <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
+          {activeTab === "stats" && (
             <div>
               {/* 2x2 grid */}
-              <div style={{
-                display: 'grid', gridTemplateColumns: '1fr 1fr',
-                gap: 12, marginBottom: 12,
-              }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 12,
+                  marginBottom: 12,
+                }}
+              >
                 <StatBox
                   value={wordCount.toLocaleString()}
-                  label={t('editor.stats.words')}
+                  label={t("editor.stats.words")}
                   icon="💬"
                 />
                 <StatBox
                   value={charCount.toLocaleString()}
-                  label={t('editor.stats.characters')}
+                  label={t("editor.stats.characters")}
                   icon="Aa"
                 />
                 <StatBox
                   value={paragraphCount.toString()}
-                  label={t('editor.stats.paragraphs')}
+                  label={t("editor.stats.paragraphs")}
                   icon="¶"
                 />
                 <StatBox
                   value={`${readingTime}m`}
-                  label={t('editor.stats.readingTime')}
+                  label={t("editor.stats.readingTime")}
                   icon="⏱"
                 />
               </div>
 
               {/* Dates */}
-              <div style={{
-                display: 'flex', flexDirection: 'column', gap: 0,
-                borderRadius: 12,
-                backgroundColor: theme.colors.surface,
-                overflow: 'hidden',
-              }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 0,
+                  borderRadius: 12,
+                  backgroundColor: theme.colors.surface,
+                  overflow: "hidden",
+                }}
+              >
                 <DateRow
-                  label={t('editor.stats.modified')}
+                  label={t("editor.stats.modified")}
                   value={formatDateTime(note.modifiedAt)}
                 />
                 <DateRow
-                  label={t('editor.stats.created')}
+                  label={t("editor.stats.created")}
                   value={formatDateTime(note.createdAt)}
                 />
               </div>
+
+              {showHideCompletedToggle && (
+                <div
+                  style={{
+                    marginTop: 12,
+                    borderRadius: 12,
+                    backgroundColor: theme.colors.surface,
+                    overflow: "hidden",
+                    padding: "0 14px",
+                  }}
+                >
+                  <SettingToggle
+                    label={t("settings.editor.hideCompletedTasks")}
+                    checked={hideCompletedTasks}
+                    onChange={onHideCompletedTasksChange}
+                    testId="hide-completed-tasks-toggle"
+                  />
+                </div>
+              )}
             </div>
           )}
 
-          {activeTab === 'toc' && (
+          {activeTab === "toc" && (
             <div>
               {toc.length === 0 ? (
-                <p style={{ color: theme.colors.textTertiary, fontSize: 14, textAlign: 'center', padding: 20 }}>
-                  {t('editor.toc.empty')}
+                <p
+                  style={{
+                    color: theme.colors.textTertiary,
+                    fontSize: 14,
+                    textAlign: "center",
+                    padding: 20,
+                  }}
+                >
+                  {t("editor.toc.empty")}
                 </p>
               ) : (
                 toc.map((item, i) => (
@@ -258,22 +356,24 @@ export function InfoPanel({ note, editor, onClose }: InfoPanelProps) {
                       onClose();
                     }}
                     style={{
-                      display: 'block',
-                      width: '100%',
-                      textAlign: 'left',
-                      padding: '10px 0',
+                      display: "block",
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "10px 0",
                       paddingLeft: (item.level - 1) * 16,
-                      background: 'none',
-                      border: 'none',
+                      background: "none",
+                      border: "none",
                       borderBottom: `1px solid ${theme.colors.borderLight}`,
-                      cursor: editor ? 'pointer' : 'default',
+                      cursor: editor ? "pointer" : "default",
                     }}
                   >
-                    <span style={{
-                      fontSize: item.level === 1 ? 15 : 14,
-                      fontWeight: item.level === 1 ? '600' : '400',
-                      color: theme.colors.text,
-                    }}>
+                    <span
+                      style={{
+                        fontSize: item.level === 1 ? 15 : 14,
+                        fontWeight: item.level === 1 ? "600" : "400",
+                        color: theme.colors.text,
+                      }}
+                    >
                       {item.text}
                     </span>
                   </button>
@@ -281,26 +381,46 @@ export function InfoPanel({ note, editor, onClose }: InfoPanelProps) {
               )}
             </div>
           )}
-
         </div>
       </div>
     </>
   );
 }
 
-function StatBox({ value, label, icon }: { value: string; label: string; icon: string }) {
+function StatBox({
+  value,
+  label,
+  icon,
+}: {
+  value: string;
+  label: string;
+  icon: string;
+}) {
   const theme = useTheme();
   return (
-    <div style={{
-      padding: '16px 14px',
-      borderRadius: 12,
-      backgroundColor: theme.colors.surface,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-        <span style={{ fontSize: 28, fontWeight: '700', color: theme.colors.text }}>
+    <div
+      style={{
+        padding: "16px 14px",
+        borderRadius: 12,
+        backgroundColor: theme.colors.surface,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 4,
+        }}
+      >
+        <span
+          style={{ fontSize: 28, fontWeight: "700", color: theme.colors.text }}
+        >
           {value}
         </span>
-        <span style={{ fontSize: 16, color: theme.colors.textTertiary }}>{icon}</span>
+        <span style={{ fontSize: 16, color: theme.colors.textTertiary }}>
+          {icon}
+        </span>
       </div>
       <span style={{ fontSize: 12, color: theme.colors.textTertiary }}>
         {label}
@@ -312,14 +432,30 @@ function StatBox({ value, label, icon }: { value: string; label: string; icon: s
 function DateRow({ label, value }: { label: string; value: string }) {
   const theme = useTheme();
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '12px 14px',
-      borderBottom: `1px solid ${theme.colors.borderLight}`,
-    }}>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "12px 14px",
+        borderBottom: `1px solid ${theme.colors.borderLight}`,
+      }}
+    >
       <div>
-        <div style={{ fontSize: 14, fontWeight: '500', color: theme.colors.text }}>{value}</div>
-        <div style={{ fontSize: 11, color: theme.colors.textTertiary, marginTop: 2 }}>{label}</div>
+        <div
+          style={{ fontSize: 14, fontWeight: "500", color: theme.colors.text }}
+        >
+          {value}
+        </div>
+        <div
+          style={{
+            fontSize: 11,
+            color: theme.colors.textTertiary,
+            marginTop: 2,
+          }}
+        >
+          {label}
+        </div>
       </div>
       <span style={{ fontSize: 16, color: theme.colors.textTertiary }}>📅</span>
     </div>

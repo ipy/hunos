@@ -12,6 +12,7 @@ import { BacklinksPanel } from "@/components/backlinks/BacklinksPanel";
 import { InfoPanel } from "@/components/editor/InfoPanel";
 import { exportAndDownload } from "@/utils/export";
 import { resolveTextFontFamily } from "@/utils/fonts";
+import { noteContentHasTaskList } from "@/utils/noteContentHasTaskList";
 import type { Editor } from "@tiptap/react";
 import type { LayoutMode } from "@/hooks/useAdaptiveLayout";
 import { shouldSuppressFocusModeEscape } from "@/utils/editorSuggestionMenu";
@@ -53,6 +54,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     requestFindInNote,
   } = useUIStore();
   const settings = useSettingsStore();
+  const { hideCompletedTasks, setHideCompletedTasks } = settings;
   const [showActions, setShowActions] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
@@ -720,11 +722,14 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         </>
       )}
 
-      {showStats && (
+      {showStats && note && (
         <InfoPanel
           note={note}
           editor={editorInstance}
           onClose={() => setShowStats(false)}
+          hideCompletedTasks={hideCompletedTasks}
+          onHideCompletedTasksChange={setHideCompletedTasks}
+          showHideCompletedToggle={noteContentHasTaskList(note.content)}
         />
       )}
 

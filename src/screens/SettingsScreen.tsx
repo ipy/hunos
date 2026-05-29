@@ -5,6 +5,7 @@ import { useSettingsStore } from "@/store/settingsStore";
 import { useUIStore } from "@/store/uiStore";
 import { Icon } from "@/components/common/Icon";
 import { TypographySettings } from "@/components/settings/TypographySettings";
+import { SettingToggle } from "@/components/settings/SettingToggle";
 import type { ThemeMode, Locale } from "@/types/settings";
 import type { LayoutMode } from "@/hooks/useAdaptiveLayout";
 
@@ -13,63 +14,6 @@ interface SettingsScreenProps {
 }
 
 type SettingsView = "main" | "typography";
-
-function SettingToggle({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  const theme = useTheme();
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "14px 0",
-        borderBottom: `1px solid ${theme.colors.borderLight}`,
-      }}
-    >
-      <span style={{ fontSize: 15, color: theme.colors.text }}>{label}</span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        style={{
-          width: 51,
-          height: 31,
-          borderRadius: 16,
-          border: "none",
-          padding: 2,
-          cursor: "pointer",
-          backgroundColor: checked ? theme.colors.accent : theme.colors.surface,
-          boxShadow: `inset 0 0 0 0.5px ${checked ? "transparent" : theme.colors.border}`,
-          transition: "background-color 0.2s cubic-bezier(0.32, 0.72, 0, 1)",
-          position: "relative",
-          flexShrink: 0,
-        }}
-      >
-        <span
-          style={{
-            display: "block",
-            width: 27,
-            height: 27,
-            borderRadius: "50%",
-            backgroundColor: theme.colors.background,
-            boxShadow: `0 1px 3px ${theme.colors.shadow}`,
-            transform: checked ? "translateX(20px)" : "translateX(0)",
-            transition: "transform 0.2s cubic-bezier(0.32, 0.72, 0, 1)",
-          }}
-        />
-      </button>
-    </div>
-  );
-}
 
 function SettingRow({
   label,

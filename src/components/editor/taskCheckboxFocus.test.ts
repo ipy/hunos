@@ -2,12 +2,14 @@ import type { Editor } from "@tiptap/core";
 import { Schema } from "@tiptap/pm/model";
 import { EditorState, TextSelection } from "@tiptap/pm/state";
 import { describe, expect, it } from "vitest";
+import { applyTaskItemToggleReorder } from "./taskSinkUtils";
 import {
   findTaskItemPosFromResolvedPos,
   getFocusedTaskCheckboxPos,
   isModEnterKeyboardEvent,
   isTaskCheckboxFocused,
   isTaskItemToggleContext,
+  resyncFocusedTaskCheckboxPos,
   resolveTaskItemPosForToggle,
   setFocusedTaskCheckboxPos,
 } from "./taskCheckboxFocus";
@@ -200,5 +202,37 @@ describe("taskCheckboxFocus", () => {
         altKey: false,
       } as KeyboardEvent),
     ).toBe(false);
+  });
+
+  it("remaps focused checkbox position after task reorder transaction", () => {
+    const taskDocument = buildTaskDoc();
+    const state = EditorState.create({
+      doc: taskDocument,
+      selection: TextSelection.create(taskDocument, 1),
+    });
+    const editor = mockEditor([], state);
+
+    const openPos = findTaskItemPos(taskDocument, "open");
+    setFocusedTaskCheckboxPos(editor, openPos);
+
+    const tr = state.tr;
+    applyTaskItemToggleReorder(tr, openPos, true);
+    resyncFocusedTaskCheckboxPos(editor, tr);
+    const nextState = state.apply(tr);
+
+    const togglePos = resolveTaskItemPosForToggle(
+      editor,
+      "taskItem",
+      nextState.selection.$from,
+    );
+    expect(togglePos).not.toBeNull();
+
+    const node = nextState.doc.nodeAt(togglePos!);
+    expect(node?.type.name).toBe("taskItem");
+    expect(node?.textContent).toBe("open");
+    expect(node?.attrs.checked).toBe(true);
+
+    const tr2 = nextState.tr;
+    expect(applyTaskItemToggleReorder(tr2, togglePos!, false)).toBe(true);
   });
 });

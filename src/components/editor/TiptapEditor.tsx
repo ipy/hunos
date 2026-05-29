@@ -21,6 +21,7 @@ import {
   MarkdownTaskItem,
 } from "./MarkdownShortcuts";
 import { TASK_LIST_TOGGLE_REORDER_META } from "./taskSinkUtils";
+import { applyHideCompletedTasksDomAttribute } from "@/utils/hideCompletedTasksDom";
 import { WikiLinkDecoration } from "./WikiLinkDecoration";
 import { WikiLinkSuggestion } from "./WikiLinkSuggestion";
 import { TagSuggestion } from "./TagSuggestion";
@@ -283,11 +284,7 @@ export function TiptapEditor({
 
   useEffect(() => {
     if (!editor) return;
-    if (hideCompletedTasks) {
-      editor.view.dom.setAttribute("data-hide-completed-tasks", "true");
-    } else {
-      editor.view.dom.removeAttribute("data-hide-completed-tasks");
-    }
+    applyHideCompletedTasksDomAttribute(editor.view.dom, hideCompletedTasks);
   }, [editor, hideCompletedTasks]);
 
   useEffect(() => {

@@ -11,6 +11,7 @@ import {
   getFocusedTaskCheckboxPos,
   isModEnterKeyboardEvent,
   resolveTaskItemPosForToggle,
+  resyncFocusedTaskCheckboxPos,
   setFocusedTaskCheckboxPos,
 } from "./taskCheckboxFocus";
 import { applyTaskItemToggleReorder } from "./taskSinkUtils";
@@ -261,6 +262,7 @@ export const MarkdownTaskItem = TaskItem.extend({
             return false;
           }
 
+          resyncFocusedTaskCheckboxPos(editor, tr);
           dispatch?.(tr);
           return true;
         },
@@ -390,6 +392,16 @@ export const MarkdownTaskItem = TaskItem.extend({
             : "false";
           checkbox.checked = updatedNode.attrs.checked;
           updateA11Y(updatedNode);
+
+          if (
+            document.activeElement === checkbox &&
+            typeof getPos === "function"
+          ) {
+            const position = getPos();
+            if (typeof position === "number") {
+              setFocusedTaskCheckboxPos(editor, position);
+            }
+          }
 
           return true;
         },
