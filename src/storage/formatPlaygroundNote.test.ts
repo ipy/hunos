@@ -1,11 +1,27 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   PLAYGROUND_CONTENT_VERSION,
   buildPlaygroundContent,
   getFormatPlaygroundTitle,
   isFormatPlaygroundNote,
   migratePlaygroundContentIfStale,
+  restoreFormatPlaygroundContent,
 } from "./formatPlaygroundNote";
+
+const noteStorageUpdate = vi.fn();
+const syncNoteLinks = vi.fn();
+
+vi.mock("./noteStorage", () => ({
+  noteStorage: {
+    update: (...args: unknown[]) => noteStorageUpdate(...args),
+  },
+}));
+
+vi.mock("@/graph/graphEngine", () => ({
+  graphEngine: {
+    syncNoteLinks: (...args: unknown[]) => syncNoteLinks(...args),
+  },
+}));
 
 describe("isFormatPlaygroundNote", () => {
   it("matches canonical playground titles", () => {
@@ -618,5 +634,48 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(
       migratePlaygroundContentIfStale(JSON.stringify(edited), "en"),
     ).toBeNull();
+  });
+});
+
+describe("restoreFormatPlaygroundContent", () => {
+  it("resets content, plain text, and localized title", async () => {
+    noteStorageUpdate.mockClear();
+    syncNoteLinks.mockClear();
+
+    await restoreFormatPlaygroundContent("playground-id", "zh");
+
+    expect(noteStorageUpdate).toHaveBeenCalledOnce();
+    const [noteId, payload] = noteStorageUpdate.mock.calls[0] as [
+      string,
+      { content: string; contentPlain: string; title: string },
+    ];
+    expect(noteId).toBe("playground-id");
+    expect(payload.title).toBe("格式试炼场");
+
+    const parsed = JSON.parse(payload.content) as {
+      attrs?: { playgroundContentVersion?: number };
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    expect(parsed.attrs?.playgroundContentVersion).toBe(
+      PLAYGROUND_CONTENT_VERSION,
+    );
+    expect(parsed.content[0]?.content?.[0]?.text).toBe("格式试炼场");
+    expect(payload.contentPlain).toContain("格式试炼场");
+    expect(syncNoteLinks).toHaveBeenCalledWith(
+      "playground-id",
+      payload.content,
+    );
+  });
+
+  it("uses English title when locale is en", async () => {
+    noteStorageUpdate.mockClear();
+
+    await restoreFormatPlaygroundContent("playground-id", "en");
+
+    const [, payload] = noteStorageUpdate.mock.calls[0] as [
+      string,
+      { title: string },
+    ];
+    expect(payload.title).toBe("Format Playground");
   });
 });

@@ -217,7 +217,12 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = undefined;
     }
+    if (titleTimeoutRef.current) {
+      clearTimeout(titleTimeoutRef.current);
+      titleTimeoutRef.current = undefined;
+    }
     await restoreFormatPlayground(note.id, settings.locale);
+    setTitleValue(getFormatPlaygroundTitle(settings.locale));
     showToast(t("notes.actions.restorePlaygroundDone"));
     setShowActions(false);
   };
@@ -268,6 +273,9 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     );
   }
 
+  const isPlaygroundNote = isFormatPlaygroundNote(note.title, note.content);
+  const restorePlaygroundLabel = t("notes.actions.restorePlayground");
+
   return (
     <div
       style={{
@@ -313,6 +321,41 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           </button>
         )}
         <div style={{ flex: 1 }} />
+        {isPlaygroundNote && (
+          <button
+            type="button"
+            onClick={handleRestorePlayground}
+            aria-label={restorePlaygroundLabel}
+            title={restorePlaygroundLabel}
+            data-testid="restore-playground-button"
+            style={{
+              background: theme.colors.surface,
+              border: `1px solid ${theme.colors.borderLight}`,
+              cursor: "pointer",
+              padding: "6px 12px",
+              borderRadius: theme.radius.full,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              minHeight: 44,
+              fontSize: 13,
+              fontWeight: 500,
+              color: theme.colors.textSecondary,
+              whiteSpace: "nowrap",
+              transition: "background-color 0.15s ease",
+            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.backgroundColor =
+                theme.colors.surfaceHover)
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.backgroundColor = theme.colors.surface)
+            }
+          >
+            <Icon name="note" size={16} color={theme.colors.textSecondary} />
+            {restorePlaygroundLabel}
+          </button>
+        )}
         {focusMode && isCompactChrome ? (
           <>
             <button

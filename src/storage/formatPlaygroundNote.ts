@@ -371,10 +371,12 @@ export async function restoreFormatPlaygroundContent(
   const content = buildPlaygroundContent(locale);
   const contentStr = JSON.stringify(content);
   const contentPlain = extractPlainTextFromTiptap(content);
+  const title = getFormatPlaygroundTitle(locale);
 
   await noteStorage.update(noteId, {
     content: contentStr,
     contentPlain,
+    title,
   });
   await graphEngine.syncNoteLinks(noteId, contentStr);
 }
