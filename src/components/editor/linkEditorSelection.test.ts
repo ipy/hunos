@@ -92,4 +92,40 @@ describe("getLinkEditorAnchorRect", () => {
   it("returns null for destroyed editors", () => {
     expect(getLinkEditorAnchorRect({ isDestroyed: true } as never)).toBeNull();
   });
+
+  it("falls back to editor bounds when coordsAtPos fails", () => {
+    const doc = schema.node("doc", null, [
+      schema.node("paragraph", null, [schema.text("hello")]),
+    ]);
+    const state = EditorState.create({
+      doc,
+      schema,
+      selection: TextSelection.create(doc, 1),
+    });
+    const editor = createEditorLike(state);
+    captureLinkEditorSelection(editor as never);
+
+    const rect = getLinkEditorAnchorRect({
+      isDestroyed: false,
+      state: editor.stateRef,
+      view: {
+        coordsAtPos: () => {
+          throw new Error("no coords");
+        },
+        dom: {
+          getBoundingClientRect: () => ({
+            left: 10,
+            top: 20,
+            width: 400,
+            height: 300,
+            right: 410,
+            bottom: 320,
+          }),
+        },
+      },
+    } as never);
+
+    expect(rect?.left).toBe(34);
+    expect(rect?.top).toBe(68);
+  });
 });

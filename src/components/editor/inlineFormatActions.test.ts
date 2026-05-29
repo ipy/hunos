@@ -31,7 +31,7 @@ function createMockEditor(options?: {
     setTextSelection: vi.fn().mockReturnThis(),
     setLink: vi.fn().mockReturnThis(),
     unsetLink: vi.fn().mockReturnThis(),
-    run: vi.fn(),
+    run: vi.fn(() => true),
   };
 
   return {
@@ -59,6 +59,8 @@ describe("link editor helpers", () => {
     expect(isValidLinkUrl("https://example.com")).toBe(true);
     expect(isValidLinkUrl("example.com")).toBe(true);
     expect(isValidLinkUrl("not a url")).toBe(false);
+    expect(isValidLinkUrl("not a valid url")).toBe(false);
+    expect(isValidLinkUrl("notavalidurl")).toBe(false);
     expect(normalizeLinkUrl("example.com")).toBe("https://example.com");
   });
 

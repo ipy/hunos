@@ -131,7 +131,7 @@ export function LinkEditorBubble({ editor }: LinkEditorBubbleProps) {
     return () => window.removeEventListener("keydown", onKeyDown, true);
   }, [handleClose, linkEditorOpen]);
 
-  if (!editor || !linkEditorOpen || !anchorRect) return null;
+  if (!editor || !linkEditorOpen) return null;
 
   return (
     <div

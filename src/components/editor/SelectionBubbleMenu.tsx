@@ -11,6 +11,7 @@ import {
   isEditorSuggestionMenuOpen,
   isLinkEditorOpen,
 } from "@/utils/editorSuggestionMenu";
+import { useUIStore } from "@/store/uiStore";
 
 function shouldShowSelectionBubbleMenu({
   editor,
@@ -51,6 +52,7 @@ interface SelectionBubbleMenuProps {
 
 export function SelectionBubbleMenu({ editor }: SelectionBubbleMenuProps) {
   const theme = useTheme();
+  const linkEditorOpen = useUIStore((s) => s.linkEditorOpen);
   const [, setTick] = useState(0);
   const rafRef = useRef<number>(0);
   const touchHandledRef = useRef(false);
@@ -80,6 +82,8 @@ export function SelectionBubbleMenu({ editor }: SelectionBubbleMenuProps) {
   );
 
   if (!editor) return null;
+
+  void linkEditorOpen;
 
   return (
     <BubbleMenu

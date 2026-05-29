@@ -1,3 +1,5 @@
+import { useUIStore } from "@/store/uiStore";
+
 let suppressFocusModeExitThisEscape = false;
 
 /** Call when Escape closes a suggestion menu so focus mode is not exited on the same keypress. */
@@ -19,8 +21,6 @@ export function isEditorSuggestionMenuOpen(): boolean {
   if (!(menu instanceof HTMLElement) || !menu.isConnected) return false;
   return menu.getBoundingClientRect().height > 0;
 }
-
-import { useUIStore } from "@/store/uiStore";
 
 /** True when the inline link URL editor bubble is open. */
 export function isLinkEditorOpen(): boolean {

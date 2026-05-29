@@ -36,12 +36,17 @@ export function toggleMark(
 
 export function isValidLinkUrl(url: string): boolean {
   const trimmed = url.trim();
-  if (!trimmed) return false;
+  if (!trimmed || /\s/.test(trimmed)) return false;
   try {
-    const parsed = new URL(
-      trimmed.includes("://") ? trimmed : `https://${trimmed}`,
-    );
-    return Boolean(parsed.hostname);
+    const href = trimmed.includes("://") ? trimmed : `https://${trimmed}`;
+    const parsed = new URL(href);
+    const host = parsed.hostname;
+    if (!host) return false;
+    if (host === "localhost") return true;
+    if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(host)) return true;
+    if (!host.includes(".")) return false;
+    const tld = host.split(".").pop() ?? "";
+    return tld.length >= 2;
   } catch {
     return false;
   }
@@ -49,7 +54,12 @@ export function isValidLinkUrl(url: string): boolean {
 
 export function normalizeLinkUrl(url: string): string {
   const trimmed = url.trim();
-  return trimmed.includes("://") ? trimmed : `https://${trimmed}`;
+  const href = trimmed.includes("://") ? trimmed : `https://${trimmed}`;
+  const parsed = new URL(href);
+  if (parsed.pathname === "/" && !trimmed.endsWith("/")) {
+    return `${parsed.protocol}//${parsed.host}${parsed.search}${parsed.hash}`;
+  }
+  return parsed.href;
 }
 
 export function getLinkEditorInitialUrl(editor: Editor): string {
@@ -89,7 +99,11 @@ export function applyLinkUrl(editor: Editor, url: string): boolean {
   if (editor.isActive("link")) {
     chain.extendMarkRange("link");
   }
-  chain.setLink({ href: normalizeLinkUrl(trimmed) }).run();
+  const applied = chain.setLink({ href: normalizeLinkUrl(trimmed) }).run();
+  if (!applied) {
+    useUIStore.getState().showToast(i18n.t("editor.link.invalidUrl"), "error");
+    return false;
+  }
   clearLinkEditorSelection();
   return true;
 }
@@ -97,12 +111,15 @@ export function applyLinkUrl(editor: Editor, url: string): boolean {
 export function removeLinkFromEditor(editor: Editor): void {
   if (editor.isDestroyed) return;
   restoreLinkEditorSelection(editor);
-  if (!editor.isActive("link")) {
+  const removed = editor
+    .chain()
+    .focus()
+    .extendMarkRange("link")
+    .unsetLink()
+    .run();
+  if (removed) {
     clearLinkEditorSelection();
-    return;
   }
-  editor.chain().focus().extendMarkRange("link").unsetLink().run();
-  clearLinkEditorSelection();
 }
 
 export function openLinkEditor(editor: Editor): void {
