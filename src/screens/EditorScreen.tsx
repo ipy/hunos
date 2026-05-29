@@ -12,7 +12,6 @@ import { BacklinksPanel } from "@/components/backlinks/BacklinksPanel";
 import { InfoPanel } from "@/components/editor/InfoPanel";
 import { exportAndDownload } from "@/utils/export";
 import { resolveTextFontFamily } from "@/utils/fonts";
-import { noteContentHasTaskList } from "@/utils/noteContentHasTaskList";
 import type { Editor } from "@tiptap/react";
 import type { LayoutMode } from "@/hooks/useAdaptiveLayout";
 import { shouldSuppressFocusModeEscape } from "@/utils/editorSuggestionMenu";
@@ -729,7 +728,6 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           onClose={() => setShowStats(false)}
           hideCompletedTasks={hideCompletedTasks}
           onHideCompletedTasksChange={setHideCompletedTasks}
-          showHideCompletedToggle={noteContentHasTaskList(note.content)}
         />
       )}
 

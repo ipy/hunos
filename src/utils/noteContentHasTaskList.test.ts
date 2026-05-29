@@ -1,5 +1,15 @@
+import type { Editor } from "@tiptap/react";
 import { describe, expect, it } from "vitest";
-import { noteContentHasTaskList } from "./noteContentHasTaskList";
+import {
+  editorHasTaskList,
+  noteContentHasTaskList,
+} from "./noteContentHasTaskList";
+
+function mockEditor(doc: Record<string, unknown>): Editor {
+  return {
+    getJSON: () => doc,
+  } as unknown as Editor;
+}
 
 describe("noteContentHasTaskList", () => {
   it("returns false for empty content", () => {
@@ -91,5 +101,50 @@ describe("noteContentHasTaskList", () => {
     });
 
     expect(noteContentHasTaskList(content)).toBe(true);
+  });
+});
+
+describe("editorHasTaskList", () => {
+  it("returns false when editor is null", () => {
+    expect(editorHasTaskList(null)).toBe(false);
+  });
+
+  it("returns false when editor has no task lists", () => {
+    const editor = mockEditor({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "hello" }],
+        },
+      ],
+    });
+
+    expect(editorHasTaskList(editor)).toBe(false);
+  });
+
+  it("returns true when live editor doc contains a task list", () => {
+    const editor = mockEditor({
+      type: "doc",
+      content: [
+        {
+          type: "taskList",
+          content: [
+            {
+              type: "taskItem",
+              attrs: { checked: false },
+              content: [
+                {
+                  type: "paragraph",
+                  content: [{ type: "text", text: "即时隐藏测试" }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(editorHasTaskList(editor)).toBe(true);
   });
 });

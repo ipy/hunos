@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/theme/ThemeContext";
 import { Icon } from "@/components/common/Icon";
@@ -6,6 +6,10 @@ import { SettingToggle } from "@/components/settings/SettingToggle";
 import type { Note } from "@/types/note";
 import type { Editor } from "@tiptap/react";
 import { scrollToTocIndex } from "@/utils/tocNavigation";
+import {
+  editorHasTaskList,
+  noteContentHasTaskList,
+} from "@/utils/noteContentHasTaskList";
 
 type Tab = "stats" | "toc";
 
@@ -15,7 +19,6 @@ interface InfoPanelProps {
   onClose: () => void;
   hideCompletedTasks: boolean;
   onHideCompletedTasksChange: (hide: boolean) => void;
-  showHideCompletedToggle: boolean;
 }
 
 interface TocItem {
@@ -65,16 +68,35 @@ export function InfoPanel({
   onClose,
   hideCompletedTasks,
   onHideCompletedTasksChange,
-  showHideCompletedToggle,
 }: InfoPanelProps) {
   const { t } = useTranslation();
   const theme = useTheme();
+  const [showHideCompletedToggle, setShowHideCompletedToggle] = useState(
+    () => editorHasTaskList(editor) || noteContentHasTaskList(note.content),
+  );
   const [activeTab, setActiveTab] = useState<Tab>("stats");
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartY = useRef<number | null>(null);
   const dragOffsetRef = useRef(0);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!editor) {
+      setShowHideCompletedToggle(noteContentHasTaskList(note.content));
+      return;
+    }
+
+    const syncTaskListVisibility = () => {
+      setShowHideCompletedToggle(editorHasTaskList(editor));
+    };
+
+    syncTaskListVisibility();
+    editor.on("transaction", syncTaskListVisibility);
+    return () => {
+      editor.off("transaction", syncTaskListVisibility);
+    };
+  }, [editor, note.content]);
 
   const charCount = note.contentPlain.length;
   const wordCount =
