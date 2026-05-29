@@ -1,18 +1,38 @@
 import i18n from "@/i18n";
 import { useUIStore } from "@/store/uiStore";
-import { readImageFileAsDataUrl, validateImageSize } from "./imageEmbedUtils";
+import {
+  loadImageDimensions,
+  readImageFileAsDataUrl,
+  validateImageSize,
+} from "./imageEmbedUtils";
+import {
+  buildBlockImageInsertAttrs,
+  type BlockImageInsertAttrs,
+} from "./imageResizeUtils";
 
 type ImageInsertEditor = {
   chain: () => {
     focus: () => {
-      setImage: (attrs: { src: string }) => { run: () => boolean };
+      setImage: (attrs: BlockImageInsertAttrs) => { run: () => boolean };
       insertContentAt: (
         pos: number,
-        content: { type: string; attrs: { src: string } },
+        content: { type: string; attrs: BlockImageInsertAttrs },
       ) => { run: () => boolean };
     };
   };
 };
+
+async function blockImageInsertAttrsFromFile(
+  file: File,
+): Promise<BlockImageInsertAttrs | null> {
+  const src = await readImageFileAsDataUrl(file);
+  if (!src) {
+    return null;
+  }
+
+  const dims = await loadImageDimensions(src);
+  return buildBlockImageInsertAttrs(src, dims?.height);
+}
 
 export async function insertImageFromFileAtCursor(
   editor: ImageInsertEditor,
@@ -23,12 +43,12 @@ export async function insertImageFromFileAtCursor(
     return false;
   }
 
-  const src = await readImageFileAsDataUrl(file);
-  if (!src) {
+  const attrs = await blockImageInsertAttrsFromFile(file);
+  if (!attrs) {
     return false;
   }
 
-  editor.chain().focus().setImage({ src }).run();
+  editor.chain().focus().setImage(attrs).run();
   return true;
 }
 
@@ -42,16 +62,12 @@ export async function insertImageFromFileAtPosition(
     return false;
   }
 
-  const src = await readImageFileAsDataUrl(file);
-  if (!src) {
+  const attrs = await blockImageInsertAttrsFromFile(file);
+  if (!attrs) {
     return false;
   }
 
-  editor
-    .chain()
-    .focus()
-    .insertContentAt(pos, { type: "image", attrs: { src } })
-    .run();
+  editor.chain().focus().insertContentAt(pos, { type: "image", attrs }).run();
   return true;
 }
 

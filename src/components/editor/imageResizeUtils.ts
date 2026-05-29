@@ -5,6 +5,26 @@ import type { EditorView } from "@tiptap/pm/view";
 /** Minimum display height for block images (matches sketch resize). */
 export const MIN_BLOCK_IMAGE_HEIGHT = 80;
 
+export type BlockImageInsertAttrs = {
+  src: string;
+  height?: number;
+};
+
+/** Apply {@link MIN_BLOCK_IMAGE_HEIGHT} when intrinsic height is below the floor. */
+export function buildBlockImageInsertAttrs(
+  src: string,
+  intrinsicHeight: number | null | undefined,
+): BlockImageInsertAttrs {
+  if (
+    typeof intrinsicHeight === "number" &&
+    intrinsicHeight > 0 &&
+    intrinsicHeight < MIN_BLOCK_IMAGE_HEIGHT
+  ) {
+    return { src, height: MIN_BLOCK_IMAGE_HEIGHT };
+  }
+  return { src };
+}
+
 export function isResizableBlockImage(node: Node): boolean {
   return node.type.name === "image";
 }

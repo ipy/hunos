@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { Schema } from "@tiptap/pm/model";
 import { EditorState, NodeSelection, TextSelection } from "@tiptap/pm/state";
 import {
+  buildBlockImageInsertAttrs,
   computeImageResizeHeight,
   getSelectedBlockImagePos,
   handleBlockImageClick,
@@ -264,6 +265,43 @@ describe("handleBlockImageClick", () => {
     >[0];
 
     expect(handleBlockImageClick(view, image, 0)).toBe(false);
+  });
+});
+
+describe("buildBlockImageInsertAttrs", () => {
+  it("adds min height for tiny intrinsic images", () => {
+    expect(buildBlockImageInsertAttrs("data:image/png;base64,tiny", 2)).toEqual(
+      {
+        src: "data:image/png;base64,tiny",
+        height: MIN_BLOCK_IMAGE_HEIGHT,
+      },
+    );
+    expect(
+      buildBlockImageInsertAttrs("data:image/png;base64,tiny", 10),
+    ).toEqual({
+      src: "data:image/png;base64,tiny",
+      height: MIN_BLOCK_IMAGE_HEIGHT,
+    });
+  });
+
+  it("leaves large images without a height attribute", () => {
+    expect(
+      buildBlockImageInsertAttrs("data:image/png;base64,large", 600),
+    ).toEqual({ src: "data:image/png;base64,large" });
+    expect(
+      buildBlockImageInsertAttrs("data:image/png;base64,edge", 80),
+    ).toEqual({ src: "data:image/png;base64,edge" });
+  });
+
+  it("falls back to src-only when dimensions are unknown", () => {
+    expect(buildBlockImageInsertAttrs("data:image/png;base64,x", null)).toEqual(
+      {
+        src: "data:image/png;base64,x",
+      },
+    );
+    expect(buildBlockImageInsertAttrs("data:image/png;base64,x", 0)).toEqual({
+      src: "data:image/png;base64,x",
+    });
   });
 });
 
