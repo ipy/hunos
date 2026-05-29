@@ -8,6 +8,7 @@ import {
   type TagSuggestionItem,
 } from './TagSuggestionMenu';
 import { markSuggestionMenuClosedByEscape } from '@/utils/editorSuggestionMenu';
+import { isValidTagName } from '@/utils/tagPattern';
 import {
   filterTagCandidates,
   findTagSuggestionMatch,
@@ -27,7 +28,8 @@ function buildItems(tags: Tag[], query: string): TagSuggestionItem[] {
   }));
 
   const q = query.trim();
-  const hasExact = tags.some(t => t.name.toLowerCase() === q.toLowerCase());
+  const validTags = tags.filter(t => isValidTagName(t.name));
+  const hasExact = validTags.some(t => t.name.toLowerCase() === q.toLowerCase());
   if (q && !hasExact && candidates.length === 0) {
     items.push({ type: 'create', query: q });
   }

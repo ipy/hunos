@@ -1,7 +1,7 @@
 import type { ResolvedPos } from '@tiptap/pm/model';
 import type { EditorState } from '@tiptap/pm/state';
 import type { Tag } from '@/types/graph';
-import { isValidTagName, TAG_NAME_BODY, TAG_NAME_START } from '@/utils/tagPattern';
+import { isValidTagName, TAG_DECORATION_REGEX, TAG_NAME_BODY, TAG_NAME_START } from '@/utils/tagPattern';
 import { isInCodeContext } from './wikiLinkSuggestionUtils';
 
 const TAG_QUERY = `${TAG_NAME_START}${TAG_NAME_BODY}`;
@@ -13,6 +13,41 @@ export const TAG_SUGGESTION_TRIGGER_REGEX = new RegExp(
 export interface TagSuggestionMatch {
   range: { from: number; to: number };
   query: string;
+}
+
+export interface TagSpan {
+  start: number;
+  end: number;
+  name: string;
+}
+
+export function findCompleteTagsInBlock(blockText: string): TagSpan[] {
+  const spans: TagSpan[] = [];
+  TAG_DECORATION_REGEX.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = TAG_DECORATION_REGEX.exec(blockText)) !== null) {
+    const fullMatch = match[0];
+    const hashOffset = fullMatch.indexOf('#');
+    const start = match.index + hashOffset;
+    spans.push({
+      start,
+      end: start + 1 + match[1].length,
+      name: match[1],
+    });
+  }
+  return spans;
+}
+
+function findCompleteTagContainingOffset(
+  blockText: string,
+  offset: number,
+): TagSpan | null {
+  for (const span of findCompleteTagsInBlock(blockText)) {
+    if (offset >= span.start && offset <= span.end) {
+      return span;
+    }
+  }
+  return null;
 }
 
 function isMarkdownHeadingTrigger(textBefore: string, hashIndex: number): boolean {
@@ -39,9 +74,18 @@ export function findTagSuggestionMatchInBlock(
   const hashIndex = textBefore.lastIndexOf('#');
   if (isMarkdownHeadingTrigger(textBefore, hashIndex)) return null;
 
+  let rangeTo = offset;
+  let query = match[1] ?? '';
+
+  const completeTag = findCompleteTagContainingOffset(blockText, offset);
+  if (completeTag && completeTag.start === hashIndex) {
+    rangeTo = completeTag.end;
+    query = completeTag.name;
+  }
+
   return {
-    range: { from: hashIndex, to: offset },
-    query: match[1] ?? '',
+    range: { from: hashIndex, to: rangeTo },
+    query,
   };
 }
 

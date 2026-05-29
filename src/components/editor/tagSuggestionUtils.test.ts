@@ -44,12 +44,31 @@ describe("findTagSuggestionMatchInBlock", () => {
     });
   });
 
-  it("caret inside existing tag keeps range from # through caret", () => {
+  it("expands replace range to full tag when caret is inside complete tag", () => {
     const text = "Organize with #format-test";
     const caret = text.indexOf("format") + 4; // after "form"
     const match = findTagSuggestionMatchInBlock(text, caret);
     expect(match).toEqual({
-      range: { from: 14, to: caret },
+      range: { from: 14, to: text.length },
+      query: "format-test",
+    });
+  });
+
+  it("expands replace range when caret is immediately after # in complete tag", () => {
+    const text = "Organize with #format-test";
+    const caret = text.indexOf("#") + 1;
+    const match = findTagSuggestionMatchInBlock(text, caret);
+    expect(match).toEqual({
+      range: { from: 14, to: text.length },
+      query: "format-test",
+    });
+  });
+
+  it("does not expand beyond partial tag while typing", () => {
+    const text = "Organize with #form";
+    const match = findTagSuggestionMatchInBlock(text, text.length);
+    expect(match).toEqual({
+      range: { from: 14, to: text.length },
       query: "form",
     });
   });
