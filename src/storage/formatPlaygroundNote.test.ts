@@ -168,7 +168,7 @@ describe("migratePlaygroundContentIfStale", () => {
       "Cmd+Shift+F search all notes",
     );
     expect(tryHintNode?.content?.[0]?.text).toContain(
-      "Enter on empty blockquote lines to exit the quote",
+      "Enter or Backspace at line start on empty blockquote lines to exit the quote",
     );
     expect(tryHintNode?.content?.[0]?.text).toContain(
       "Mod+Enter (or Enter on an empty last code line) to leave code blocks",
@@ -362,7 +362,7 @@ describe("migratePlaygroundContentIfStale", () => {
       "Cmd+Shift+F 搜索全部笔记",
     );
     expect(tryHintNode?.content?.[0]?.text).toContain(
-      "空引用行按 Enter 退出引用",
+      "空引用行按 Enter 或行首 Backspace 退出引用",
     );
     expect(tryHintNode?.content?.[0]?.text).toContain(
       "Mod+Enter（或代码块末尾空行连按 Enter）离开代码块",
@@ -538,6 +538,36 @@ describe("migratePlaygroundContentIfStale", () => {
 
     expect(labels).toEqual(["Open task", "Pending task", "Completed task"]);
     expect(checked).toEqual([false, false, true]);
+  });
+
+  it("updates tryHint with blockquote Backspace exit for stale v14 playground notes", () => {
+    const stale = buildPlaygroundContent("en") as {
+      type: "doc";
+      attrs?: { playgroundContentVersion?: number };
+      content: unknown[];
+    };
+    stale.attrs = { playgroundContentVersion: 14 };
+    const staleContent = JSON.stringify(stale);
+
+    const migrated = migratePlaygroundContentIfStale(staleContent, "en");
+    expect(migrated).not.toBeNull();
+
+    const parsed = JSON.parse(migrated!) as {
+      attrs?: { playgroundContentVersion?: number };
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    expect(parsed.attrs?.playgroundContentVersion).toBe(
+      PLAYGROUND_CONTENT_VERSION,
+    );
+
+    const trySectionIndex = parsed.content.findIndex(
+      (node) =>
+        node.type === "heading" && node.content?.[0]?.text === "Try Your Own",
+    );
+    const tryHintNode = parsed.content[trySectionIndex + 1];
+    expect(tryHintNode?.content?.[0]?.text).toContain(
+      "Enter or Backspace at line start on empty blockquote lines to exit the quote",
+    );
   });
 
   it("leaves reordered task lists alone when content version is current", () => {
