@@ -1,5 +1,6 @@
 import { noteStorage } from "./noteStorage";
 import { graphEngine } from "@/graph/graphEngine";
+import { useNoteStore } from "@/store/noteStore";
 import { extractPlainTextFromTiptap } from "@/graph/linkExtractor";
 import {
   PLAYGROUND_SAMPLE_IMAGE_HEIGHT,
@@ -690,4 +691,31 @@ export function migratePlaygroundContentIfStale(
   };
 
   return JSON.stringify(updated);
+}
+
+/** Flush-aware playground sync when settings locale changes (Settings or URL bootstrap). */
+export async function syncFormatPlaygroundOnLocaleChange(
+  locale: Locale,
+  flushedContent?: string | null,
+): Promise<void> {
+  const { activeNoteId, notes, saveNoteContent, saveNoteTitle } =
+    useNoteStore.getState();
+  if (!activeNoteId) return;
+
+  const note = notes.find((n) => n.id === activeNoteId);
+  if (!note || !isFormatPlaygroundNote(note.title, note.content)) return;
+
+  const sourceContent = flushedContent ?? note.content;
+  const migrated = migratePlaygroundContentIfStale(sourceContent, locale);
+  const expectedTitle = getFormatPlaygroundTitle(locale);
+  const titleNeedsUpdate =
+    FORMAT_PLAYGROUND_TITLES.includes(note.title) &&
+    note.title !== expectedTitle;
+
+  if (migrated) {
+    await saveNoteContent(note.id, migrated);
+  }
+  if (titleNeedsUpdate) {
+    await saveNoteTitle(note.id, expectedTitle);
+  }
 }

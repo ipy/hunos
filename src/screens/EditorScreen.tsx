@@ -22,6 +22,10 @@ import {
   isFormatPlaygroundNote,
   migratePlaygroundContentIfStale,
 } from "@/storage/formatPlaygroundNote";
+import {
+  registerEditorAutosaveFlush,
+  unregisterEditorAutosaveFlush,
+} from "@/store/editorAutosaveRegistry";
 
 interface EditorScreenProps {
   layout?: LayoutMode;
@@ -59,6 +63,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const [findOpen, setFindOpen] = useState(false);
   const [editorInstance, setEditorInstance] = useState<Editor | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const pendingContentRef = useRef<string | null>(null);
   const lastPlaygroundMigrateKeyRef = useRef<string | null>(null);
 
   const note = notes.find((n) => n.id === activeNoteId);
@@ -102,24 +107,50 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const handleContentChange = useCallback(
     (json: string, flushSave?: boolean) => {
       if (!activeNoteId) return;
+      pendingContentRef.current = json;
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       if (flushSave) {
         void saveNoteContent(activeNoteId, json);
+        pendingContentRef.current = null;
         return;
       }
       saveTimeoutRef.current = setTimeout(() => {
         void saveNoteContent(activeNoteId, json);
+        pendingContentRef.current = null;
       }, 400);
     },
     [activeNoteId, saveNoteContent],
   );
 
+  const flushPendingAutosave = useCallback(async (): Promise<string | null> => {
+    if (!activeNoteId) return null;
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = undefined;
+    }
+
+    const json =
+      pendingContentRef.current ??
+      (editorInstance
+        ? JSON.stringify(editorInstance.getJSON())
+        : null);
+
+    if (!json) return null;
+
+    await saveNoteContent(activeNoteId, json);
+    pendingContentRef.current = null;
+    return json;
+  }, [activeNoteId, editorInstance, saveNoteContent]);
+
   useEffect(() => {
+    registerEditorAutosaveFlush(flushPendingAutosave);
     return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      void flushPendingAutosave();
+      unregisterEditorAutosaveFlush(flushPendingAutosave);
       if (titleTimeoutRef.current) clearTimeout(titleTimeoutRef.current);
     };
-  }, []);
+  }, [flushPendingAutosave]);
 
   useEffect(() => {
     if (!note?.id || !isFormatPlaygroundNote(note.title, note.content)) return;

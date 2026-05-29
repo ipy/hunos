@@ -150,8 +150,8 @@ export function SettingsScreen({ layout = "mobile" }: SettingsScreenProps) {
   const showBackButton = layout === "mobile" || layout === "tablet";
   const showDownloads = !isNativeShell();
 
-  const handleLocaleChange = (newLocale: Locale) => {
-    setLocale(newLocale);
+  const handleLocaleChange = async (newLocale: Locale) => {
+    await setLocale(newLocale);
     i18n.changeLanguage(newLocale);
   };
 

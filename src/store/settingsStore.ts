@@ -9,6 +9,8 @@ import type {
 } from "@/types/settings";
 import { DEFAULT_SETTINGS } from "@/types/settings";
 import { settingsStorage } from "@/storage/settingsStorage";
+import { syncFormatPlaygroundOnLocaleChange } from "@/storage/formatPlaygroundNote";
+import { flushEditorAutosave } from "@/store/editorAutosaveRegistry";
 import { readLocaleFromUrl } from "@/utils/localeBootstrap";
 
 interface SettingsStore extends AppSettings {
@@ -30,7 +32,7 @@ interface SettingsStore extends AppSettings {
   resetTypography: () => Promise<void>;
 }
 
-export const useSettingsStore = create<SettingsStore>((set) => ({
+export const useSettingsStore = create<SettingsStore>((set, get) => ({
   ...DEFAULT_SETTINGS,
   isLoaded: false,
 
@@ -38,6 +40,8 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
     const settings = await settingsStorage.getAll();
     const urlLocale = readLocaleFromUrl();
     if (urlLocale && urlLocale !== settings.locale) {
+      const flushedContent = await flushEditorAutosave();
+      await syncFormatPlaygroundOnLocaleChange(urlLocale, flushedContent);
       await settingsStorage.set("locale", urlLocale);
       settings.locale = urlLocale;
     }
@@ -50,6 +54,12 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   },
 
   setLocale: async (locale) => {
+    const current = get().locale;
+    if (current === locale) return;
+
+    const flushedContent = await flushEditorAutosave();
+    await syncFormatPlaygroundOnLocaleChange(locale, flushedContent);
+
     await settingsStorage.set("locale", locale);
     set({ locale });
   },
