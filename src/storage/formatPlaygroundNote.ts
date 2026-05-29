@@ -1,12 +1,15 @@
 import { noteStorage } from "./noteStorage";
 import { graphEngine } from "@/graph/graphEngine";
 import { extractPlainTextFromTiptap } from "@/graph/linkExtractor";
-import { PLAYGROUND_SAMPLE_IMAGE_SRC } from "@/components/editor/imageEmbedUtils";
+import {
+  PLAYGROUND_SAMPLE_IMAGE_HEIGHT,
+  PLAYGROUND_SAMPLE_IMAGE_SRC,
+} from "@/components/editor/imageEmbedUtils";
 import type { Locale } from "@/types/settings";
 
 type PlaygroundLocale = "en" | "zh";
 
-export const PLAYGROUND_CONTENT_VERSION = 16;
+export const PLAYGROUND_CONTENT_VERSION = 17;
 
 export const FORMAT_PLAYGROUND_TITLES: readonly string[] = [
   "Format Playground",
@@ -319,6 +322,7 @@ export function buildPlaygroundContent(locale: Locale) {
         attrs: {
           src: PLAYGROUND_SAMPLE_IMAGE_SRC,
           alt: s.imageSampleAlt,
+          height: PLAYGROUND_SAMPLE_IMAGE_HEIGHT,
         },
       },
 
@@ -556,6 +560,7 @@ export function migratePlaygroundContentIfStale(
           attrs: {
             src: PLAYGROUND_SAMPLE_IMAGE_SRC,
             alt: s.imageSampleAlt,
+            height: PLAYGROUND_SAMPLE_IMAGE_HEIGHT,
           },
         },
       );
@@ -566,6 +571,22 @@ export function migratePlaygroundContentIfStale(
     const node = contentNodes[i];
     if (node.type !== "heading" || node.attrs?.level !== 2) {
       continue;
+    }
+    if (headingText(node) === s.sectionImages) {
+      const imageNode = contentNodes[i + 2];
+      if (
+        imageNode?.type === "image" &&
+        imageNode.attrs?.src === PLAYGROUND_SAMPLE_IMAGE_SRC &&
+        imageNode.attrs?.height !== PLAYGROUND_SAMPLE_IMAGE_HEIGHT
+      ) {
+        contentNodes[i + 2] = {
+          ...imageNode,
+          attrs: {
+            ...imageNode.attrs,
+            height: PLAYGROUND_SAMPLE_IMAGE_HEIGHT,
+          },
+        };
+      }
     }
     if (headingText(node) === s.sectionTry) {
       const tryHintNode = contentNodes[i + 1];

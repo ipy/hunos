@@ -5,6 +5,8 @@ import {
   hasImageInDataTransfer,
   isImageFile,
   MAX_IMAGE_BYTES,
+  PLAYGROUND_SAMPLE_IMAGE_HEIGHT,
+  PLAYGROUND_SAMPLE_IMAGE_SRC,
   validateImageSize,
 } from "./imageEmbedUtils";
 
@@ -12,6 +14,13 @@ function makePngFile(size = 64, name = "test.png"): File {
   const bytes = new Uint8Array(size);
   return new File([bytes], name, { type: "image/png" });
 }
+
+describe("playground sample image constants", () => {
+  it("uses a data URL with a documented default height", () => {
+    expect(PLAYGROUND_SAMPLE_IMAGE_SRC).toMatch(/^data:image\/png;base64,/);
+    expect(PLAYGROUND_SAMPLE_IMAGE_HEIGHT).toBe(120);
+  });
+});
 
 describe("isImageFile", () => {
   it("accepts image MIME types", () => {

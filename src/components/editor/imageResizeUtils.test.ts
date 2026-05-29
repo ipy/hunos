@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { Schema } from "@tiptap/pm/model";
+import { EditorState, NodeSelection, TextSelection } from "@tiptap/pm/state";
 import {
   computeImageResizeHeight,
+  handleBlockImageClick,
   isResizableBlockImage,
   MIN_BLOCK_IMAGE_HEIGHT,
 } from "./imageResizeUtils";
@@ -28,6 +30,57 @@ describe("isResizableBlockImage", () => {
   it("returns false for non-image nodes", () => {
     const paragraph = schema.nodes.paragraph.create();
     expect(isResizableBlockImage(paragraph)).toBe(false);
+  });
+});
+
+describe("handleBlockImageClick", () => {
+  it("selects a block image node on click", () => {
+    const image = schema.nodes.image.create({ src: "test.png" });
+    const doc = schema.node("doc", null, [image]);
+    const imagePos = 0;
+    const state = EditorState.create({
+      doc,
+      schema,
+      selection: TextSelection.create(doc, 1),
+    });
+    const dispatched: EditorState[] = [];
+    const view = {
+      state,
+      dispatch(tr: { selection: typeof state.selection }) {
+        dispatched.push(state.apply(tr as Parameters<typeof state.apply>[0]));
+      },
+    } as Parameters<typeof handleBlockImageClick>[0];
+
+    expect(handleBlockImageClick(view, image, imagePos)).toBe(true);
+    expect(dispatched).toHaveLength(1);
+    expect(dispatched[0].selection).toBeInstanceOf(NodeSelection);
+    expect((dispatched[0].selection as NodeSelection).from).toBe(imagePos);
+  });
+
+  it("returns false for non-image nodes", () => {
+    const paragraph = schema.nodes.paragraph.create();
+    const doc = schema.node("doc", null, [paragraph]);
+    const state = EditorState.create({ doc, schema });
+    const view = { state, dispatch: () => {} } as Parameters<
+      typeof handleBlockImageClick
+    >[0];
+
+    expect(handleBlockImageClick(view, paragraph, 0)).toBe(false);
+  });
+
+  it("returns false when the image is already selected", () => {
+    const image = schema.nodes.image.create({ src: "test.png" });
+    const doc = schema.node("doc", null, [image]);
+    const state = EditorState.create({
+      doc,
+      schema,
+      selection: NodeSelection.create(doc, 0),
+    });
+    const view = { state, dispatch: () => {} } as Parameters<
+      typeof handleBlockImageClick
+    >[0];
+
+    expect(handleBlockImageClick(view, image, 0)).toBe(false);
   });
 });
 

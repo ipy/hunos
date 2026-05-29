@@ -1,8 +1,11 @@
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
-/** Tiny 1×1 PNG used in Format Playground seed content. */
+/** Tiny 1×1 PNG used in Format Playground seed content (display size set via height attr). */
 export const PLAYGROUND_SAMPLE_IMAGE_SRC =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
+/** Default rendered height for the Format Playground sample image block. */
+export const PLAYGROUND_SAMPLE_IMAGE_HEIGHT = 120;
 
 export function isImageFile(file: File): boolean {
   return file.type.startsWith("image/");
