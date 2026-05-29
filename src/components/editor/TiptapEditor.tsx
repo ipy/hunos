@@ -20,6 +20,7 @@ import {
   MarkdownShortcuts,
   MarkdownTaskItem,
 } from "./MarkdownShortcuts";
+import { TASK_LIST_TOGGLE_REORDER_META } from "./taskSinkUtils";
 import { WikiLinkDecoration } from "./WikiLinkDecoration";
 import { WikiLinkSuggestion } from "./WikiLinkSuggestion";
 import { TagSuggestion } from "./TagSuggestion";
@@ -61,7 +62,7 @@ import type { EditorFont } from "@/types/settings";
 interface TiptapEditorProps {
   noteId: string;
   initialContent: string;
-  onChange: (json: string) => void;
+  onChange: (json: string, flushSave?: boolean) => void;
   onEditorReady: (editor: Editor) => void;
   fontFamily: EditorFont;
   headingsFont: EditorFont;
@@ -251,9 +252,11 @@ export function TiptapEditor({
       FindInNoteExtension,
     ],
     content: initialContent ? tryParseJson(initialContent) : undefined,
-    onUpdate: ({ editor }) => {
+    onUpdate: ({ editor, transaction }) => {
       const json = JSON.stringify(editor.getJSON());
-      onChange(json);
+      const flushSave =
+        transaction.getMeta(TASK_LIST_TOGGLE_REORDER_META) === true;
+      onChange(json, flushSave);
     },
     editorProps: {
       attributes: {

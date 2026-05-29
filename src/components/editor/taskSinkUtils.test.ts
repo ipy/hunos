@@ -151,6 +151,41 @@ describe("applyTaskItemToggleReorder", () => {
     expect(taskChecked(result)).toEqual([false, true, true]);
   });
 
+  it("returns true and updates checked when sink is a no-op (already last)", () => {
+    const state = EditorState.create({ doc: buildInterleavedTaskDoc() });
+    const pos = findTaskItemPos(state, "pending");
+    const tr = state.tr;
+    const changed = applyTaskItemToggleReorder(tr, pos, true);
+    const result = state.apply(tr);
+
+    expect(changed).toBe(true);
+    expect(taskLabels(result)).toEqual(["open", "done", "pending"]);
+    expect(taskChecked(result)).toEqual([false, true, true]);
+  });
+
+  it("serializes reordered task list child order for autosave (AC5)", () => {
+    const state = EditorState.create({ doc: buildPlaygroundTaskDoc() });
+    const result = toggleTaskWithReorder(state, "pending", true);
+    const taskListJson = result.doc
+      .toJSON()
+      .content?.find((node: { type?: string }) => node.type === "taskList") as {
+      content?: Array<{
+        attrs?: { checked?: boolean };
+        content?: Array<{ content?: Array<{ text?: string }> }>;
+      }>;
+    };
+
+    const labels = (taskListJson.content ?? []).map(
+      (item) => item.content?.[0]?.content?.[0]?.text,
+    );
+    const checked = (taskListJson.content ?? []).map(
+      (item) => item.attrs?.checked,
+    );
+
+    expect(labels).toEqual(["open", "done", "pending"]);
+    expect(checked).toEqual([false, true, true]);
+  });
+
   it("checks open then pending and preserves completion order (AC4)", () => {
     let state = EditorState.create({ doc: buildPlaygroundTaskDoc() });
     state = toggleTaskWithReorder(state, "open", true);
@@ -273,6 +308,26 @@ describe("applyOpenTaskFloat", () => {
     applyOpenTaskFloat(tr, positions);
     const result = afterUncheck.apply(tr);
 
+    expect(taskLabels(result)).toEqual(["open", "pending", "done"]);
+    expect(taskChecked(result)).toEqual([false, false, true]);
+  });
+
+  it("returns true and floats when unchecking from the completed block (AC3)", () => {
+    const state = EditorState.create({
+      doc: doc.create({}, [
+        taskList.create({}, [
+          buildTaskItem(false, "open"),
+          buildTaskItem(true, "done"),
+          buildTaskItem(true, "pending"),
+        ]),
+      ]),
+    });
+    const pos = findTaskItemPos(state, "pending");
+    const tr = state.tr;
+    const changed = applyTaskItemToggleReorder(tr, pos, false);
+    const result = state.apply(tr);
+
+    expect(changed).toBe(true);
     expect(taskLabels(result)).toEqual(["open", "pending", "done"]);
     expect(taskChecked(result)).toEqual([false, false, true]);
   });

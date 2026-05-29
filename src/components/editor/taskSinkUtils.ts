@@ -1,6 +1,8 @@
 import type { Node, ResolvedPos } from "@tiptap/pm/model";
 import type { Transaction } from "@tiptap/pm/state";
 
+export const TASK_LIST_TOGGLE_REORDER_META = "taskListToggleReorder";
+
 function getTaskListItemContext(
   $pos: ResolvedPos,
 ): { taskListDepth: number; taskItemDepth: number; itemIndex: number } | null {
@@ -178,10 +180,13 @@ export function applyTaskItemToggleReorder(
   });
 
   if (checked) {
-    return sinkTaskItemToListBottom(tr, taskItemPos);
+    sinkTaskItemToListBottom(tr, taskItemPos);
+  } else {
+    floatTaskItemBeforeCompletedBlock(tr, taskItemPos);
   }
 
-  return floatTaskItemBeforeCompletedBlock(tr, taskItemPos);
+  tr.setMeta(TASK_LIST_TOGGLE_REORDER_META, true);
+  return true;
 }
 
 /** Sink every newly checked task item to the bottom of its task list. */

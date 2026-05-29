@@ -87,12 +87,16 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   };
 
   const handleContentChange = useCallback(
-    (json: string) => {
+    (json: string, flushSave?: boolean) => {
       if (!activeNoteId) return;
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      if (flushSave) {
+        void saveNoteContent(activeNoteId, json);
+        return;
+      }
       saveTimeoutRef.current = setTimeout(() => {
-        saveNoteContent(activeNoteId, json);
-      }, 500);
+        void saveNoteContent(activeNoteId, json);
+      }, 400);
     },
     [activeNoteId, saveNoteContent],
   );
