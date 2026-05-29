@@ -1,8 +1,10 @@
 import { create } from 'zustand';
 import type { Tag, TagTreeNode } from '@/types/graph';
 import { tagStorage } from '@/storage/tagStorage';
+import { isValidTagName } from '@/utils/tagPattern';
 
 function buildTree(tags: Tag[]): TagTreeNode[] {
+  tags = tags.filter(t => isValidTagName(t.name));
   const nodeMap = new Map<string, TagTreeNode>();
   tags.forEach(t => nodeMap.set(t.id, { ...t, children: [], isExpanded: true }));
 
@@ -44,7 +46,8 @@ export const useTagStore = create<TagStore>((set, get) => ({
 
   loadTags: async () => {
     set({ isLoading: true });
-    const tags = await tagStorage.listAll();
+    await tagStorage.deleteInvalid();
+    const tags = (await tagStorage.listAll()).filter(t => isValidTagName(t.name));
     const tagTree = buildTree(tags);
     set({ tags, tagTree, isLoading: false });
   },

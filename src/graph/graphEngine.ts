@@ -2,6 +2,7 @@ import { linkStorage } from '@/storage/linkStorage';
 import { tagStorage } from '@/storage/tagStorage';
 import { noteStorage } from '@/storage/noteStorage';
 import { extractFromPlainText, extractPlainTextFromTiptap } from './linkExtractor';
+import { isValidTagName } from '@/utils/tagPattern';
 import { replaceWikiLinkTitleInContent } from '@/utils/wikiLink';
 import type { BacklinkResult } from '@/types/graph';
 import type { Note } from '@/types/note';
@@ -23,7 +24,11 @@ export const graphEngine = {
     await tagStorage.removeAllForNote(noteId);
 
     for (const tagRef of extraction.tags) {
+      if (!isValidTagName(tagRef.name)) continue;
+
       const tag = await tagStorage.getOrCreate(tagRef.name);
+      if (!tag) continue;
+
       await tagStorage.addNoteTag(noteId, tag.id, tagRef.position);
       await linkStorage.create(noteId, tag.id, 'tag_ref', '', tagRef.position);
     }

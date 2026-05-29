@@ -1,7 +1,7 @@
 import type { ResolvedPos } from '@tiptap/pm/model';
 import type { EditorState } from '@tiptap/pm/state';
 import type { Tag } from '@/types/graph';
-import { TAG_NAME_BODY, TAG_NAME_START } from '@/utils/tagPattern';
+import { isValidTagName, TAG_NAME_BODY, TAG_NAME_START } from '@/utils/tagPattern';
 import { isInCodeContext } from './wikiLinkSuggestionUtils';
 
 const TAG_QUERY = `${TAG_NAME_START}${TAG_NAME_BODY}`;
@@ -26,6 +26,25 @@ function isMarkdownHeadingTrigger(textBefore: string, hashIndex: number): boolea
   return false;
 }
 
+export function findTagSuggestionMatchInBlock(
+  blockText: string,
+  offset: number,
+): TagSuggestionMatch | null {
+  if (offset < 0 || offset > blockText.length) return null;
+
+  const textBefore = blockText.slice(0, offset);
+  const match = TAG_SUGGESTION_TRIGGER_REGEX.exec(textBefore);
+  if (!match) return null;
+
+  const hashIndex = textBefore.lastIndexOf('#');
+  if (isMarkdownHeadingTrigger(textBefore, hashIndex)) return null;
+
+  return {
+    range: { from: hashIndex, to: offset },
+    query: match[1] ?? '',
+  };
+}
+
 export function findTagSuggestionMatch(
   state: EditorState,
 ): TagSuggestionMatch | null {
@@ -37,16 +56,15 @@ export function findTagSuggestionMatch(
 
   const blockStart = $from.start();
   const textBefore = state.doc.textBetween(blockStart, $from.pos, '\n', '\n');
-  const match = TAG_SUGGESTION_TRIGGER_REGEX.exec(textBefore);
-  if (!match) return null;
+  const localMatch = findTagSuggestionMatchInBlock(textBefore, textBefore.length);
+  if (!localMatch) return null;
 
-  const hashIndex = textBefore.lastIndexOf('#');
-  if (isMarkdownHeadingTrigger(textBefore, hashIndex)) return null;
-
-  const triggerLen = match[0].length;
   return {
-    range: { from: $from.pos - triggerLen, to: $from.pos },
-    query: match[1] ?? '',
+    range: {
+      from: blockStart + localMatch.range.from,
+      to: blockStart + localMatch.range.to,
+    },
+    query: localMatch.query,
   };
 }
 
@@ -57,9 +75,11 @@ export function filterTagCandidates(
 ): Tag[] {
   const q = query.toLowerCase().trim();
 
+  const validTags = tags.filter(t => isValidTagName(t.name));
+
   const matching = q
-    ? tags.filter(t => t.name.toLowerCase().includes(q))
-    : [...tags];
+    ? validTags.filter(t => t.name.toLowerCase().includes(q))
+    : validTags;
 
   matching.sort((a, b) => {
     if (!q) return a.name.localeCompare(b.name);
