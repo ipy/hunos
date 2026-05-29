@@ -121,6 +121,69 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(tryHintNode?.content?.[0]?.text).toContain(
       "Mod+Backspace delete table row",
     );
+    expect(tryHintNode?.content?.[0]?.text).toContain("[text](url)");
+    expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+K links selected text");
+  });
+
+  it("includes external link sample in tags section", () => {
+    const content = buildPlaygroundContent("en") as {
+      content: Array<{
+        type: string;
+        content?: Array<{ text?: string; marks?: Array<{ type: string; attrs?: { href?: string } }> }>;
+      }>;
+    };
+    const tagsSectionIndex = content.content.findIndex(
+      (node) =>
+        node.type === "heading" && node.content?.[0]?.text === "Tags & Links",
+    );
+    const tagsParagraph = content.content[tagsSectionIndex + 1];
+    const linkNode = tagsParagraph?.content?.find((node) =>
+      node.marks?.some((mark) => mark.type === "link"),
+    );
+    expect(linkNode?.text).toBe("project docs");
+    expect(linkNode?.marks?.[0]?.attrs?.href).toBe("https://example.com");
+  });
+
+  it("updates tryHint and tags section for stale playground notes", () => {
+    const stale = buildPlaygroundContent("en") as {
+      type: "doc";
+      attrs?: { playgroundContentVersion?: number };
+      content: unknown[];
+    };
+    stale.attrs = { playgroundContentVersion: 9 };
+    const staleContent = JSON.stringify(stale);
+
+    const migrated = migratePlaygroundContentIfStale(staleContent, "en");
+    expect(migrated).not.toBeNull();
+
+    const parsed = JSON.parse(migrated!) as {
+      attrs?: { playgroundContentVersion?: number };
+      content: Array<{
+        type: string;
+        content?: Array<{ text?: string; marks?: Array<{ type: string }> }>;
+      }>;
+    };
+    expect(parsed.attrs?.playgroundContentVersion).toBe(
+      PLAYGROUND_CONTENT_VERSION,
+    );
+
+    const trySectionIndex = parsed.content.findIndex(
+      (node) =>
+        node.type === "heading" && node.content?.[0]?.text === "Try Your Own",
+    );
+    const tryHintNode = parsed.content[trySectionIndex + 1];
+    expect(tryHintNode?.content?.[0]?.text).toContain("[text](url)");
+
+    const tagsSectionIndex = parsed.content.findIndex(
+      (node) =>
+        node.type === "heading" && node.content?.[0]?.text === "Tags & Links",
+    );
+    const tagsParagraph = parsed.content[tagsSectionIndex + 1];
+    expect(
+      tagsParagraph?.content?.some((node) =>
+        node.marks?.some((mark) => mark.type === "link"),
+      ),
+    ).toBe(true);
   });
 
   it("updates tryHint with table syntax for stale playground notes", () => {
@@ -168,6 +231,7 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(tryHintNode?.content?.[0]?.text).toContain(
       "Mod+Backspace 删除表格行",
     );
+    expect(tryHintNode?.content?.[0]?.text).toContain("[文字](url)");
     expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+Shift+Z");
     expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+F 在笔记内查找");
     expect(tryHintNode?.content?.[0]?.text).toContain(

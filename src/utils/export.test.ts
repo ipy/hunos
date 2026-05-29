@@ -182,3 +182,149 @@ describe("exportNote markdown tables", () => {
     expect(exportNote(note, "markdown")).toContain("| Edited | Italic |");
   });
 });
+
+describe("exportNote markdown links", () => {
+  it("exports external links as GFM markdown", () => {
+    const note = makeNote({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "Example Site",
+              marks: [
+                {
+                  type: "link",
+                  attrs: { href: "https://example.com" },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(exportNote(note, "markdown")).toBe(
+      "[Example Site](https://example.com)",
+    );
+  });
+
+  it("exports autolinked URLs as markdown links", () => {
+    const note = makeNote({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "https://hunos.dev",
+              marks: [
+                {
+                  type: "link",
+                  attrs: { href: "https://hunos.dev" },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(exportNote(note, "markdown")).toBe(
+      "[https://hunos.dev](https://hunos.dev)",
+    );
+  });
+
+  it("keeps wiki-links as plain bracket syntax", () => {
+    const note = makeNote({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "[[Welcome to Hunos]]" }],
+        },
+      ],
+    });
+
+    expect(exportNote(note, "markdown")).toBe("[[Welcome to Hunos]]");
+  });
+
+  it("exports links alongside wiki-links in one paragraph", () => {
+    const note = makeNote({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            { type: "text", text: "See " },
+            {
+              type: "text",
+              text: "project docs",
+              marks: [
+                {
+                  type: "link",
+                  attrs: { href: "https://example.com" },
+                },
+              ],
+            },
+            { type: "text", text: " and " },
+            { type: "text", text: "[[Welcome to Hunos]]" },
+          ],
+        },
+      ],
+    });
+
+    const markdown = exportNote(note, "markdown");
+    expect(markdown).toContain("[project docs](https://example.com)");
+    expect(markdown).toContain("[[Welcome to Hunos]]");
+  });
+});
+
+describe("exportNote html links", () => {
+  it("exports external links with safe attributes", () => {
+    const note = makeNote({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "Example Site",
+              marks: [
+                {
+                  type: "link",
+                  attrs: { href: "https://example.com" },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const html = exportNote(note, "html");
+    expect(html).toContain(
+      '<a href="https://example.com" target="_blank" rel="noopener noreferrer">Example Site</a>',
+    );
+  });
+
+  it("keeps wiki-links as plain text in HTML export", () => {
+    const note = makeNote({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "[[Welcome to Hunos]]" }],
+        },
+      ],
+    });
+
+    const html = exportNote(note, "html");
+    expect(html).toContain("[[Welcome to Hunos]]");
+    expect(html).not.toContain("<a");
+  });
+});

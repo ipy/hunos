@@ -5,7 +5,7 @@ import type { Locale } from "@/types/settings";
 
 type PlaygroundLocale = "en" | "zh";
 
-export const PLAYGROUND_CONTENT_VERSION = 9;
+export const PLAYGROUND_CONTENT_VERSION = 10;
 
 export const FORMAT_PLAYGROUND_TITLES: readonly string[] = [
   "Format Playground",
@@ -50,6 +50,9 @@ interface PlaygroundStrings {
   tagsText: string;
   tag: string;
   wikiLink: string;
+  tagsExternalPrefix: string;
+  tagsExternalLabel: string;
+  tagsExternalSuffix: string;
   tryHint: string;
 }
 
@@ -94,8 +97,11 @@ const STRINGS: Record<PlaygroundLocale, PlaygroundStrings> = {
     tagsText: "Organize with ",
     tag: "#format-test",
     wikiLink: "[[Welcome to Hunos]]",
+    tagsExternalPrefix: " See ",
+    tagsExternalLabel: "project docs",
+    tagsExternalSuffix: " for more.",
     tryHint:
-      "Add new blocks below — type # / ## / ### , - , 1. , - [ ] , > , ``` , --- , | Name | Type | for tables, type # for tag autocomplete, or [[ to link notes with autocomplete. Desktop shortcuts: Cmd+B/I/Shift+X/K, Cmd+Enter for tasks (or add table row in cells), Tab / Shift+Tab to nest lists or move between table cells, Mod+Shift+Enter add table column, Mod+Backspace delete table row, Mod+Shift+Backspace delete table column, Cmd+Alt+↑/↓ to move lines, Cmd+D to duplicate line, Cmd+Shift+K to delete line, Cmd+Z / Cmd+Shift+Z to undo and redo, Enter on empty list items to outdent or exit, Backspace at line start to outdent nested items, Cmd+N new note, Cmd+F find in note, Cmd+Option+F find and replace, Cmd+Shift+F search all notes.",
+      "Add new blocks below — type # / ## / ### , - , 1. , - [ ] , > , ``` , --- , | Name | Type | for tables, type [text](url) for external links (bare URLs linkify on space), type # for tag autocomplete, or [[ to link notes with autocomplete. Desktop shortcuts: Cmd+B/I/Shift+X/K (Cmd+K links selected text), Cmd+Enter for tasks (or add table row in cells), Tab / Shift+Tab to nest lists or move between table cells, Mod+Shift+Enter add table column, Mod+Backspace delete table row, Mod+Shift+Backspace delete table column, Cmd+Alt+↑/↓ to move lines, Cmd+D to duplicate line, Cmd+Shift+K to delete line, Cmd+Z / Cmd+Shift+Z to undo and redo, Enter on empty list items to outdent or exit, Backspace at line start to outdent nested items, Cmd+N new note, Cmd+F find in note, Cmd+Option+F find and replace, Cmd+Shift+F search all notes.",
   },
   zh: {
     title: "格式试炼场",
@@ -137,15 +143,31 @@ const STRINGS: Record<PlaygroundLocale, PlaygroundStrings> = {
     tagsText: "用 ",
     tag: "#格式测试",
     wikiLink: "[[欢迎使用 Hunos]]",
+    tagsExternalPrefix: " 详见 ",
+    tagsExternalLabel: "项目文档",
+    tagsExternalSuffix: "。",
     tryHint:
-      "在下方空行试输入 # / ## / ### 、- 、1. 、- [ ] 、> 、``` 、--- 、| 名称 | 类型 | 创建表格，输入 # 可用标签自动完成，或输入 [[ 链接笔记。桌面快捷键：Cmd+B/I/Shift+X/K、Cmd+Enter 切换任务（或在表格单元格内添加行）、Tab / Shift+Tab 嵌套列表或在表格单元格间移动、Mod+Shift+Enter 添加表格列、Mod+Backspace 删除表格行、Mod+Shift+Backspace 删除表格列、Cmd+Alt+↑/↓ 移动行、Cmd+D 复制行、Cmd+Shift+K 删除行、Cmd+Z / Cmd+Shift+Z 撤销与重做、空列表项按 Enter 降级或退出列表、行首 Backspace 降级嵌套项、Cmd+N 新建笔记、Cmd+F 在笔记内查找、Cmd+Option+F 查找并替换、Cmd+Shift+F 搜索全部笔记。",
+      "在下方空行试输入 # / ## / ### 、- 、1. 、- [ ] 、> 、``` 、--- 、| 名称 | 类型 | 创建表格，输入 [文字](url) 创建外部链接（裸 URL 输入空格后自动链接），输入 # 可用标签自动完成，或输入 [[ 链接笔记。桌面快捷键：Cmd+B/I/Shift+X/K（Cmd+K 为选中文本加链接）、Cmd+Enter 切换任务（或在表格单元格内添加行）、Tab / Shift+Tab 嵌套列表或在表格单元格间移动、Mod+Shift+Enter 添加表格列、Mod+Backspace 删除表格行、Mod+Shift+Backspace 删除表格列、Cmd+Alt+↑/↓ 移动行、Cmd+D 复制行、Cmd+Shift+K 删除行、Cmd+Z / Cmd+Shift+Z 撤销与重做、空列表项按 Enter 降级或退出列表、行首 Backspace 降级嵌套项、Cmd+N 新建笔记、Cmd+F 在笔记内查找、Cmd+Option+F 查找并替换、Cmd+Shift+F 搜索全部笔记。",
   },
 };
 
-function text(value: string, marks?: { type: string }[]) {
+function text(value: string, marks?: { type: string; attrs?: Record<string, unknown> }[]) {
   return marks
     ? { type: "text", marks, text: value }
     : { type: "text", text: value };
+}
+
+function externalLinkText(label: string, href: string) {
+  return text(label, [
+    {
+      type: "link",
+      attrs: {
+        href,
+        target: "_blank",
+        rel: "noopener noreferrer",
+      },
+    },
+  ]);
 }
 
 function heading(level: number, value: string) {
@@ -294,6 +316,9 @@ export function buildPlaygroundContent(locale: Locale) {
         text(" and link to "),
         text(s.wikiLink),
         text("."),
+        text(s.tagsExternalPrefix),
+        externalLinkText(s.tagsExternalLabel, "https://example.com"),
+        text(s.tagsExternalSuffix),
       ),
 
       heading(2, s.sectionTry),
@@ -402,6 +427,21 @@ export function migratePlaygroundContentIfStale(
       const tryHintNode = contentNodes[i + 1];
       if (tryHintNode?.type === "paragraph") {
         contentNodes[i + 1] = paragraph(text(s.tryHint));
+      }
+    }
+    if (headingText(node) === s.sectionTags) {
+      const tagsNode = contentNodes[i + 1];
+      if (tagsNode?.type === "paragraph") {
+        contentNodes[i + 1] = paragraph(
+          text(s.tagsText),
+          text(s.tag),
+          text(" and link to "),
+          text(s.wikiLink),
+          text("."),
+          text(s.tagsExternalPrefix),
+          externalLinkText(s.tagsExternalLabel, "https://example.com"),
+          text(s.tagsExternalSuffix),
+        );
       }
     }
     if (headingText(node) === s.sectionBlocks) {

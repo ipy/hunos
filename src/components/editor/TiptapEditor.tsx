@@ -33,6 +33,10 @@ import { BlockMoveShortcuts } from "./BlockMoveShortcuts";
 import { HistoryKeyboardShortcuts } from "./HistoryKeyboardShortcuts";
 import { FindInNoteExtension } from "./FindInNoteExtension";
 import { MarkdownTableInput } from "./MarkdownTableInput";
+import { MarkdownLinkInput } from "./MarkdownLinkInput";
+import { LinkAutolinkGuards } from "./LinkAutolinkGuards";
+import { shouldAutolinkUrl } from "./linkAutolinkUtils";
+import { isValidLinkUrl } from "./inlineFormatActions";
 import { TableKeyboardShortcuts } from "./TableKeyboardShortcuts";
 import { getHunosCodeBlockExtension } from "./HunosCodeBlock";
 import { getCodeBlockHighlightStyles } from "./codeBlockHighlightStyles";
@@ -161,6 +165,7 @@ export function TiptapEditor({
       MarkdownBold,
       MarkdownShortcuts,
       MarkdownTableInput,
+      MarkdownLinkInput,
       MarkdownBulletList,
       Placeholder.configure({
         placeholder: t("editor.placeholder"),
@@ -170,9 +175,17 @@ export function TiptapEditor({
       Highlight.configure({ multicolor: true }),
       Underline,
       Link.configure({
-        openOnClick: false,
-        HTMLAttributes: { class: "editor-link" },
+        openOnClick: true,
+        autolink: true,
+        linkOnPaste: true,
+        HTMLAttributes: {
+          class: "editor-link",
+          target: "_blank",
+          rel: "noopener noreferrer",
+        },
+        shouldAutoLink: (url) => shouldAutolinkUrl(url) && isValidLinkUrl(url),
       }),
+      LinkAutolinkGuards,
       Image.extend({
         addAttributes() {
           return {

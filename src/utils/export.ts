@@ -2,7 +2,7 @@ import type { Note } from '@/types/note';
 
 function tiptapToMarkdown(json: unknown, context?: { orderedIndex?: number; inOrderedList?: boolean }): string {
   if (!json || typeof json !== 'object') return '';
-  const doc = json as { type?: string; content?: unknown[]; text?: string; attrs?: Record<string, unknown>; marks?: { type: string }[] };
+  const doc = json as { type?: string; content?: unknown[]; text?: string; attrs?: Record<string, unknown>; marks?: { type: string; attrs?: Record<string, unknown> }[] };
 
   if (doc.type === 'text') {
     let text = doc.text || '';
@@ -15,6 +15,11 @@ function tiptapToMarkdown(json: unknown, context?: { orderedIndex?: number; inOr
           case 'underline': text = `<u>${text}</u>`; break;
           case 'highlight': text = `==${text}==`; break;
           case 'code': text = `\`${text}\``; break;
+          case 'link': {
+            const href = (mark.attrs?.href as string) || '';
+            text = `[${text}](${href})`;
+            break;
+          }
         }
       }
     }
@@ -76,7 +81,7 @@ function tiptapToMarkdown(json: unknown, context?: { orderedIndex?: number; inOr
 
 function tiptapToHtml(json: unknown): string {
   if (!json || typeof json !== 'object') return '';
-  const doc = json as { type?: string; content?: unknown[]; text?: string; attrs?: Record<string, unknown>; marks?: { type: string }[] };
+  const doc = json as { type?: string; content?: unknown[]; text?: string; attrs?: Record<string, unknown>; marks?: { type: string; attrs?: Record<string, unknown> }[] };
 
   if (doc.type === 'text') {
     let text = escapeHtml(doc.text || '');
@@ -89,6 +94,11 @@ function tiptapToHtml(json: unknown): string {
           case 'underline': text = `<u>${text}</u>`; break;
           case 'highlight': text = `<mark>${text}</mark>`; break;
           case 'code': text = `<code>${text}</code>`; break;
+          case 'link': {
+            const href = escapeHtml((mark.attrs?.href as string) || '');
+            text = `<a href="${href}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+            break;
+          }
         }
       }
     }
