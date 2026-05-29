@@ -44,6 +44,34 @@ function expandMarkRange(
   return { rangeStart, rangeEnd };
 }
 
+function markRevealKey(mark: Mark): string {
+  return `${mark.type.name}:${JSON.stringify(mark.attrs)}`;
+}
+
+function seedMarkRange(
+  parent: Node,
+  blockStart: number,
+  mark: Mark,
+): { rangeStart: number; rangeEnd: number } | null {
+  let seedStart = 0;
+  let seedEnd = 0;
+  let found = false;
+
+  parent.forEach((node, offset) => {
+    if (!node.isText || found) return;
+    const hasMark = node.marks.some((m) => m.eq(mark));
+    if (!hasMark) return;
+
+    seedStart = blockStart + offset;
+    seedEnd = seedStart + node.nodeSize;
+    found = true;
+  });
+
+  if (!found) return null;
+
+  return expandMarkRange(parent, blockStart, mark, seedStart, seedEnd);
+}
+
 export function collectMarkdownRevealSymbolSpecs(
   state: EditorState,
 ): MarkdownRevealSymbolSpec[] {
@@ -56,29 +84,28 @@ export function collectMarkdownRevealSymbolSpecs(
   if (!parent.isTextblock) return specs;
 
   const blockStart = $pos.start();
+  const seenMarks = new Set<string>();
 
-  parent.forEach((node, offset) => {
+  parent.forEach((node) => {
     if (!node.isText) return;
-    const absStart = blockStart + offset;
-    const absEnd = absStart + node.nodeSize;
-
-    if (from < absStart || from > absEnd) return;
 
     node.marks.forEach((mark) => {
+      const key = markRevealKey(mark);
+      if (seenMarks.has(key)) return;
+
       const sym = getMarkRevealSymbols(mark.type.name, mark);
       if (!sym) return;
 
-      const { rangeStart, rangeEnd } = expandMarkRange(
-        parent,
-        blockStart,
-        mark,
-        absStart,
-        absEnd,
-      );
+      const range = seedMarkRange(parent, blockStart, mark);
+      if (!range) return;
+
+      seenMarks.add(key);
+
+      if (from < range.rangeStart || from > range.rangeEnd) return;
 
       specs.push({
-        rangeStart,
-        rangeEnd,
+        rangeStart: range.rangeStart,
+        rangeEnd: range.rangeEnd,
         open: sym.open,
         close: sym.close,
       });

@@ -1,7 +1,10 @@
 import { Schema } from "@tiptap/pm/model";
 import { EditorState, TextSelection } from "@tiptap/pm/state";
 import { describe, expect, it } from "vitest";
-import { buildMarkdownRevealDecorations, collectMarkdownRevealSymbolSpecs } from "./MarkdownReveal";
+import {
+  buildMarkdownRevealDecorations,
+  collectMarkdownRevealSymbolSpecs,
+} from "./MarkdownReveal";
 import { getMarkRevealSymbols } from "./markdownSymbols";
 
 const schema = new Schema({
@@ -72,8 +75,31 @@ describe("buildMarkdownRevealDecorations", () => {
     const prefix = "详见 ";
     const label = "项目文档";
     const suffix = "。";
-    const caretInLabel = prefix.length + 1;
+    const caretInLabel = prefix.length + 2;
     const state = stateWithLinkParagraph(prefix, label, suffix, caretInLabel);
+
+    expect(revealedSymbolTexts(state)).toEqual(["[", "](https://example.com)"]);
+  });
+
+  it("reveals link delimiters at the first character boundary of zh labels", () => {
+    const prefix = "详见 ";
+    const label = "项目文档";
+    const suffix = "。";
+    const state = stateWithLinkParagraph(prefix, label, suffix, prefix.length);
+
+    expect(revealedSymbolTexts(state)).toEqual(["[", "](https://example.com)"]);
+  });
+
+  it("reveals link delimiters at the last character boundary of zh labels", () => {
+    const prefix = "详见 ";
+    const label = "项目文档";
+    const suffix = "。";
+    const state = stateWithLinkParagraph(
+      prefix,
+      label,
+      suffix,
+      prefix.length + label.length,
+    );
 
     expect(revealedSymbolTexts(state)).toEqual(["[", "](https://example.com)"]);
   });
@@ -88,16 +114,87 @@ describe("buildMarkdownRevealDecorations", () => {
     expect(revealedSymbolTexts(state)).toEqual(["[", "](https://example.com)"]);
   });
 
+  it("reveals link delimiters at English label boundaries", () => {
+    const prefix = "See ";
+    const label = "project docs";
+    const suffix = " for more.";
+
+    const firstChar = stateWithLinkParagraph(
+      prefix,
+      label,
+      suffix,
+      prefix.length,
+    );
+    const lastChar = stateWithLinkParagraph(
+      prefix,
+      label,
+      suffix,
+      prefix.length + label.length,
+    );
+
+    expect(revealedSymbolTexts(firstChar)).toEqual([
+      "[",
+      "](https://example.com)",
+    ]);
+    expect(revealedSymbolTexts(lastChar)).toEqual([
+      "[",
+      "](https://example.com)",
+    ]);
+  });
+
   it("does not reveal link delimiters when caret is outside the link", () => {
     const prefix = "用 ";
     const label = "项目文档";
     const suffix = " #格式测试";
     const caretInPlainText = 1;
-    const state = stateWithLinkParagraph(prefix, label, suffix, caretInPlainText);
+    const state = stateWithLinkParagraph(
+      prefix,
+      label,
+      suffix,
+      caretInPlainText,
+    );
 
     const texts = revealedSymbolTexts(state);
     expect(texts).not.toContain("[");
     expect(texts.some((text) => text.startsWith("]("))).toBe(false);
+  });
+
+  it("does not reveal link delimiters after the link label", () => {
+    const prefix = "用 ";
+    const label = "项目文档";
+    const suffix = " #格式测试";
+    const state = stateWithLinkParagraph(
+      prefix,
+      label,
+      suffix,
+      prefix.length + label.length + 1,
+    );
+
+    const texts = revealedSymbolTexts(state);
+    expect(texts).not.toContain("[");
+    expect(texts.some((text) => text.startsWith("]("))).toBe(false);
+  });
+
+  it("reveals link delimiters once when caret is on a split label boundary", () => {
+    const linkMark = schema.marks.link.create({ href: "https://example.com" });
+    const prefix = "See ";
+    const document = doc.create({}, [
+      paragraph.create({}, [
+        schema.text(prefix),
+        schema.text("pro", [linkMark]),
+        schema.text("ject docs", [linkMark]),
+        schema.text("."),
+      ]),
+    ]);
+    const caretPos = 1 + prefix.length + 3;
+    const state = EditorState.create({
+      doc: document,
+      schema,
+      selection: TextSelection.create(document, caretPos),
+    });
+
+    expect(collectMarkdownRevealSymbolSpecs(state)).toHaveLength(1);
+    expect(revealedSymbolTexts(state)).toEqual(["[", "](https://example.com)"]);
   });
 
   it("still reveals other marks when caret is outside a link", () => {
