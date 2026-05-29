@@ -51,7 +51,11 @@ function tiptapToMarkdown(json: unknown, context?: { orderedIndex?: number; inOr
       return `- [${checked}] ` + children.trim() + '\n';
     }
     case 'blockquote': return '> ' + children.trim().replace(/\n/g, '\n> ') + '\n\n';
-    case 'codeBlock': return '```\n' + children + '```\n\n';
+    case 'codeBlock': {
+      const language = doc.attrs?.language as string | undefined;
+      const fence = language ? `\`\`\`${language}\n` : '```\n';
+      return fence + children + '```\n\n';
+    }
     case 'horizontalRule': return '---\n\n';
     case 'table': {
       const rows = (doc.content || []).map((c: unknown) => tiptapToMarkdown(c, childContext).trimEnd());
@@ -109,7 +113,11 @@ function tiptapToHtml(json: unknown): string {
       return `<li><input type="checkbox"${checked} disabled> ${children}</li>`;
     }
     case 'blockquote': return `<blockquote>${children}</blockquote>`;
-    case 'codeBlock': return `<pre><code>${children}</code></pre>`;
+    case 'codeBlock': {
+      const language = doc.attrs?.language as string | undefined;
+      const langClass = language ? ` class="language-${language}"` : '';
+      return `<pre><code${langClass}>${children}</code></pre>`;
+    }
     case 'horizontalRule': return '<hr>';
     default: return children;
   }

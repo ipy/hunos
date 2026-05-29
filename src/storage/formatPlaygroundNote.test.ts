@@ -79,6 +79,35 @@ describe("migratePlaygroundContentIfStale", () => {
     );
   });
 
+  it("updates code block sample and language for stale playground notes", () => {
+    const stale = buildPlaygroundContent("en") as {
+      type: "doc";
+      attrs?: { playgroundContentVersion?: number };
+      content: unknown[];
+    };
+    stale.attrs = { playgroundContentVersion: 7 };
+    const staleContent = JSON.stringify(stale);
+
+    const migrated = migratePlaygroundContentIfStale(staleContent, "en");
+    expect(migrated).not.toBeNull();
+
+    const parsed = JSON.parse(migrated!) as {
+      attrs?: { playgroundContentVersion?: number };
+      content: Array<{
+        type: string;
+        attrs?: { language?: string };
+        content?: Array<{ text?: string }>;
+      }>;
+    };
+    expect(parsed.attrs?.playgroundContentVersion).toBe(
+      PLAYGROUND_CONTENT_VERSION,
+    );
+
+    const codeBlock = parsed.content.find((node) => node.type === "codeBlock");
+    expect(codeBlock?.attrs?.language).toBe("javascript");
+    expect(codeBlock?.content?.[0]?.text).toContain("function greet");
+  });
+
   it("includes undo/redo hints in zh seed", () => {
     const content = buildPlaygroundContent("zh") as {
       content: Array<{ type: string; content?: Array<{ text?: string }> }>;
@@ -97,5 +126,18 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(tryHintNode?.content?.[0]?.text).toContain(
       "Cmd+Shift+F 搜索全部笔记",
     );
+  });
+
+  it("seeds highlighted javascript code block sample", () => {
+    const content = buildPlaygroundContent("en") as {
+      content: Array<{
+        type: string;
+        attrs?: { language?: string };
+        content?: Array<{ text?: string }>;
+      }>;
+    };
+    const codeBlock = content.content.find((node) => node.type === "codeBlock");
+    expect(codeBlock?.attrs?.language).toBe("javascript");
+    expect(codeBlock?.content?.[0]?.text).toContain("function greet");
   });
 });

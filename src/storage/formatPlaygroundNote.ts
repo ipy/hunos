@@ -5,7 +5,7 @@ import type { Locale } from "@/types/settings";
 
 type PlaygroundLocale = "en" | "zh";
 
-export const PLAYGROUND_CONTENT_VERSION = 7;
+export const PLAYGROUND_CONTENT_VERSION = 8;
 
 export const FORMAT_PLAYGROUND_TITLES: readonly string[] = [
   "Format Playground",
@@ -80,7 +80,8 @@ const STRINGS: Record<PlaygroundLocale, PlaygroundStrings> = {
     taskDone: "Completed task",
     taskPending: "Pending task",
     quote: "A blockquote for emphasis or citations.",
-    codeSample: 'const hello = "world";',
+    codeSample:
+      'function greet(name) {\n  return "Hello, " + name;\n}\n\nconst hello = greet("world");',
     tableH1: "Name",
     tableH2: "Type",
     tableH3: "Status",
@@ -122,7 +123,8 @@ const STRINGS: Record<PlaygroundLocale, PlaygroundStrings> = {
     taskDone: "已完成任务",
     taskPending: "待办任务",
     quote: "引用块，用于强调或引用。",
-    codeSample: 'const hello = "world";',
+    codeSample:
+      'function greet(name) {\n  return "Hello, " + name;\n}\n\nconst hello = greet("world");',
     tableH1: "名称",
     tableH2: "类型",
     tableH3: "状态",
@@ -258,6 +260,7 @@ export function buildPlaygroundContent(locale: Locale) {
       },
       {
         type: "codeBlock",
+        attrs: { language: "javascript" },
         content: [text(s.codeSample)],
       },
       { type: "horizontalRule" },
@@ -395,14 +398,28 @@ export function migratePlaygroundContentIfStale(
     if (node.type !== "heading" || node.attrs?.level !== 2) {
       continue;
     }
-    if (headingText(node) !== s.sectionTry) {
-      continue;
+    if (headingText(node) === s.sectionTry) {
+      const tryHintNode = contentNodes[i + 1];
+      if (tryHintNode?.type === "paragraph") {
+        contentNodes[i + 1] = paragraph(text(s.tryHint));
+      }
     }
-    const tryHintNode = contentNodes[i + 1];
-    if (tryHintNode?.type === "paragraph") {
-      contentNodes[i + 1] = paragraph(text(s.tryHint));
+    if (headingText(node) === s.sectionBlocks) {
+      for (let j = i + 1; j < contentNodes.length; j += 1) {
+        const blockNode = contentNodes[j];
+        if (blockNode.type === "heading") {
+          break;
+        }
+        if (blockNode.type === "codeBlock") {
+          contentNodes[j] = {
+            type: "codeBlock",
+            attrs: { language: "javascript" },
+            content: [text(s.codeSample)],
+          };
+          break;
+        }
+      }
     }
-    break;
   }
 
   const updated: PlaygroundDoc = {

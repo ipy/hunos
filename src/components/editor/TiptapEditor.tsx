@@ -32,6 +32,8 @@ import { BlockLineShortcuts } from "./BlockLineShortcuts";
 import { BlockMoveShortcuts } from "./BlockMoveShortcuts";
 import { HistoryKeyboardShortcuts } from "./HistoryKeyboardShortcuts";
 import { FindInNoteExtension } from "./FindInNoteExtension";
+import { getHunosCodeBlockExtension } from "./HunosCodeBlock";
+import { getCodeBlockHighlightStyles } from "./codeBlockHighlightStyles";
 import ListItem from "@tiptap/extension-list-item";
 import { SelectionBubbleMenu } from "./SelectionBubbleMenu";
 import Strike from "@tiptap/extension-strike";
@@ -129,7 +131,9 @@ export function TiptapEditor({
         italic: false,
         listItem: false,
         history: false,
+        codeBlock: false,
       }),
+      getHunosCodeBlockExtension(),
       History.extend({
         addKeyboardShortcuts() {
           return {};
@@ -342,7 +346,9 @@ export function TiptapEditor({
         .hunos-editor pre code {
           background: none;
           padding: 0;
+          white-space: pre;
         }
+        ${getCodeBlockHighlightStyles(theme.isDark)}
         .hunos-editor mark {
           background: ${theme.colors.highlight};
           border-radius: 2px;
