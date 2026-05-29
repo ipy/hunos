@@ -83,15 +83,29 @@ export function EditorFindBar({
     editor.commands.setFindInNoteReplaceText(replaceText);
   }, [editor, replaceText]);
 
+  const flushFindQuery = () => {
+    const pluginQuery = getFindInNoteState(editor.state)?.query ?? "";
+    if (pluginQuery !== query) {
+      editor.commands.setFindInNoteQuery(query);
+    }
+  };
+
+  const flushReplaceText = () => {
+    const pluginReplace = getFindInNoteState(editor.state)?.replaceText ?? "";
+    if (pluginReplace !== replaceText) {
+      editor.commands.setFindInNoteReplaceText(replaceText);
+    }
+  };
+
   const handleReplaceOne = () => {
-    editor.commands.setFindInNoteQuery(query);
-    editor.commands.setFindInNoteReplaceText(replaceText);
+    flushFindQuery();
+    flushReplaceText();
     editor.commands.replaceFindInNoteMatch();
   };
 
   const handleReplaceAll = () => {
-    editor.commands.setFindInNoteQuery(query);
-    editor.commands.setFindInNoteReplaceText(replaceText);
+    flushFindQuery();
+    flushReplaceText();
     editor.commands.replaceAllFindInNoteMatches();
   };
 

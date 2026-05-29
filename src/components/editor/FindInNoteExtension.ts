@@ -121,6 +121,148 @@ declare module "@tiptap/core" {
   }
 }
 
+export function createFindInNotePlugin(): Plugin<FindInNotePluginState> {
+  return new Plugin<FindInNotePluginState>({
+    key: findInNotePluginKey,
+    state: {
+      init: (_, state) =>
+        createState(state.doc, {
+          open: false,
+          query: "",
+          replaceText: "",
+          replaceMode: false,
+          activeIndex: -1,
+        }),
+      apply: (tr, prev, _oldState, newState) => {
+        const meta = tr.getMeta(findInNotePluginKey) as
+          | FindInNoteMeta
+          | undefined;
+
+        if (meta?.type === "close") {
+          return createState(newState.doc, {
+            open: false,
+            query: "",
+            replaceText: "",
+            replaceMode: false,
+            activeIndex: -1,
+            savedSelection: null,
+          });
+        }
+
+        if (meta?.type === "open") {
+          return createState(newState.doc, {
+            open: true,
+            query: "",
+            replaceText: "",
+            replaceMode: meta.replaceMode ?? false,
+            activeIndex: -1,
+            savedSelection: meta.savedSelection ?? {
+              from: newState.selection.from,
+              to: newState.selection.to,
+            },
+          });
+        }
+
+        if (!prev.open && !meta) {
+          return prev;
+        }
+
+        let nextQuery = prev.query;
+        let nextReplaceText = prev.replaceText;
+        let nextActiveIndex = prev.activeIndex;
+
+        if (meta?.type === "setQuery") {
+          nextQuery = meta.query ?? "";
+          if (nextQuery !== prev.query) {
+            nextActiveIndex = 0;
+          }
+        } else if (meta?.type === "setReplaceText") {
+          nextReplaceText = meta.replaceText ?? "";
+        } else if (meta?.type === "next") {
+          nextActiveIndex = wrapFindIndex(
+            prev.activeIndex,
+            prev.matches.length,
+            "next",
+          );
+        } else if (meta?.type === "prev") {
+          nextActiveIndex = wrapFindIndex(
+            prev.activeIndex,
+            prev.matches.length,
+            "prev",
+          );
+        } else if (meta?.type === "afterReplaceOne") {
+          const newMatches = findMatchesInDoc(newState.doc, prev.query);
+          nextActiveIndex = activeIndexAfterReplaceOne(
+            prev.activeIndex,
+            prev.matches.length,
+            newMatches.length,
+          );
+          return createState(newState.doc, {
+            open: prev.open,
+            query: nextQuery,
+            replaceText: nextReplaceText,
+            replaceMode: prev.replaceMode,
+            activeIndex: nextActiveIndex,
+            matches: newMatches,
+            savedSelection: prev.savedSelection,
+          });
+        } else if (meta?.type === "afterReplaceAll") {
+          const newMatches = findMatchesInDoc(newState.doc, prev.query);
+          return createState(newState.doc, {
+            open: prev.open,
+            query: nextQuery,
+            replaceText: nextReplaceText,
+            replaceMode: prev.replaceMode,
+            activeIndex:
+              newMatches.length > 0
+                ? clampFindIndex(0, newMatches.length)
+                : -1,
+            matches: newMatches,
+            savedSelection: prev.savedSelection,
+          });
+        } else if (tr.docChanged) {
+          const matches = findMatchesInDoc(newState.doc, prev.query);
+          nextActiveIndex = clampFindIndex(prev.activeIndex, matches.length);
+        }
+
+        return createState(newState.doc, {
+          open: prev.open,
+          query: nextQuery,
+          replaceText: nextReplaceText,
+          replaceMode: prev.replaceMode,
+          activeIndex: nextActiveIndex,
+          savedSelection: prev.savedSelection,
+        });
+      },
+    },
+    props: {
+      decorations(state) {
+        return getFindInNoteState(state)?.decorations ?? DecorationSet.empty;
+      },
+    },
+    view() {
+      return {
+        update(view, prevState) {
+          const prevPlugin = getFindInNoteState(prevState);
+          const nextPlugin = getFindInNoteState(view.state);
+          if (!nextPlugin?.open) return;
+
+          const indexChanged =
+            nextPlugin.activeIndex !== prevPlugin?.activeIndex;
+          const queryChanged = nextPlugin.query !== prevPlugin?.query;
+
+          if (indexChanged || queryChanged) {
+            scrollActiveMatchIntoView(
+              view,
+              nextPlugin.matches[nextPlugin.activeIndex],
+            );
+          }
+        },
+      };
+    },
+  });
+}
+
 export const FindInNoteExtension = Extension.create({
   name: "findInNote",
 
@@ -267,149 +409,6 @@ export const FindInNoteExtension = Extension.create({
   },
 
   addProseMirrorPlugins() {
-    return [
-      new Plugin<FindInNotePluginState>({
-        key: findInNotePluginKey,
-        state: {
-          init: (_, state) =>
-            createState(state.doc, {
-              open: false,
-              query: "",
-              replaceText: "",
-              replaceMode: false,
-              activeIndex: -1,
-            }),
-          apply: (tr, prev, _oldState, newState) => {
-            const meta = tr.getMeta(findInNotePluginKey) as
-              | FindInNoteMeta
-              | undefined;
-
-            if (meta?.type === "close") {
-              return createState(newState.doc, {
-                open: false,
-                query: "",
-                replaceText: "",
-                replaceMode: false,
-                activeIndex: -1,
-                savedSelection: null,
-              });
-            }
-
-            if (meta?.type === "open") {
-              return createState(newState.doc, {
-                open: true,
-                query: "",
-                replaceText: "",
-                replaceMode: meta.replaceMode ?? false,
-                activeIndex: -1,
-                savedSelection: meta.savedSelection ?? {
-                  from: newState.selection.from,
-                  to: newState.selection.to,
-                },
-              });
-            }
-
-            if (!prev.open && !meta) {
-              return prev;
-            }
-
-            let nextQuery = prev.query;
-            let nextReplaceText = prev.replaceText;
-            let nextActiveIndex = prev.activeIndex;
-
-            if (meta?.type === "setQuery") {
-              nextQuery = meta.query ?? "";
-              nextActiveIndex = 0;
-            } else if (meta?.type === "setReplaceText") {
-              nextReplaceText = meta.replaceText ?? "";
-            } else if (meta?.type === "next") {
-              nextActiveIndex = wrapFindIndex(
-                prev.activeIndex,
-                prev.matches.length,
-                "next",
-              );
-            } else if (meta?.type === "prev") {
-              nextActiveIndex = wrapFindIndex(
-                prev.activeIndex,
-                prev.matches.length,
-                "prev",
-              );
-            } else if (meta?.type === "afterReplaceOne") {
-              const newMatches = findMatchesInDoc(newState.doc, prev.query);
-              nextActiveIndex = activeIndexAfterReplaceOne(
-                prev.activeIndex,
-                prev.matches.length,
-                newMatches.length,
-              );
-              return createState(newState.doc, {
-                open: prev.open,
-                query: nextQuery,
-                replaceText: nextReplaceText,
-                replaceMode: prev.replaceMode,
-                activeIndex: nextActiveIndex,
-                matches: newMatches,
-                savedSelection: prev.savedSelection,
-              });
-            } else if (meta?.type === "afterReplaceAll") {
-              const newMatches = findMatchesInDoc(newState.doc, prev.query);
-              return createState(newState.doc, {
-                open: prev.open,
-                query: nextQuery,
-                replaceText: nextReplaceText,
-                replaceMode: prev.replaceMode,
-                activeIndex:
-                  newMatches.length > 0
-                    ? clampFindIndex(0, newMatches.length)
-                    : -1,
-                matches: newMatches,
-                savedSelection: prev.savedSelection,
-              });
-            } else if (tr.docChanged) {
-              const matches = findMatchesInDoc(newState.doc, prev.query);
-              nextActiveIndex = clampFindIndex(
-                prev.activeIndex,
-                matches.length,
-              );
-            }
-
-            return createState(newState.doc, {
-              open: prev.open,
-              query: nextQuery,
-              replaceText: nextReplaceText,
-              replaceMode: prev.replaceMode,
-              activeIndex: nextActiveIndex,
-              savedSelection: prev.savedSelection,
-            });
-          },
-        },
-        props: {
-          decorations(state) {
-            return (
-              getFindInNoteState(state)?.decorations ?? DecorationSet.empty
-            );
-          },
-        },
-        view() {
-          return {
-            update(view, prevState) {
-              const prevPlugin = getFindInNoteState(prevState);
-              const nextPlugin = getFindInNoteState(view.state);
-              if (!nextPlugin?.open) return;
-
-              const indexChanged =
-                nextPlugin.activeIndex !== prevPlugin?.activeIndex;
-              const queryChanged = nextPlugin.query !== prevPlugin?.query;
-
-              if (indexChanged || queryChanged) {
-                scrollActiveMatchIntoView(
-                  view,
-                  nextPlugin.matches[nextPlugin.activeIndex],
-                );
-              }
-            },
-          };
-        },
-      }),
-    ];
+    return [createFindInNotePlugin()];
   },
 });
