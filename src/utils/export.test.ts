@@ -328,3 +328,53 @@ describe("exportNote html links", () => {
     expect(html).not.toContain("<a");
   });
 });
+
+describe("exportNote images", () => {
+  const sampleSrc =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
+  it("exports embedded images as GFM markdown", () => {
+    const note = makeNote({
+      type: "doc",
+      content: [
+        {
+          type: "image",
+          attrs: { src: sampleSrc },
+        },
+      ],
+    });
+
+    expect(exportNote(note, "markdown")).toBe(`![](${sampleSrc})`);
+  });
+
+  it("exports image alt text in markdown", () => {
+    const note = makeNote({
+      type: "doc",
+      content: [
+        {
+          type: "image",
+          attrs: { src: sampleSrc, alt: "Screenshot" },
+        },
+      ],
+    });
+
+    expect(exportNote(note, "markdown")).toBe(`![Screenshot](${sampleSrc})`);
+  });
+
+  it("exports embedded images in HTML", () => {
+    const note = makeNote({
+      type: "doc",
+      content: [
+        {
+          type: "image",
+          attrs: { src: sampleSrc, alt: "Sample" },
+        },
+      ],
+    });
+
+    const html = exportNote(note, "html");
+    expect(html).toContain(`src="${sampleSrc}"`);
+    expect(html).toContain('alt="Sample"');
+    expect(html).toContain('class="editor-image"');
+  });
+});

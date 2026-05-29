@@ -1,14 +1,19 @@
-import { Extension } from '@tiptap/core';
-import { Plugin } from '@tiptap/pm/state';
-import { marked } from 'marked';
+import { Extension } from "@tiptap/core";
+import { Plugin } from "@tiptap/pm/state";
+import { marked } from "marked";
+import { getImageFileFromClipboard } from "./imageEmbedUtils";
 
 function markdownToHtml(text: string): string {
-  const preprocessed = text.replace(/==([^=\n]+?)==/g, '<mark>$1</mark>');
-  return marked.parse(preprocessed, { async: false, breaks: true, gfm: true }) as string;
+  const preprocessed = text.replace(/==([^=\n]+?)==/g, "<mark>$1</mark>");
+  return marked.parse(preprocessed, {
+    async: false,
+    breaks: true,
+    gfm: true,
+  }) as string;
 }
 
 export const MarkdownPaste = Extension.create({
-  name: 'markdownPaste',
+  name: "markdownPaste",
 
   addProseMirrorPlugins() {
     const editor = this.editor;
@@ -20,10 +25,12 @@ export const MarkdownPaste = Extension.create({
             const clipboard = event.clipboardData;
             if (!clipboard) return false;
 
-            const html = clipboard.getData('text/html');
+            if (getImageFileFromClipboard(clipboard)) return false;
+
+            const html = clipboard.getData("text/html");
             if (html && html.trim().length > 0) return false;
 
-            const text = clipboard.getData('text/plain');
+            const text = clipboard.getData("text/plain");
             if (!text) return false;
 
             event.preventDefault();

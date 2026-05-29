@@ -13,6 +13,7 @@ import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
 import { MarkdownReveal } from "./MarkdownReveal";
 import { MarkdownPaste } from "./MarkdownPaste";
+import { ImagePasteDrop } from "./ImagePasteDrop";
 import {
   MarkdownBold,
   MarkdownBulletList,
@@ -225,6 +226,7 @@ export function TiptapEditor({
       TableCell,
       TableHeader,
       MarkdownReveal,
+      ImagePasteDrop,
       MarkdownPaste,
       WikiLinkDecoration.configure({ onWikiLinkClick: handleWikiLinkClick }),
       WikiLinkSuggestion.configure({

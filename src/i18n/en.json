@@ -127,6 +127,9 @@
     "link": {
       "prompt": "Link URL",
       "invalidUrl": "Please enter a valid URL (e.g. https://example.com)"
+    },
+    "image": {
+      "tooLarge": "Image is too large (max 5 MB)"
     }
   },
   "settings": {

@@ -1,11 +1,12 @@
 import { noteStorage } from "./noteStorage";
 import { graphEngine } from "@/graph/graphEngine";
 import { extractPlainTextFromTiptap } from "@/graph/linkExtractor";
+import { PLAYGROUND_SAMPLE_IMAGE_SRC } from "@/components/editor/imageEmbedUtils";
 import type { Locale } from "@/types/settings";
 
 type PlaygroundLocale = "en" | "zh";
 
-export const PLAYGROUND_CONTENT_VERSION = 10;
+export const PLAYGROUND_CONTENT_VERSION = 11;
 
 export const FORMAT_PLAYGROUND_TITLES: readonly string[] = [
   "Format Playground",
@@ -19,6 +20,7 @@ interface PlaygroundStrings {
   sectionInline: string;
   sectionLists: string;
   sectionBlocks: string;
+  sectionImages: string;
   sectionTable: string;
   sectionTags: string;
   sectionTry: string;
@@ -38,6 +40,8 @@ interface PlaygroundStrings {
   taskPending: string;
   quote: string;
   codeSample: string;
+  imagesIntro: string;
+  imageSampleAlt: string;
   tableH1: string;
   tableH2: string;
   tableH3: string;
@@ -60,11 +64,12 @@ const STRINGS: Record<PlaygroundLocale, PlaygroundStrings> = {
   en: {
     title: "Format Playground",
     intro:
-      "Test every format in this single note — headings, marks, lists, blocks, tables, tags, and wiki links. Scroll through each section or use the TOC in the info panel.",
+      "Test every format in this single note — headings, marks, lists, blocks, images, tables, tags, and wiki links. Scroll through each section or use the TOC in the info panel.",
     sectionHeadings: "Headings",
     sectionInline: "Inline Marks",
     sectionLists: "Lists",
     sectionBlocks: "Blocks",
+    sectionImages: "Images",
     sectionTable: "Table",
     sectionTags: "Tags & Links",
     sectionTry: "Try Your Own",
@@ -85,6 +90,9 @@ const STRINGS: Record<PlaygroundLocale, PlaygroundStrings> = {
     quote: "A blockquote for emphasis or citations.",
     codeSample:
       'function greet(name) {\n  return "Hello, " + name;\n}\n\nconst hello = greet("world");',
+    imagesIntro:
+      "Embedded sample image (paste or drag-and-drop your own below).",
+    imageSampleAlt: "Sample",
     tableH1: "Name",
     tableH2: "Type",
     tableH3: "Status",
@@ -101,16 +109,17 @@ const STRINGS: Record<PlaygroundLocale, PlaygroundStrings> = {
     tagsExternalLabel: "project docs",
     tagsExternalSuffix: " for more.",
     tryHint:
-      "Add new blocks below — type # / ## / ### , - , 1. , - [ ] , > , ``` , --- , | Name | Type | for tables, type [text](url) for external links (bare URLs linkify on space), type # for tag autocomplete, or [[ to link notes with autocomplete. Desktop shortcuts: Cmd+B/I/Shift+X/K (Cmd+K links selected text), Cmd+Enter for tasks (or add table row in cells), Tab / Shift+Tab to nest lists or move between table cells, Mod+Shift+Enter add table column, Mod+Backspace delete table row, Mod+Shift+Backspace delete table column, Cmd+Alt+↑/↓ to move lines, Cmd+D to duplicate line, Cmd+Shift+K to delete line, Cmd+Z / Cmd+Shift+Z to undo and redo, Enter on empty list items to outdent or exit, Backspace at line start to outdent nested items, Cmd+N new note, Cmd+F find in note, Cmd+Option+F find and replace, Cmd+Shift+F search all notes.",
+      "Add new blocks below — type # / ## / ### , - , 1. , - [ ] , > , ``` , --- , | Name | Type | for tables, type [text](url) for external links (bare URLs linkify on space), paste or drag-and-drop images (PNG/JPG, max 5 MB), type # for tag autocomplete, or [[ to link notes with autocomplete. Desktop shortcuts: Cmd+B/I/Shift+X/K (Cmd+K links selected text), Cmd+Enter for tasks (or add table row in cells), Tab / Shift+Tab to nest lists or move between table cells, Mod+Shift+Enter add table column, Mod+Backspace delete table row, Mod+Shift+Backspace delete table column, Cmd+Alt+↑/↓ to move lines, Cmd+D to duplicate line, Cmd+Shift+K to delete line, Cmd+Z / Cmd+Shift+Z to undo and redo, Enter on empty list items to outdent or exit, Backspace at line start to outdent nested items, Cmd+N new note, Cmd+F find in note, Cmd+Option+F find and replace, Cmd+Shift+F search all notes.",
   },
   zh: {
     title: "格式试炼场",
     intro:
-      "在这一篇笔记里测试所有格式——标题、行内样式、列表、块级元素、表格、标签与双向链接。可滚动各分区，或在信息面板的目录中快速跳转。",
+      "在这一篇笔记里测试所有格式——标题、行内样式、列表、块级元素、图片、表格、标签与双向链接。可滚动各分区，或在信息面板的目录中快速跳转。",
     sectionHeadings: "标题",
     sectionInline: "行内样式",
     sectionLists: "列表",
     sectionBlocks: "块级元素",
+    sectionImages: "图片",
     sectionTable: "表格",
     sectionTags: "标签与链接",
     sectionTry: "自由试炼",
@@ -131,6 +140,8 @@ const STRINGS: Record<PlaygroundLocale, PlaygroundStrings> = {
     quote: "引用块，用于强调或引用。",
     codeSample:
       'function greet(name) {\n  return "Hello, " + name;\n}\n\nconst hello = greet("world");',
+    imagesIntro: "内嵌示例图片（可在下方粘贴或拖放自己的图片）。",
+    imageSampleAlt: "示例",
     tableH1: "名称",
     tableH2: "类型",
     tableH3: "状态",
@@ -147,11 +158,14 @@ const STRINGS: Record<PlaygroundLocale, PlaygroundStrings> = {
     tagsExternalLabel: "项目文档",
     tagsExternalSuffix: "。",
     tryHint:
-      "在下方空行试输入 # / ## / ### 、- 、1. 、- [ ] 、> 、``` 、--- 、| 名称 | 类型 | 创建表格，输入 [文字](url) 创建外部链接（裸 URL 输入空格后自动链接），输入 # 可用标签自动完成，或输入 [[ 链接笔记。桌面快捷键：Cmd+B/I/Shift+X/K（Cmd+K 为选中文本加链接）、Cmd+Enter 切换任务（或在表格单元格内添加行）、Tab / Shift+Tab 嵌套列表或在表格单元格间移动、Mod+Shift+Enter 添加表格列、Mod+Backspace 删除表格行、Mod+Shift+Backspace 删除表格列、Cmd+Alt+↑/↓ 移动行、Cmd+D 复制行、Cmd+Shift+K 删除行、Cmd+Z / Cmd+Shift+Z 撤销与重做、空列表项按 Enter 降级或退出列表、行首 Backspace 降级嵌套项、Cmd+N 新建笔记、Cmd+F 在笔记内查找、Cmd+Option+F 查找并替换、Cmd+Shift+F 搜索全部笔记。",
+      "在下方空行试输入 # / ## / ### 、- 、1. 、- [ ] 、> 、``` 、--- 、| 名称 | 类型 | 创建表格，输入 [文字](url) 创建外部链接（裸 URL 输入空格后自动链接），粘贴或拖放图片（PNG/JPG，最大 5 MB），输入 # 可用标签自动完成，或输入 [[ 链接笔记。桌面快捷键：Cmd+B/I/Shift+X/K（Cmd+K 为选中文本加链接）、Cmd+Enter 切换任务（或在表格单元格内添加行）、Tab / Shift+Tab 嵌套列表或在表格单元格间移动、Mod+Shift+Enter 添加表格列、Mod+Backspace 删除表格行、Mod+Shift+Backspace 删除表格列、Cmd+Alt+↑/↓ 移动行、Cmd+D 复制行、Cmd+Shift+K 删除行、Cmd+Z / Cmd+Shift+Z 撤销与重做、空列表项按 Enter 降级或退出列表、行首 Backspace 降级嵌套项、Cmd+N 新建笔记、Cmd+F 在笔记内查找、Cmd+Option+F 查找并替换、Cmd+Shift+F 搜索全部笔记。",
   },
 };
 
-function text(value: string, marks?: { type: string; attrs?: Record<string, unknown> }[]) {
+function text(
+  value: string,
+  marks?: { type: string; attrs?: Record<string, unknown> }[],
+) {
   return marks
     ? { type: "text", marks, text: value }
     : { type: "text", text: value };
@@ -287,6 +301,16 @@ export function buildPlaygroundContent(locale: Locale) {
       },
       { type: "horizontalRule" },
 
+      heading(2, s.sectionImages),
+      paragraph(text(s.imagesIntro)),
+      {
+        type: "image",
+        attrs: {
+          src: PLAYGROUND_SAMPLE_IMAGE_SRC,
+          alt: s.imageSampleAlt,
+        },
+      },
+
       heading(2, s.sectionTable),
       {
         type: "table",
@@ -418,6 +442,43 @@ export function migratePlaygroundContentIfStale(
 
   const s = STRINGS[resolvePlaygroundLocale(locale)];
   const contentNodes = [...parsed.content];
+
+  const introNode = contentNodes[1];
+  if (introNode?.type === "paragraph") {
+    contentNodes[1] = paragraph(text(s.intro));
+  }
+
+  const hasImagesSection = contentNodes.some(
+    (node) =>
+      node.type === "heading" &&
+      node.attrs?.level === 2 &&
+      headingText(node) === s.sectionImages,
+  );
+
+  if (!hasImagesSection) {
+    const tableSectionIndex = contentNodes.findIndex(
+      (node) =>
+        node.type === "heading" &&
+        node.attrs?.level === 2 &&
+        headingText(node) === s.sectionTable,
+    );
+    if (tableSectionIndex > -1) {
+      contentNodes.splice(
+        tableSectionIndex,
+        0,
+        heading(2, s.sectionImages),
+        paragraph(text(s.imagesIntro)),
+        {
+          type: "image",
+          attrs: {
+            src: PLAYGROUND_SAMPLE_IMAGE_SRC,
+            alt: s.imageSampleAlt,
+          },
+        },
+      );
+    }
+  }
+
   for (let i = 0; i < contentNodes.length; i += 1) {
     const node = contentNodes[i];
     if (node.type !== "heading" || node.attrs?.level !== 2) {

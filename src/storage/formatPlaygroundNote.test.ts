@@ -122,14 +122,39 @@ describe("migratePlaygroundContentIfStale", () => {
       "Mod+Backspace delete table row",
     );
     expect(tryHintNode?.content?.[0]?.text).toContain("[text](url)");
-    expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+K links selected text");
+    expect(tryHintNode?.content?.[0]?.text).toContain(
+      "Cmd+K links selected text",
+    );
+    expect(tryHintNode?.content?.[0]?.text).toContain(
+      "paste or drag-and-drop images",
+    );
+  });
+
+  it("seeds an Images section with embedded sample image", () => {
+    const content = buildPlaygroundContent("en") as {
+      content: Array<{
+        type: string;
+        attrs?: { src?: string; alt?: string };
+        content?: Array<{ text?: string }>;
+      }>;
+    };
+    const imagesSectionIndex = content.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "Images",
+    );
+    expect(imagesSectionIndex).toBeGreaterThan(-1);
+    const imageNode = content.content[imagesSectionIndex + 2];
+    expect(imageNode?.type).toBe("image");
+    expect(imageNode?.attrs?.src).toMatch(/^data:image\/png;base64,/);
   });
 
   it("includes external link sample in tags section", () => {
     const content = buildPlaygroundContent("en") as {
       content: Array<{
         type: string;
-        content?: Array<{ text?: string; marks?: Array<{ type: string; attrs?: { href?: string } }> }>;
+        content?: Array<{
+          text?: string;
+          marks?: Array<{ type: string; attrs?: { href?: string } }>;
+        }>;
       }>;
     };
     const tagsSectionIndex = content.content.findIndex(
@@ -239,6 +264,65 @@ describe("migratePlaygroundContentIfStale", () => {
     );
     expect(tryHintNode?.content?.[0]?.text).toContain(
       "Cmd+Shift+F 搜索全部笔记",
+    );
+  });
+
+  it("updates intro, images section, and tryHint for stale v10 playground notes", () => {
+    const stale = buildPlaygroundContent("en") as {
+      type: "doc";
+      attrs?: { playgroundContentVersion?: number };
+      content: unknown[];
+    };
+    stale.attrs = { playgroundContentVersion: 10 };
+
+    const staleNodes = stale.content as Array<{
+      type: string;
+      content?: Array<{ text?: string }>;
+    }>;
+    const imagesSectionIndex = staleNodes.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "Images",
+    );
+    if (imagesSectionIndex > -1) {
+      staleNodes.splice(imagesSectionIndex, 3);
+    }
+    staleNodes[1] = {
+      type: "paragraph",
+      content: [
+        {
+          text: "Test every format in this single note — headings, marks, lists, blocks, tables, tags, and wiki links.",
+        },
+      ],
+    };
+
+    const migrated = migratePlaygroundContentIfStale(
+      JSON.stringify(stale),
+      "en",
+    );
+    expect(migrated).not.toBeNull();
+
+    const parsed = JSON.parse(migrated!) as {
+      attrs?: { playgroundContentVersion?: number };
+      content: Array<{
+        type: string;
+        attrs?: { src?: string };
+        content?: Array<{ text?: string }>;
+      }>;
+    };
+    expect(parsed.attrs?.playgroundContentVersion).toBe(
+      PLAYGROUND_CONTENT_VERSION,
+    );
+    expect(parsed.content[1]?.content?.[0]?.text).toContain("images");
+    const migratedImagesIndex = parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "Images",
+    );
+    expect(migratedImagesIndex).toBeGreaterThan(-1);
+    expect(parsed.content[migratedImagesIndex + 2]?.type).toBe("image");
+    const trySectionIndex = parsed.content.findIndex(
+      (node) =>
+        node.type === "heading" && node.content?.[0]?.text === "Try Your Own",
+    );
+    expect(parsed.content[trySectionIndex + 1]?.content?.[0]?.text).toContain(
+      "paste or drag-and-drop images",
     );
   });
 
