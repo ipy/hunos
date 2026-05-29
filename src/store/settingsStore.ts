@@ -1,7 +1,15 @@
-import { create } from 'zustand';
-import type { AppSettings, ThemeMode, Locale, EditorFont, SortBy, SortOrder } from '@/types/settings';
-import { DEFAULT_SETTINGS } from '@/types/settings';
-import { settingsStorage } from '@/storage/settingsStorage';
+import { create } from "zustand";
+import type {
+  AppSettings,
+  ThemeMode,
+  Locale,
+  EditorFont,
+  SortBy,
+  SortOrder,
+} from "@/types/settings";
+import { DEFAULT_SETTINGS } from "@/types/settings";
+import { settingsStorage } from "@/storage/settingsStorage";
+import { readLocaleFromUrl } from "@/utils/localeBootstrap";
 
 interface SettingsStore extends AppSettings {
   isLoaded: boolean;
@@ -27,66 +35,71 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
 
   loadSettings: async () => {
     const settings = await settingsStorage.getAll();
+    const urlLocale = readLocaleFromUrl();
+    if (urlLocale && urlLocale !== settings.locale) {
+      await settingsStorage.set("locale", urlLocale);
+      settings.locale = urlLocale;
+    }
     set({ ...settings, isLoaded: true });
   },
 
   setTheme: async (theme) => {
-    await settingsStorage.set('theme', theme);
+    await settingsStorage.set("theme", theme);
     set({ theme });
   },
 
   setLocale: async (locale) => {
-    await settingsStorage.set('locale', locale);
+    await settingsStorage.set("locale", locale);
     set({ locale });
   },
 
   setEditorFont: async (editorFont) => {
-    await settingsStorage.set('editorFont', editorFont);
+    await settingsStorage.set("editorFont", editorFont);
     set({ editorFont });
   },
 
   setHeadingsFont: async (headingsFont) => {
-    await settingsStorage.set('headingsFont', headingsFont);
+    await settingsStorage.set("headingsFont", headingsFont);
     set({ headingsFont });
   },
 
   setCodeFont: async (codeFont) => {
-    await settingsStorage.set('codeFont', codeFont);
+    await settingsStorage.set("codeFont", codeFont);
     set({ codeFont });
   },
 
   setFontSize: async (fontSize) => {
-    await settingsStorage.set('fontSize', fontSize);
+    await settingsStorage.set("fontSize", fontSize);
     set({ fontSize });
   },
 
   setLineHeight: async (lineHeight) => {
-    await settingsStorage.set('lineHeight', lineHeight);
+    await settingsStorage.set("lineHeight", lineHeight);
     set({ lineHeight });
   },
 
   setLineWidth: async (lineWidth) => {
-    await settingsStorage.set('lineWidth', lineWidth);
+    await settingsStorage.set("lineWidth", lineWidth);
     set({ lineWidth });
   },
 
   setParagraphSpacing: async (paragraphSpacing) => {
-    await settingsStorage.set('paragraphSpacing', paragraphSpacing);
+    await settingsStorage.set("paragraphSpacing", paragraphSpacing);
     set({ paragraphSpacing });
   },
 
   setParagraphIndent: async (paragraphIndent) => {
-    await settingsStorage.set('paragraphIndent', paragraphIndent);
+    await settingsStorage.set("paragraphIndent", paragraphIndent);
     set({ paragraphIndent });
   },
 
   setSortBy: async (sortBy) => {
-    await settingsStorage.set('sortBy', sortBy);
+    await settingsStorage.set("sortBy", sortBy);
     set({ sortBy });
   },
 
   setSortOrder: async (sortOrder) => {
-    await settingsStorage.set('sortOrder', sortOrder);
+    await settingsStorage.set("sortOrder", sortOrder);
     set({ sortOrder });
   },
 

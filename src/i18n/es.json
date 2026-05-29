@@ -124,6 +124,9 @@
     },
     "link": {
       "prompt": "URL del enlace",
+      "placeholder": "https://example.com",
+      "apply": "Aplicar",
+      "remove": "Quitar",
       "invalidUrl": "Introduce una URL válida (p. ej. https://example.com)"
     },
     "image": {

@@ -126,6 +126,9 @@
     },
     "link": {
       "prompt": "链接地址",
+      "placeholder": "https://example.com",
+      "apply": "应用",
+      "remove": "移除",
       "invalidUrl": "请输入有效 URL（例如 https://example.com）"
     },
     "image": {

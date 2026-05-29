@@ -1,9 +1,12 @@
 import { Extension } from "@tiptap/core";
-import { isEditorSuggestionMenuOpen } from "@/utils/editorSuggestionMenu";
-import { promptAndSetLink } from "./inlineFormatActions";
+import {
+  isEditorSuggestionMenuOpen,
+  isLinkEditorOpen,
+} from "@/utils/editorSuggestionMenu";
+import { openLinkEditor } from "./inlineFormatActions";
 
-function suggestionMenuBlocksShortcut(): boolean {
-  return isEditorSuggestionMenuOpen();
+function shortcutBlocked(): boolean {
+  return isEditorSuggestionMenuOpen() || isLinkEditorOpen();
 }
 
 export const EditorKeyboardShortcuts = Extension.create({
@@ -13,24 +16,24 @@ export const EditorKeyboardShortcuts = Extension.create({
   addKeyboardShortcuts() {
     return {
       "Mod-b": () => {
-        if (suggestionMenuBlocksShortcut()) return true;
+        if (shortcutBlocked()) return true;
         return this.editor.commands.toggleBold();
       },
       "Mod-i": () => {
-        if (suggestionMenuBlocksShortcut()) return true;
+        if (shortcutBlocked()) return true;
         return this.editor.commands.toggleItalic();
       },
       "Mod-Shift-x": () => {
-        if (suggestionMenuBlocksShortcut()) return true;
+        if (shortcutBlocked()) return true;
         return this.editor.commands.toggleStrike();
       },
       "Mod-k": () => {
-        if (suggestionMenuBlocksShortcut()) return true;
-        promptAndSetLink(this.editor);
+        if (shortcutBlocked()) return true;
+        openLinkEditor(this.editor);
         return true;
       },
       "Mod-Enter": () => {
-        if (suggestionMenuBlocksShortcut()) return true;
+        if (shortcutBlocked()) return true;
         if (!this.editor.isActive("taskItem")) return false;
         return this.editor.commands.toggleTaskItemWithReorder();
       },

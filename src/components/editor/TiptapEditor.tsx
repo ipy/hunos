@@ -47,6 +47,7 @@ import { getHunosCodeBlockExtension } from "./HunosCodeBlock";
 import { getCodeBlockHighlightStyles } from "./codeBlockHighlightStyles";
 import ListItem from "@tiptap/extension-list-item";
 import { SelectionBubbleMenu } from "./SelectionBubbleMenu";
+import { LinkEditorBubble } from "./LinkEditorBubble";
 import Strike from "@tiptap/extension-strike";
 import Italic from "@tiptap/extension-italic";
 import History from "@tiptap/extension-history";
@@ -55,6 +56,7 @@ import { useTheme } from "@/theme/ThemeContext";
 import { resolveTextFontFamily, resolveCodeFontFamily } from "@/utils/fonts";
 import { useNoteStore } from "@/store/noteStore";
 import { useTagStore } from "@/store/tagStore";
+import { useUIStore } from "@/store/uiStore";
 import { noteStorage } from "@/storage/noteStorage";
 import { graphEngine } from "@/graph/graphEngine";
 import { findNoteByWikiTitle } from "@/utils/wikiLink";
@@ -110,6 +112,10 @@ export function TiptapEditor({
       tagsRef.current = state.tags;
     });
   }, []);
+
+  useEffect(() => {
+    useUIStore.getState().closeLinkEditor();
+  }, [noteId]);
 
   const handleWikiLinkClick = async (title: string) => {
     const store = useNoteStore.getState();
@@ -553,6 +559,7 @@ export function TiptapEditor({
       `}</style>
       <EditorContent editor={editor} />
       <SelectionBubbleMenu editor={editor} />
+      <LinkEditorBubble editor={editor} />
     </>
   );
 }

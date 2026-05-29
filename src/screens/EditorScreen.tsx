@@ -80,6 +80,15 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     setTitleValue(note?.title ?? "");
   }, [note?.id]);
 
+  useEffect(() => {
+    if (!note?.title) return;
+    const titleInput = document.querySelector(
+      '[data-field="note-title"]',
+    ) as HTMLInputElement | null;
+    if (document.activeElement === titleInput) return;
+    setTitleValue(note.title);
+  }, [note?.title]);
+
   const handleTitleChange = (newTitle: string) => {
     setTitleValue(newTitle);
     if (!activeNoteId) return;

@@ -20,7 +20,17 @@ export function isEditorSuggestionMenuOpen(): boolean {
   return menu.getBoundingClientRect().height > 0;
 }
 
+/** True when the inline link URL editor bubble is open. */
+export function isLinkEditorOpen(): boolean {
+  const el = document.querySelector('[data-hunos-link-editor="true"]');
+  return el instanceof HTMLElement && el.isConnected;
+}
+
 /** True when the window-level Escape handler should not exit focus mode. */
 export function shouldSuppressFocusModeEscape(): boolean {
-  return isEditorSuggestionMenuOpen() || suppressFocusModeExitThisEscape;
+  return (
+    isEditorSuggestionMenuOpen() ||
+    isLinkEditorOpen() ||
+    suppressFocusModeExitThisEscape
+  );
 }
