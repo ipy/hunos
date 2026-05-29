@@ -7,14 +7,21 @@ import { getFindInNoteState, findInNotePluginKey } from "./FindInNoteExtension";
 
 interface EditorFindBarProps {
   editor: Editor;
+  showReplace: boolean;
   onClose: () => void;
 }
 
-export function EditorFindBar({ editor, onClose }: EditorFindBarProps) {
+export function EditorFindBar({
+  editor,
+  showReplace,
+  onClose,
+}: EditorFindBarProps) {
   const { t } = useTranslation();
   const theme = useTheme();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const findInputRef = useRef<HTMLInputElement>(null);
+  const replaceInputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
+  const [replaceText, setReplaceText] = useState("");
   const [activeIndex, setActiveIndex] = useState(-1);
   const [matchCount, setMatchCount] = useState(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
@@ -36,11 +43,13 @@ export function EditorFindBar({ editor, onClose }: EditorFindBarProps) {
   }, [editor, onClose]);
 
   useEffect(() => {
-    editor.commands.openFindInNote();
+    editor.commands.openFindInNote({ replaceMode: showReplace });
     syncFromEditor();
-    const timer = setTimeout(() => inputRef.current?.focus(), 0);
+    const timer = setTimeout(() => {
+      findInputRef.current?.focus();
+    }, 0);
     return () => clearTimeout(timer);
-  }, [editor, syncFromEditor]);
+  }, [editor, showReplace, syncFromEditor]);
 
   useEffect(() => {
     editor.on("transaction", syncFromEditor);
@@ -69,6 +78,22 @@ export function EditorFindBar({ editor, onClose }: EditorFindBarProps) {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [editor, query]);
+
+  useEffect(() => {
+    editor.commands.setFindInNoteReplaceText(replaceText);
+  }, [editor, replaceText]);
+
+  const handleReplaceOne = () => {
+    editor.commands.setFindInNoteQuery(query);
+    editor.commands.setFindInNoteReplaceText(replaceText);
+    editor.commands.replaceFindInNoteMatch();
+  };
+
+  const handleReplaceAll = () => {
+    editor.commands.setFindInNoteQuery(query);
+    editor.commands.setFindInNoteReplaceText(replaceText);
+    editor.commands.replaceAllFindInNoteMatches();
+  };
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -115,13 +140,15 @@ export function EditorFindBar({ editor, onClose }: EditorFindBarProps) {
         ? t("editor.find.noResults")
         : "";
 
+  const canReplace = query.trim().length > 0 && matchCount > 0;
+
   return (
     <div
       data-testid="editor-find-bar"
       style={{
         display: "flex",
-        alignItems: "center",
-        gap: 8,
+        flexDirection: "column",
+        gap: 6,
         padding: "8px 12px",
         borderBottom: `1px solid ${theme.colors.borderLight}`,
         backgroundColor: theme.isDark
@@ -134,77 +161,122 @@ export function EditorFindBar({ editor, onClose }: EditorFindBarProps) {
         position: "relative",
       }}
     >
-      <Icon name="search" size={16} color={theme.colors.textTertiary} />
-      <input
-        ref={inputRef}
-        type="text"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            editor.commands.findInNoteNext();
-          }
-          if (e.key === "Escape") {
-            e.preventDefault();
-            handleClose();
-          }
-        }}
-        placeholder={t("editor.find.placeholder")}
-        aria-label={t("editor.find.placeholder")}
+      <div
         style={{
-          flex: 1,
-          border: "none",
-          outline: "none",
-          background: "transparent",
-          fontSize: 14,
-          color: theme.colors.text,
-          minWidth: 0,
-        }}
-      />
-      <span
-        style={{
-          fontSize: 12,
-          color: theme.colors.textTertiary,
-          minWidth: 56,
-          textAlign: "center",
-          whiteSpace: "nowrap",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          width: "100%",
         }}
       >
-        {countLabel}
-      </span>
-      <button
-        type="button"
-        onClick={() => editor.commands.findInNotePrevious()}
-        aria-label={t("editor.find.previous")}
-        title={t("editor.find.previous")}
-        style={navButtonStyle(theme)}
-      >
-        <Icon
-          name="chevronDown"
-          size={16}
-          color={theme.colors.textSecondary}
-          className="find-nav-up"
+        <Icon name="search" size={16} color={theme.colors.textTertiary} />
+        <input
+          ref={findInputRef}
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              editor.commands.findInNoteNext();
+            }
+            if (e.key === "Escape") {
+              e.preventDefault();
+              handleClose();
+            }
+          }}
+          placeholder={t("editor.find.placeholder")}
+          aria-label={t("editor.find.placeholder")}
+          style={inputStyle(theme)}
         />
-      </button>
-      <button
-        type="button"
-        onClick={() => editor.commands.findInNoteNext()}
-        aria-label={t("editor.find.next")}
-        title={t("editor.find.next")}
-        style={navButtonStyle(theme)}
-      >
-        <Icon name="chevronDown" size={16} color={theme.colors.textSecondary} />
-      </button>
-      <button
-        type="button"
-        onClick={handleClose}
-        aria-label={t("editor.find.close")}
-        title={t("editor.find.close")}
-        style={navButtonStyle(theme)}
-      >
-        <Icon name="close" size={16} color={theme.colors.textSecondary} />
-      </button>
+        <span style={countStyle(theme)}>{countLabel}</span>
+        <button
+          type="button"
+          onClick={() => editor.commands.findInNotePrevious()}
+          aria-label={t("editor.find.previous")}
+          title={t("editor.find.previous")}
+          style={navButtonStyle(theme)}
+        >
+          <Icon
+            name="chevronDown"
+            size={16}
+            color={theme.colors.textSecondary}
+            className="find-nav-up"
+          />
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.commands.findInNoteNext()}
+          aria-label={t("editor.find.next")}
+          title={t("editor.find.next")}
+          style={navButtonStyle(theme)}
+        >
+          <Icon
+            name="chevronDown"
+            size={16}
+            color={theme.colors.textSecondary}
+          />
+        </button>
+        <button
+          type="button"
+          onClick={handleClose}
+          aria-label={t("editor.find.close")}
+          title={t("editor.find.close")}
+          style={navButtonStyle(theme)}
+        >
+          <Icon name="close" size={16} color={theme.colors.textSecondary} />
+        </button>
+      </div>
+
+      {showReplace && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            width: "100%",
+            paddingLeft: 24,
+          }}
+        >
+          <input
+            ref={replaceInputRef}
+            data-testid="editor-replace-input"
+            type="text"
+            value={replaceText}
+            onChange={(e) => setReplaceText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                e.preventDefault();
+                handleClose();
+              }
+            }}
+            placeholder={t("editor.find.replacePlaceholder")}
+            aria-label={t("editor.find.replacePlaceholder")}
+            style={inputStyle(theme)}
+          />
+          <button
+            type="button"
+            disabled={!canReplace}
+            onClick={handleReplaceOne}
+            aria-label={t("editor.find.replace")}
+            title={t("editor.find.replace")}
+            style={actionButtonStyle(theme, !canReplace)}
+          >
+            {t("editor.find.replace")}
+          </button>
+          <button
+            type="button"
+            disabled={!canReplace}
+            onClick={handleReplaceAll}
+            aria-label={t("editor.find.replaceAll")}
+            title={t("editor.find.replaceAll")}
+            style={actionButtonStyle(theme, !canReplace)}
+          >
+            {t("editor.find.replaceAll")}
+          </button>
+        </div>
+      )}
+
       <style>{`
         .find-nav-up {
           transform: rotate(180deg);
@@ -212,6 +284,28 @@ export function EditorFindBar({ editor, onClose }: EditorFindBarProps) {
       `}</style>
     </div>
   );
+}
+
+function inputStyle(theme: ReturnType<typeof useTheme>): React.CSSProperties {
+  return {
+    flex: 1,
+    border: "none",
+    outline: "none",
+    background: "transparent",
+    fontSize: 14,
+    color: theme.colors.text,
+    minWidth: 0,
+  };
+}
+
+function countStyle(theme: ReturnType<typeof useTheme>): React.CSSProperties {
+  return {
+    fontSize: 12,
+    color: theme.colors.textTertiary,
+    minWidth: 56,
+    textAlign: "center",
+    whiteSpace: "nowrap",
+  };
 }
 
 function navButtonStyle(
@@ -228,5 +322,23 @@ function navButtonStyle(
     justifyContent: "center",
     minWidth: 32,
     minHeight: 32,
+  };
+}
+
+function actionButtonStyle(
+  theme: ReturnType<typeof useTheme>,
+  disabled: boolean,
+): React.CSSProperties {
+  return {
+    background: "none",
+    border: `1px solid ${theme.colors.borderLight}`,
+    borderRadius: theme.radius.md,
+    cursor: disabled ? "default" : "pointer",
+    padding: "4px 10px",
+    fontSize: 13,
+    color: disabled ? theme.colors.textTertiary : theme.colors.text,
+    opacity: disabled ? 0.5 : 1,
+    whiteSpace: "nowrap",
+    flexShrink: 0,
   };
 }

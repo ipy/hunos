@@ -72,6 +72,9 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+Shift+Z");
     expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+F find in note");
     expect(tryHintNode?.content?.[0]?.text).toContain(
+      "Cmd+Option+F find and replace",
+    );
+    expect(tryHintNode?.content?.[0]?.text).toContain(
       "Cmd+Shift+F search all notes",
     );
   });
@@ -88,6 +91,9 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+Z");
     expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+Shift+Z");
     expect(tryHintNode?.content?.[0]?.text).toContain("Cmd+F 在笔记内查找");
+    expect(tryHintNode?.content?.[0]?.text).toContain(
+      "Cmd+Option+F 查找并替换",
+    );
     expect(tryHintNode?.content?.[0]?.text).toContain(
       "Cmd+Shift+F 搜索全部笔记",
     );

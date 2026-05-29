@@ -107,6 +107,9 @@
     },
     "find": {
       "placeholder": "Buscar en la nota…",
+      "replacePlaceholder": "Reemplazar por…",
+      "replace": "Reemplazar",
+      "replaceAll": "Reemplazar todo",
       "noResults": "Sin resultados",
       "matchCount": "{{current}} / {{total}}",
       "next": "Coincidencia siguiente",

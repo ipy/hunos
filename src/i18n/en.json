@@ -109,6 +109,9 @@
     },
     "find": {
       "placeholder": "Find in note…",
+      "replacePlaceholder": "Replace with…",
+      "replace": "Replace",
+      "replaceAll": "Replace all",
       "noResults": "No results",
       "matchCount": "{{current}} / {{total}}",
       "next": "Next match",

@@ -2,8 +2,10 @@ import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey, type EditorState } from "@tiptap/pm/state";
 import { Decoration, DecorationSet, type EditorView } from "@tiptap/pm/view";
 import {
+  activeIndexAfterReplaceOne,
   clampFindIndex,
   findMatchesInDoc,
+  sortMatchesForReplaceAll,
   wrapFindIndex,
   type FindMatch,
 } from "./findInNoteUtils";
@@ -11,6 +13,8 @@ import {
 export interface FindInNotePluginState {
   open: boolean;
   query: string;
+  replaceText: string;
+  replaceMode: boolean;
   activeIndex: number;
   matches: FindMatch[];
   savedSelection: { from: number; to: number } | null;
@@ -62,6 +66,8 @@ function createState(
   return {
     open: partial.open,
     query,
+    replaceText: partial.replaceText ?? "",
+    replaceMode: partial.replaceMode ?? false,
     activeIndex,
     matches,
     savedSelection: partial.savedSelection ?? null,
@@ -85,18 +91,32 @@ function scrollActiveMatchIntoView(
 }
 
 interface FindInNoteMeta {
-  type: "open" | "close" | "setQuery" | "next" | "prev";
+  type:
+    | "open"
+    | "close"
+    | "setQuery"
+    | "setReplaceText"
+    | "next"
+    | "prev"
+    | "afterReplaceOne"
+    | "afterReplaceAll";
   query?: string;
+  replaceText?: string;
+  replaceMode?: boolean;
+  savedSelection?: { from: number; to: number };
 }
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
     findInNote: {
-      openFindInNote: () => ReturnType;
+      openFindInNote: (options?: { replaceMode?: boolean }) => ReturnType;
       closeFindInNote: () => ReturnType;
       setFindInNoteQuery: (query: string) => ReturnType;
+      setFindInNoteReplaceText: (replaceText: string) => ReturnType;
       findInNoteNext: () => ReturnType;
       findInNotePrevious: () => ReturnType;
+      replaceFindInNoteMatch: () => ReturnType;
+      replaceAllFindInNoteMatches: () => ReturnType;
     };
   }
 }
@@ -107,7 +127,7 @@ export const FindInNoteExtension = Extension.create({
   addCommands() {
     return {
       openFindInNote:
-        () =>
+        (options?: { replaceMode?: boolean }) =>
         ({ state, dispatch }) => {
           if (!dispatch) return true;
           const { from, to } = state.selection;
@@ -115,10 +135,10 @@ export const FindInNoteExtension = Extension.create({
             state.tr.setMeta(findInNotePluginKey, {
               type: "open",
               query: "",
+              replaceText: "",
+              replaceMode: options?.replaceMode ?? false,
               savedSelection: { from, to },
-            } satisfies FindInNoteMeta & {
-              savedSelection: { from: number; to: number };
-            }),
+            } satisfies FindInNoteMeta),
           );
           return true;
         },
@@ -145,6 +165,18 @@ export const FindInNoteExtension = Extension.create({
           );
           return true;
         },
+      setFindInNoteReplaceText:
+        (replaceText: string) =>
+        ({ state, dispatch }) => {
+          if (!dispatch) return true;
+          dispatch(
+            state.tr.setMeta(findInNotePluginKey, {
+              type: "setReplaceText",
+              replaceText,
+            } satisfies FindInNoteMeta),
+          );
+          return true;
+        },
       findInNoteNext:
         () =>
         ({ state, dispatch }) => {
@@ -167,6 +199,60 @@ export const FindInNoteExtension = Extension.create({
           );
           return true;
         },
+      replaceFindInNoteMatch:
+        () =>
+        ({ state, dispatch }) => {
+          const pluginState = getFindInNoteState(state);
+          if (!pluginState?.open || !dispatch) return false;
+
+          const query = pluginState.query.trim();
+          if (!query) return false;
+
+          const match = pluginState.matches[pluginState.activeIndex];
+          if (!match) return false;
+
+          const marks = state.doc.resolve(match.from).marks();
+          let tr = state.tr;
+          if (pluginState.replaceText) {
+            const node = state.schema.text(pluginState.replaceText, marks);
+            tr = tr.replaceWith(match.from, match.to, node);
+          } else {
+            tr = tr.delete(match.from, match.to);
+          }
+          tr = tr.setMeta(findInNotePluginKey, {
+            type: "afterReplaceOne",
+          } satisfies FindInNoteMeta);
+          dispatch(tr);
+          return true;
+        },
+      replaceAllFindInNoteMatches:
+        () =>
+        ({ state, dispatch }) => {
+          const pluginState = getFindInNoteState(state);
+          if (!pluginState?.open || !dispatch) return false;
+
+          const query = pluginState.query.trim();
+          if (!query) return false;
+
+          const matches = findMatchesInDoc(state.doc, query);
+          if (matches.length === 0) return false;
+
+          let tr = state.tr;
+          for (const match of sortMatchesForReplaceAll(matches)) {
+            const marks = state.doc.resolve(match.from).marks();
+            if (pluginState.replaceText) {
+              const node = state.schema.text(pluginState.replaceText, marks);
+              tr = tr.replaceWith(match.from, match.to, node);
+            } else {
+              tr = tr.delete(match.from, match.to);
+            }
+          }
+          tr = tr.setMeta(findInNotePluginKey, {
+            type: "afterReplaceAll",
+          } satisfies FindInNoteMeta);
+          dispatch(tr);
+          return true;
+        },
     };
   },
 
@@ -186,18 +272,24 @@ export const FindInNoteExtension = Extension.create({
         key: findInNotePluginKey,
         state: {
           init: (_, state) =>
-            createState(state.doc, { open: false, query: "", activeIndex: -1 }),
+            createState(state.doc, {
+              open: false,
+              query: "",
+              replaceText: "",
+              replaceMode: false,
+              activeIndex: -1,
+            }),
           apply: (tr, prev, _oldState, newState) => {
             const meta = tr.getMeta(findInNotePluginKey) as
-              | (FindInNoteMeta & {
-                  savedSelection?: { from: number; to: number };
-                })
+              | FindInNoteMeta
               | undefined;
 
             if (meta?.type === "close") {
               return createState(newState.doc, {
                 open: false,
                 query: "",
+                replaceText: "",
+                replaceMode: false,
                 activeIndex: -1,
                 savedSelection: null,
               });
@@ -207,6 +299,8 @@ export const FindInNoteExtension = Extension.create({
               return createState(newState.doc, {
                 open: true,
                 query: "",
+                replaceText: "",
+                replaceMode: meta.replaceMode ?? false,
                 activeIndex: -1,
                 savedSelection: meta.savedSelection ?? {
                   from: newState.selection.from,
@@ -220,11 +314,14 @@ export const FindInNoteExtension = Extension.create({
             }
 
             let nextQuery = prev.query;
+            let nextReplaceText = prev.replaceText;
             let nextActiveIndex = prev.activeIndex;
 
             if (meta?.type === "setQuery") {
               nextQuery = meta.query ?? "";
               nextActiveIndex = 0;
+            } else if (meta?.type === "setReplaceText") {
+              nextReplaceText = meta.replaceText ?? "";
             } else if (meta?.type === "next") {
               nextActiveIndex = wrapFindIndex(
                 prev.activeIndex,
@@ -237,6 +334,36 @@ export const FindInNoteExtension = Extension.create({
                 prev.matches.length,
                 "prev",
               );
+            } else if (meta?.type === "afterReplaceOne") {
+              const newMatches = findMatchesInDoc(newState.doc, prev.query);
+              nextActiveIndex = activeIndexAfterReplaceOne(
+                prev.activeIndex,
+                prev.matches.length,
+                newMatches.length,
+              );
+              return createState(newState.doc, {
+                open: prev.open,
+                query: nextQuery,
+                replaceText: nextReplaceText,
+                replaceMode: prev.replaceMode,
+                activeIndex: nextActiveIndex,
+                matches: newMatches,
+                savedSelection: prev.savedSelection,
+              });
+            } else if (meta?.type === "afterReplaceAll") {
+              const newMatches = findMatchesInDoc(newState.doc, prev.query);
+              return createState(newState.doc, {
+                open: prev.open,
+                query: nextQuery,
+                replaceText: nextReplaceText,
+                replaceMode: prev.replaceMode,
+                activeIndex:
+                  newMatches.length > 0
+                    ? clampFindIndex(0, newMatches.length)
+                    : -1,
+                matches: newMatches,
+                savedSelection: prev.savedSelection,
+              });
             } else if (tr.docChanged) {
               const matches = findMatchesInDoc(newState.doc, prev.query);
               nextActiveIndex = clampFindIndex(
@@ -248,6 +375,8 @@ export const FindInNoteExtension = Extension.create({
             return createState(newState.doc, {
               open: prev.open,
               query: nextQuery,
+              replaceText: nextReplaceText,
+              replaceMode: prev.replaceMode,
               activeIndex: nextActiveIndex,
               savedSelection: prev.savedSelection,
             });

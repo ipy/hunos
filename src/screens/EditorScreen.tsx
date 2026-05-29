@@ -47,6 +47,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     toggleFocusMode,
     setFocusMode,
     findInNoteSignal,
+    findInNoteReplaceMode,
   } = useUIStore();
   const settings = useSettingsStore();
   const [showActions, setShowActions] = useState(false);
@@ -463,6 +464,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         <EditorFindBar
           key={findInNoteSignal}
           editor={editorInstance}
+          showReplace={findInNoteReplaceMode}
           onClose={() => setFindOpen(false)}
         />
       )}

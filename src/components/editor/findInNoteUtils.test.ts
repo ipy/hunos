@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { Schema } from "@tiptap/pm/model";
 import { schema as basicSchema } from "@tiptap/pm/schema-basic";
 import {
+  activeIndexAfterReplaceOne,
   clampFindIndex,
   findMatchesInDoc,
+  sortMatchesForReplaceAll,
   wrapFindIndex,
 } from "./findInNoteUtils";
 
@@ -114,5 +116,30 @@ describe("clampFindIndex", () => {
     expect(clampFindIndex(-1, 3)).toBe(0);
     expect(clampFindIndex(5, 3)).toBe(2);
     expect(clampFindIndex(1, 3)).toBe(1);
+  });
+});
+
+describe("sortMatchesForReplaceAll", () => {
+  it("orders matches from highest position to lowest", () => {
+    const sorted = sortMatchesForReplaceAll([
+      { from: 1, to: 4 },
+      { from: 20, to: 23 },
+      { from: 10, to: 13 },
+    ]);
+    expect(sorted.map((m) => m.from)).toEqual([20, 10, 1]);
+  });
+});
+
+describe("activeIndexAfterReplaceOne", () => {
+  it("advances to the next match after replace-one", () => {
+    expect(activeIndexAfterReplaceOne(1, 5, 4)).toBe(2);
+  });
+
+  it("wraps from the last match to the first", () => {
+    expect(activeIndexAfterReplaceOne(4, 5, 4)).toBe(0);
+  });
+
+  it("returns -1 when no matches remain", () => {
+    expect(activeIndexAfterReplaceOne(0, 1, 0)).toBe(-1);
   });
 });

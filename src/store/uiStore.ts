@@ -20,6 +20,7 @@ interface UIStore {
   focusMode: boolean;
   noteSearchOpen: boolean;
   findInNoteSignal: number;
+  findInNoteReplaceMode: boolean;
   toasts: Toast[];
 
   navigate: (screen: Screen) => void;
@@ -34,7 +35,7 @@ interface UIStore {
   toggleFocusMode: () => void;
   openNoteSearch: () => void;
   clearNoteSearchOpen: () => void;
-  requestFindInNote: () => void;
+  requestFindInNote: (options?: { replace?: boolean }) => void;
   showToast: (message: string, type?: Toast["type"]) => void;
   dismissToast: (id: string) => void;
 }
@@ -49,6 +50,7 @@ export const useUIStore = create<UIStore>((set, get) => ({
   focusMode: false,
   noteSearchOpen: false,
   findInNoteSignal: 0,
+  findInNoteReplaceMode: false,
   toasts: [],
 
   navigate: (screen) => {
@@ -94,8 +96,11 @@ export const useUIStore = create<UIStore>((set, get) => ({
 
   openNoteSearch: () => set({ focusMode: false, noteSearchOpen: true }),
   clearNoteSearchOpen: () => set({ noteSearchOpen: false }),
-  requestFindInNote: () =>
-    set((s) => ({ findInNoteSignal: s.findInNoteSignal + 1 })),
+  requestFindInNote: (options) =>
+    set((s) => ({
+      findInNoteSignal: s.findInNoteSignal + 1,
+      findInNoteReplaceMode: options?.replace ?? false,
+    })),
 
   showToast: (message, type = "info") => {
     const id = Date.now().toString();

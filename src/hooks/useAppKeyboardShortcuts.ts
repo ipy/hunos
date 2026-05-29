@@ -22,14 +22,24 @@ export function useAppKeyboardShortcuts() {
     if (layout !== "desktop") return;
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
+      if (!(e.metaKey || e.ctrlKey)) return;
 
       const key = e.key.toLowerCase();
-      if (key !== "n" && key !== "f") return;
-
       const { currentScreen, openNoteSearch, requestFindInNote } =
         useUIStore.getState();
       if (currentScreen === "settings") return;
+
+      if (e.altKey && key === "f") {
+        e.preventDefault();
+        if (isEditorContextActive()) {
+          requestFindInNote({ replace: true });
+        }
+        return;
+      }
+
+      if (e.altKey) return;
+
+      if (key !== "n" && key !== "f") return;
 
       if (key === "n") {
         if (isFormFieldTarget(e.target)) return;

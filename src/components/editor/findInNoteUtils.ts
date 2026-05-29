@@ -52,3 +52,19 @@ export function clampFindIndex(index: number, total: number): number {
   if (index >= total) return total - 1;
   return index;
 }
+
+/** Sort matches from highest document position to lowest for replace-all. */
+export function sortMatchesForReplaceAll(matches: FindMatch[]): FindMatch[] {
+  return [...matches].sort((a, b) => b.from - a.from);
+}
+
+export function activeIndexAfterReplaceOne(
+  prevIndex: number,
+  prevMatchCount: number,
+  newMatchCount: number,
+): number {
+  if (newMatchCount <= 0) return -1;
+  if (prevMatchCount <= 0) return 0;
+  const nextIndex = wrapFindIndex(prevIndex, prevMatchCount, "next");
+  return clampFindIndex(nextIndex, newMatchCount);
+}
