@@ -99,8 +99,10 @@ export function findTagSuggestionMatch(
   if (isInCodeContext($from)) return null;
 
   const blockStart = $from.start();
-  const textBefore = state.doc.textBetween(blockStart, $from.pos, '\n', '\n');
-  const localMatch = findTagSuggestionMatchInBlock(textBefore, textBefore.length);
+  const blockEnd = $from.end();
+  const blockText = state.doc.textBetween(blockStart, blockEnd, '\n', '\n');
+  const caretOffset = $from.pos - blockStart;
+  const localMatch = findTagSuggestionMatchInBlock(blockText, caretOffset);
   if (!localMatch) return null;
 
   return {

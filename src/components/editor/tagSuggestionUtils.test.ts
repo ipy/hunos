@@ -1,6 +1,10 @@
+import { Schema } from "@tiptap/pm/model";
+import { EditorState, TextSelection } from "@tiptap/pm/state";
+import { schema as basicSchema } from "@tiptap/pm/schema-basic";
 import { describe, expect, it } from "vitest";
 import {
   filterTagCandidates,
+  findTagSuggestionMatch,
   findTagSuggestionMatchInBlock,
 } from "./tagSuggestionUtils";
 import type { Tag } from "@/types/graph";
@@ -85,6 +89,35 @@ describe("findTagSuggestionMatchInBlock", () => {
   it("returns null outside block bounds", () => {
     expect(findTagSuggestionMatchInBlock("#tag", -1)).toBeNull();
     expect(findTagSuggestionMatchInBlock("#tag", 10)).toBeNull();
+  });
+});
+
+const schema = new Schema({
+  nodes: basicSchema.spec.nodes,
+  marks: basicSchema.spec.marks,
+});
+
+function tagMatchAtCaret(text: string, caretInText: number) {
+  const doc = schema.node("doc", null, [
+    schema.node("paragraph", null, [schema.text(text)]),
+  ]);
+  const state = EditorState.create({
+    doc,
+    schema,
+    selection: TextSelection.create(doc, 1 + caretInText),
+  });
+  return findTagSuggestionMatch(state);
+}
+
+describe("findTagSuggestionMatch", () => {
+  it("expands to full tag using complete block text when caret is mid-token", () => {
+    const text = "Organize with #format-test";
+    const caret = text.indexOf("format") + 4;
+    const match = tagMatchAtCaret(text, caret);
+    expect(match).toEqual({
+      range: { from: 1 + 14, to: 1 + text.length },
+      query: "format-test",
+    });
   });
 });
 
