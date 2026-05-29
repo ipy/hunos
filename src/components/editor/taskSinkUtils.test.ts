@@ -3,7 +3,10 @@ import { EditorState } from "@tiptap/pm/state";
 import { describe, expect, it } from "vitest";
 import {
   applyCompletedTaskSink,
+  applyOpenTaskFloat,
   findTaskItemsNewlyChecked,
+  findTaskItemsNewlyUnchecked,
+  floatTaskItemBeforeCompletedBlock,
   sinkTaskItemToListBottom,
 } from "./taskSinkUtils";
 
@@ -81,6 +84,27 @@ function setTaskChecked(state: EditorState, label: string, checked: boolean) {
   return state.apply(tr);
 }
 
+function toggleTaskWithReorder(
+  state: EditorState,
+  label: string,
+  checked: boolean,
+) {
+  const before = state;
+  const afterToggle = setTaskChecked(before, label, checked);
+  const checkedPositions = findTaskItemsNewlyChecked(
+    before.doc,
+    afterToggle.doc,
+  );
+  const uncheckedPositions = findTaskItemsNewlyUnchecked(
+    before.doc,
+    afterToggle.doc,
+  );
+  const tr = afterToggle.tr;
+  applyCompletedTaskSink(tr, checkedPositions);
+  applyOpenTaskFloat(tr, uncheckedPositions);
+  return afterToggle.apply(tr);
+}
+
 describe("findTaskItemsNewlyChecked", () => {
   it("detects a task item that was just checked", () => {
     const before = buildPlaygroundTaskDoc();
@@ -98,6 +122,21 @@ describe("findTaskItemsNewlyChecked", () => {
   it("ignores unchecked and already-checked items", () => {
     const docNode = buildPlaygroundTaskDoc();
     expect(findTaskItemsNewlyChecked(docNode, docNode)).toEqual([]);
+  });
+});
+
+describe("findTaskItemsNewlyUnchecked", () => {
+  it("detects a task item that was just unchecked", () => {
+    const before = buildPlaygroundTaskDoc();
+    const after = setTaskChecked(
+      EditorState.create({ doc: before }),
+      "done",
+      false,
+    );
+
+    expect(findTaskItemsNewlyUnchecked(before, after.doc)).toEqual([
+      findTaskItemPos(after, "done"),
+    ]);
   });
 });
 
@@ -128,6 +167,54 @@ describe("sinkTaskItemToListBottom", () => {
   });
 });
 
+describe("floatTaskItemBeforeCompletedBlock", () => {
+  it("moves an unchecked item from the completed block before remaining checked items", () => {
+    const state = EditorState.create({
+      doc: doc.create({}, [
+        taskList.create({}, [
+          buildTaskItem(false, "open"),
+          buildTaskItem(true, "done"),
+          buildTaskItem(true, "pending"),
+        ]),
+      ]),
+    });
+    const uncheckedPending = setTaskChecked(state, "pending", false);
+    const pendingPos = findTaskItemPos(uncheckedPending, "pending");
+
+    const tr = uncheckedPending.tr;
+    floatTaskItemBeforeCompletedBlock(tr, pendingPos);
+    const next = uncheckedPending.apply(tr);
+
+    expect(taskLabels(next)).toEqual(["open", "pending", "done"]);
+    expect(taskChecked(next)).toEqual([false, false, true]);
+  });
+
+  it("keeps order when unchecking the only completed item between open tasks", () => {
+    const state = EditorState.create({ doc: buildPlaygroundTaskDoc() });
+    const uncheckedDone = setTaskChecked(state, "done", false);
+    const donePos = findTaskItemPos(uncheckedDone, "done");
+
+    const tr = uncheckedDone.tr;
+    floatTaskItemBeforeCompletedBlock(tr, donePos);
+    const next = uncheckedDone.apply(tr);
+
+    expect(taskLabels(next)).toEqual(["open", "done", "pending"]);
+    expect(taskChecked(next)).toEqual([false, false, false]);
+  });
+
+  it("no-ops when the unchecked item is already in the open block", () => {
+    const state = EditorState.create({ doc: buildPlaygroundTaskDoc() });
+    const uncheckedDone = setTaskChecked(state, "done", false);
+    const donePos = findTaskItemPos(uncheckedDone, "done");
+
+    const tr = uncheckedDone.tr;
+    const changed = floatTaskItemBeforeCompletedBlock(tr, donePos);
+
+    expect(changed).toBe(false);
+    expect(tr.doc.eq(uncheckedDone.doc)).toBe(true);
+  });
+});
+
 describe("applyCompletedTaskSink", () => {
   it("reorders each newly checked item during sequential toggles", () => {
     let state = EditorState.create({
@@ -141,12 +228,7 @@ describe("applyCompletedTaskSink", () => {
     });
 
     const checkAndSink = (label: string) => {
-      const before = state;
-      const afterCheck = setTaskChecked(before, label, true);
-      const positions = findTaskItemsNewlyChecked(before.doc, afterCheck.doc);
-      const tr = afterCheck.tr;
-      applyCompletedTaskSink(tr, positions);
-      state = afterCheck.apply(tr);
+      state = toggleTaskWithReorder(state, label, true);
     };
 
     checkAndSink("a");
@@ -158,14 +240,28 @@ describe("applyCompletedTaskSink", () => {
 
   it("matches format playground AC1 order after checking pending", () => {
     const state = EditorState.create({ doc: buildPlaygroundTaskDoc() });
-    const checkedPending = setTaskChecked(state, "pending", true);
-
-    const positions = findTaskItemsNewlyChecked(state.doc, checkedPending.doc);
-    const tr = checkedPending.tr;
-    applyCompletedTaskSink(tr, positions);
-    const result = checkedPending.apply(tr);
+    const result = toggleTaskWithReorder(state, "pending", true);
 
     expect(taskLabels(result)).toEqual(["open", "done", "pending"]);
     expect(taskChecked(result)).toEqual([false, true, true]);
+  });
+});
+
+describe("applyOpenTaskFloat", () => {
+  it("leaves playground order when unchecking the sole completed item", () => {
+    const state = EditorState.create({ doc: buildPlaygroundTaskDoc() });
+    const result = toggleTaskWithReorder(state, "done", false);
+
+    expect(taskLabels(result)).toEqual(["open", "done", "pending"]);
+    expect(taskChecked(result)).toEqual([false, false, false]);
+  });
+
+  it("floats an unchecked bottom item before remaining completed tasks", () => {
+    let state = EditorState.create({ doc: buildPlaygroundTaskDoc() });
+    state = toggleTaskWithReorder(state, "pending", true);
+    const result = toggleTaskWithReorder(state, "pending", false);
+
+    expect(taskLabels(result)).toEqual(["open", "pending", "done"]);
+    expect(taskChecked(result)).toEqual([false, false, true]);
   });
 });

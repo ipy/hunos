@@ -10,7 +10,9 @@ import TaskItem from "@tiptap/extension-task-item";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import {
   applyCompletedTaskSink,
+  applyOpenTaskFloat,
   findTaskItemsNewlyChecked,
+  findTaskItemsNewlyUnchecked,
 } from "./taskSinkUtils";
 import { findWrapping } from "@tiptap/pm/transform";
 import type { Node, NodeType, ResolvedPos } from "@tiptap/pm/model";
@@ -229,16 +231,25 @@ export const MarkdownTaskItem = TaskItem.extend({
             return null;
           }
 
-          const positions = findTaskItemsNewlyChecked(
+          const checkedPositions = findTaskItemsNewlyChecked(
             oldState.doc,
             newState.doc,
           );
-          if (positions.length === 0) {
+          const uncheckedPositions = findTaskItemsNewlyUnchecked(
+            oldState.doc,
+            newState.doc,
+          );
+          if (
+            checkedPositions.length === 0 &&
+            uncheckedPositions.length === 0
+          ) {
             return null;
           }
 
           const tr = newState.tr;
-          if (!applyCompletedTaskSink(tr, positions)) {
+          const sank = applyCompletedTaskSink(tr, checkedPositions);
+          const floated = applyOpenTaskFloat(tr, uncheckedPositions);
+          if (!sank && !floated) {
             return null;
           }
 

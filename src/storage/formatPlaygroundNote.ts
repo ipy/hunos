@@ -6,7 +6,7 @@ import type { Locale } from "@/types/settings";
 
 type PlaygroundLocale = "en" | "zh";
 
-export const PLAYGROUND_CONTENT_VERSION = 11;
+export const PLAYGROUND_CONTENT_VERSION = 12;
 
 export const FORMAT_PLAYGROUND_TITLES: readonly string[] = [
   "Format Playground",
@@ -516,6 +516,25 @@ export function migratePlaygroundContentIfStale(
             type: "codeBlock",
             attrs: { language: "javascript" },
             content: [text(s.codeSample)],
+          };
+          break;
+        }
+      }
+    }
+    if (headingText(node) === s.sectionLists) {
+      for (let j = i + 1; j < contentNodes.length; j += 1) {
+        const listNode = contentNodes[j];
+        if (listNode.type === "heading") {
+          break;
+        }
+        if (listNode.type === "taskList") {
+          contentNodes[j] = {
+            type: "taskList",
+            content: [
+              taskItem(false, s.taskOpen),
+              taskItem(true, s.taskDone),
+              taskItem(false, s.taskPending),
+            ],
           };
           break;
         }

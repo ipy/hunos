@@ -338,4 +338,97 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(codeBlock?.attrs?.language).toBe("javascript");
     expect(codeBlock?.content?.[0]?.text).toContain("function greet");
   });
+
+  it("seeds task list as open, completed, pending for AC restore", () => {
+    const content = JSON.parse(JSON.stringify(buildPlaygroundContent("en"))) as {
+      content: Array<{ type: string; content?: unknown[] }>;
+    };
+    const taskListNode = content.content.find(
+      (node) => node.type === "taskList",
+    ) as { content: Array<{ attrs: { checked: boolean }; content: unknown[] }> };
+    expect(taskListNode).toBeDefined();
+
+    const labels = taskListNode.content.map((item) => {
+      const paragraph = item.content[0] as { content: Array<{ text: string }> };
+      return paragraph.content[0].text;
+    });
+    const checked = taskListNode.content.map((item) => item.attrs.checked);
+
+    expect(labels).toEqual(["Open task", "Completed task", "Pending task"]);
+    expect(checked).toEqual([false, true, false]);
+  });
+
+  it("restores task list seed when migrating stale v11 playground notes", () => {
+    const stale = JSON.parse(JSON.stringify(buildPlaygroundContent("en"))) as {
+      type: "doc";
+      attrs?: { playgroundContentVersion?: number };
+      content: Array<{ type: string; content?: unknown[] }>;
+    };
+    stale.attrs = { playgroundContentVersion: 11 };
+
+    const taskListIndex = stale.content.findIndex(
+      (node) => node.type === "taskList",
+    );
+    stale.content[taskListIndex] = {
+      type: "taskList",
+      content: [
+        {
+          type: "taskItem",
+          attrs: { checked: false },
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "Open task" }],
+            },
+          ],
+        },
+        {
+          type: "taskItem",
+          attrs: { checked: false },
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "Pending task" }],
+            },
+          ],
+        },
+        {
+          type: "taskItem",
+          attrs: { checked: true },
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "Completed task" }],
+            },
+          ],
+        },
+      ],
+    };
+
+    const migrated = migratePlaygroundContentIfStale(
+      JSON.stringify(stale),
+      "en",
+    );
+    expect(migrated).not.toBeNull();
+
+    const parsed = JSON.parse(migrated!) as {
+      attrs?: { playgroundContentVersion?: number };
+      content: Array<{ type: string; content?: unknown[] }>;
+    };
+    expect(parsed.attrs?.playgroundContentVersion).toBe(
+      PLAYGROUND_CONTENT_VERSION,
+    );
+
+    const taskListNode = parsed.content.find(
+      (node) => node.type === "taskList",
+    ) as { content: Array<{ attrs: { checked: boolean }; content: unknown[] }> };
+    const labels = taskListNode.content.map((item) => {
+      const paragraph = item.content[0] as { content: Array<{ text: string }> };
+      return paragraph.content[0].text;
+    });
+    const checked = taskListNode.content.map((item) => item.attrs.checked);
+
+    expect(labels).toEqual(["Open task", "Completed task", "Pending task"]);
+    expect(checked).toEqual([false, true, false]);
+  });
 });
