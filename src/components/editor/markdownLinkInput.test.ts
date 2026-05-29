@@ -55,6 +55,15 @@ describe("findMarkdownLinkInputMatch", () => {
     expect(match?.[2]).toBe("https://example.com");
   });
 
+  it("matches when TipTap includes the trigger space in textBefore", () => {
+    const match = findMarkdownLinkInputMatch(
+      "[Example Site](https://example.com) ",
+    );
+    expect(match?.[1]).toBe("Example Site");
+    expect(match?.[2]).toBe("https://example.com");
+    expect(match?.[0]).toBe("[Example Site](https://example.com) ");
+  });
+
   it("ignores incomplete markdown links", () => {
     expect(findMarkdownLinkInputMatch("[Example Site](https://")).toBeNull();
   });
@@ -67,6 +76,36 @@ describe("applyMarkdownLinkInputRule", () => {
     );
     const next = applyMarkdownLinkInputRule(state, range, match);
 
+    expect(next).not.toBeNull();
+    expect(next!.doc.textContent).toBe("Example Site");
+    const linkMark = next!.doc.firstChild?.firstChild?.marks.find(
+      (mark) => mark.type.name === "link",
+    );
+    expect(linkMark?.attrs.href).toBe("https://example.com");
+  });
+
+  it("converts markdown links when Space is the trigger (TipTap input rule path)", () => {
+    const markdown = "[Example Site](https://example.com)";
+    const textBefore = `${markdown} `;
+    const match = findMarkdownLinkInputMatch(textBefore);
+    expect(match).not.toBeNull();
+
+    const document = doc.create({}, [
+      paragraph.create({}, schema.text(markdown)),
+    ]);
+    const trigger = " ";
+    const cursorPos = 1 + markdown.length;
+    const range = {
+      from: cursorPos - (match![0].length - trigger.length),
+      to: cursorPos,
+    };
+    const state = EditorState.create({
+      doc: document,
+      schema,
+      selection: TextSelection.create(document, cursorPos),
+    });
+
+    const next = applyMarkdownLinkInputRule(state, range, match!);
     expect(next).not.toBeNull();
     expect(next!.doc.textContent).toBe("Example Site");
     const linkMark = next!.doc.firstChild?.firstChild?.marks.find(

@@ -9,7 +9,8 @@ import {
   isRangeIntersectingWikiLink,
 } from "./wikiLinkSuggestionUtils";
 
-export const MARKDOWN_LINK_INPUT_REGEX = /\[([^\]]+)\]\(([^)]+)\)$/;
+/** Optional trailing whitespace matches TipTap InputRule `textBefore` (text + trigger char). */
+export const MARKDOWN_LINK_INPUT_REGEX = /\[([^\]]+)\]\(([^)]+)\)\s?$/;
 
 type MarkdownLinkMatch = RegExpMatchArray;
 
