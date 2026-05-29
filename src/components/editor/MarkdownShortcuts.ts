@@ -7,7 +7,17 @@ import {
 import Bold, { starInputRegex } from "@tiptap/extension-bold";
 import BulletList from "@tiptap/extension-bullet-list";
 import TaskItem from "@tiptap/extension-task-item";
+import {
+  getFocusedTaskCheckboxPos,
+  isModEnterKeyboardEvent,
+  resolveTaskItemPosForToggle,
+  setFocusedTaskCheckboxPos,
+} from "./taskCheckboxFocus";
 import { applyTaskItemToggleReorder } from "./taskSinkUtils";
+import {
+  isEditorSuggestionMenuOpen,
+  isLinkEditorOpen,
+} from "@/utils/editorSuggestionMenu";
 import { findWrapping } from "@tiptap/pm/transform";
 import type { Node, NodeType, ResolvedPos } from "@tiptap/pm/model";
 import type { Transaction } from "@tiptap/pm/state";
@@ -211,16 +221,8 @@ export const MarkdownBulletList = BulletList.extend({
   },
 });
 
-function findTaskItemPosFromSelection(
-  $from: ResolvedPos,
-  taskItemName: string,
-): number | null {
-  for (let depth = $from.depth; depth > 0; depth -= 1) {
-    if ($from.node(depth).type.name === taskItemName) {
-      return $from.before(depth);
-    }
-  }
-  return null;
+function taskItemShortcutBlocked(): boolean {
+  return isEditorSuggestionMenuOpen() || isLinkEditorOpen();
 }
 
 export const MarkdownTaskItem = TaskItem.extend({
@@ -238,10 +240,11 @@ export const MarkdownTaskItem = TaskItem.extend({
     return {
       toggleTaskItemWithReorder:
         () =>
-        ({ state, dispatch }) => {
-          const taskItemPos = findTaskItemPosFromSelection(
-            state.selection.$from,
+        ({ state, dispatch, editor }) => {
+          const taskItemPos = resolveTaskItemPosForToggle(
+            editor,
             this.name,
+            state.selection.$from,
           );
           if (taskItemPos === null) {
             return false;
@@ -282,7 +285,54 @@ export const MarkdownTaskItem = TaskItem.extend({
 
       checkboxWrapper.contentEditable = "false";
       checkbox.type = "checkbox";
+
+      const syncFocusedTaskCheckbox = () => {
+        if (typeof getPos !== "function") {
+          return;
+        }
+
+        const position = getPos();
+        if (typeof position !== "number") {
+          return;
+        }
+
+        setFocusedTaskCheckboxPos(editor, position);
+      };
+
+      const clearFocusedTaskCheckbox = () => {
+        if (typeof getPos !== "function") {
+          return;
+        }
+
+        const position = getPos();
+        if (
+          typeof position === "number" &&
+          getFocusedTaskCheckboxPos(editor) === position
+        ) {
+          setFocusedTaskCheckboxPos(editor, null);
+        }
+      };
+
       checkbox.addEventListener("mousedown", (event) => event.preventDefault());
+      checkbox.addEventListener("click", () => {
+        checkbox.focus({ preventScroll: true });
+      });
+      checkbox.addEventListener("focus", syncFocusedTaskCheckbox);
+      checkbox.addEventListener("blur", clearFocusedTaskCheckbox);
+      checkbox.addEventListener("keydown", (event) => {
+        if (!isModEnterKeyboardEvent(event) || taskItemShortcutBlocked()) {
+          return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (!editor.isEditable) {
+          return;
+        }
+
+        editor.commands.toggleTaskItemWithReorder();
+      });
       checkbox.addEventListener("change", (event) => {
         if (!editor.isEditable && !this.options.onReadOnlyChecked) {
           checkbox.checked = !checkbox.checked;
@@ -329,6 +379,7 @@ export const MarkdownTaskItem = TaskItem.extend({
       return {
         dom: listItem,
         contentDOM: content,
+        destroy: clearFocusedTaskCheckbox,
         update: (updatedNode) => {
           if (updatedNode.type !== this.type) {
             return false;

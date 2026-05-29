@@ -4,6 +4,7 @@ import {
   isLinkEditorOpen,
 } from "@/utils/editorSuggestionMenu";
 import { openLinkEditor } from "./inlineFormatActions";
+import { isTaskItemToggleContext } from "./taskCheckboxFocus";
 
 function shortcutBlocked(): boolean {
   return isEditorSuggestionMenuOpen() || isLinkEditorOpen();
@@ -34,7 +35,7 @@ export const EditorKeyboardShortcuts = Extension.create({
       },
       "Mod-Enter": () => {
         if (shortcutBlocked()) return true;
-        if (!this.editor.isActive("taskItem")) return false;
+        if (!isTaskItemToggleContext(this.editor)) return false;
         return this.editor.commands.toggleTaskItemWithReorder();
       },
     };

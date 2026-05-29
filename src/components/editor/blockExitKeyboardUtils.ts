@@ -1,5 +1,6 @@
 import type { Editor } from "@tiptap/core";
 import type { ResolvedPos } from "@tiptap/pm/model";
+import { isTaskCheckboxFocused } from "./taskCheckboxFocus";
 import { isTableShortcutContext } from "./tableKeyboardUtils";
 
 /** True when the caret sits in an empty textblock (paragraph or code line). */
@@ -103,7 +104,11 @@ export function shouldExitCodeBlockOnModEnter(editor: Editor): boolean {
     return false;
   }
 
-  if (isTableShortcutContext(editor) || editor.isActive("taskItem")) {
+  if (
+    isTableShortcutContext(editor) ||
+    editor.isActive("taskItem") ||
+    isTaskCheckboxFocused(editor)
+  ) {
     return false;
   }
 
