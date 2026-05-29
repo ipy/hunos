@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PLAYGROUND_SAMPLE_IMAGE_SRC } from "@/components/editor/imageEmbedUtils";
 import {
+  PLAYGROUND_CONTENT_VERSION,
   buildPlaygroundContent,
+  pickFormatPlaygroundNote,
   syncFormatPlaygroundOnLocaleChange,
 } from "./formatPlaygroundNote";
 
@@ -20,6 +22,41 @@ const saveNoteContent = mockNoteStoreState.saveNoteContent;
 const saveNoteTitle = mockNoteStoreState.saveNoteTitle;
 
 const noteStorageList = vi.fn();
+
+function playgroundContentWithVersion(
+  locale: "en" | "zh",
+  version: number,
+): string {
+  const doc = buildPlaygroundContent(locale) as {
+    type: "doc";
+    attrs?: Record<string, unknown>;
+    content: unknown[];
+  };
+  doc.attrs = {
+    ...doc.attrs,
+    playgroundContentVersion: version,
+  };
+  return JSON.stringify(doc);
+}
+
+function duplicatePlaygroundPair() {
+  return [
+    {
+      id: "pg-en",
+      title: "Format Playground",
+      content: JSON.stringify(buildPlaygroundContent("en")),
+      isPinned: false,
+      modifiedAt: 100,
+    },
+    {
+      id: "pg-zh",
+      title: "格式试炼场",
+      content: playgroundContentWithVersion("en", PLAYGROUND_CONTENT_VERSION),
+      isPinned: false,
+      modifiedAt: 200,
+    },
+  ];
+}
 
 vi.mock("@/store/noteStore", () => ({
   useNoteStore: {
@@ -140,5 +177,123 @@ describe("syncFormatPlaygroundOnLocaleChange", () => {
 
     expect(saveNoteTitle).toHaveBeenCalledWith("pg-1", "格式试炼场");
     expect(saveNoteTitle).not.toHaveBeenCalledWith("welcome-1", expect.anything());
+  });
+
+  it("prefers zh-titled playground when syncing zh locale with duplicate canonical notes", async () => {
+    mockNoteStoreState.activeNoteId = null;
+    mockNoteStoreState.notes = [];
+    noteStorageList.mockResolvedValue(duplicatePlaygroundPair());
+
+    await syncFormatPlaygroundOnLocaleChange("zh");
+
+    expect(saveNoteContent).toHaveBeenCalledTimes(1);
+    expect(saveNoteContent).toHaveBeenCalledWith(
+      "pg-zh",
+      expect.any(String),
+    );
+    expect(saveNoteContent).not.toHaveBeenCalledWith("pg-en", expect.anything());
+  });
+
+  it("prefers en-titled playground when syncing en locale with duplicate canonical notes", async () => {
+    mockNoteStoreState.activeNoteId = null;
+    mockNoteStoreState.notes = [];
+    noteStorageList.mockResolvedValue([
+      {
+        id: "pg-zh",
+        title: "格式试炼场",
+        content: JSON.stringify(buildPlaygroundContent("zh")),
+        isPinned: false,
+        modifiedAt: 200,
+      },
+      {
+        id: "pg-en",
+        title: "Format Playground",
+        content: playgroundContentWithVersion("zh", PLAYGROUND_CONTENT_VERSION),
+        isPinned: false,
+        modifiedAt: 100,
+      },
+    ]);
+
+    await syncFormatPlaygroundOnLocaleChange("en");
+
+    expect(saveNoteContent).toHaveBeenCalledTimes(1);
+    expect(saveNoteContent).toHaveBeenCalledWith(
+      "pg-en",
+      expect.any(String),
+    );
+    expect(saveNoteContent).not.toHaveBeenCalledWith("pg-zh", expect.anything());
+  });
+
+  it("prefers pinned attr-match playground when neither title is canonical", async () => {
+    mockNoteStoreState.activeNoteId = null;
+    mockNoteStoreState.notes = [];
+    noteStorageList.mockResolvedValue([
+      {
+        id: "pg-unpinned",
+        title: "Playground Copy A",
+        content: playgroundContentWithVersion("en", PLAYGROUND_CONTENT_VERSION),
+        isPinned: false,
+        modifiedAt: 300,
+      },
+      {
+        id: "pg-pinned",
+        title: "Playground Copy B",
+        content: playgroundContentWithVersion("en", 18),
+        isPinned: true,
+        modifiedAt: 100,
+      },
+    ]);
+
+    await syncFormatPlaygroundOnLocaleChange("zh");
+
+    expect(saveNoteContent).toHaveBeenCalledTimes(1);
+    expect(saveNoteContent).toHaveBeenCalledWith(
+      "pg-pinned",
+      expect.any(String),
+    );
+    expect(saveNoteContent).not.toHaveBeenCalledWith(
+      "pg-unpinned",
+      expect.anything(),
+    );
+  });
+
+  it("prefers highest playgroundContentVersion among unpinned attr-match notes", async () => {
+    mockNoteStoreState.activeNoteId = null;
+    mockNoteStoreState.notes = [];
+    noteStorageList.mockResolvedValue([
+      {
+        id: "pg-v18",
+        title: "Playground Copy Old",
+        content: playgroundContentWithVersion("en", 18),
+        isPinned: false,
+        modifiedAt: 300,
+      },
+      {
+        id: "pg-v20",
+        title: "Playground Copy New",
+        content: playgroundContentWithVersion("en", PLAYGROUND_CONTENT_VERSION),
+        isPinned: false,
+        modifiedAt: 100,
+      },
+    ]);
+
+    await syncFormatPlaygroundOnLocaleChange("zh");
+
+    expect(saveNoteContent).toHaveBeenCalledTimes(1);
+    expect(saveNoteContent).toHaveBeenCalledWith("pg-v20", expect.any(String));
+    expect(saveNoteContent).not.toHaveBeenCalledWith(
+      "pg-v18",
+      expect.anything(),
+    );
+  });
+});
+
+describe("pickFormatPlaygroundNote", () => {
+  it("returns locale-matching canonical title over the other canonical duplicate", () => {
+    const picked = pickFormatPlaygroundNote(duplicatePlaygroundPair(), "zh");
+    expect(picked?.id).toBe("pg-zh");
+
+    const pickedEn = pickFormatPlaygroundNote(duplicatePlaygroundPair(), "en");
+    expect(pickedEn?.id).toBe("pg-en");
   });
 });

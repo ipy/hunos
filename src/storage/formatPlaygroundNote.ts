@@ -736,20 +736,62 @@ export function migratePlaygroundContentIfStale(
   return JSON.stringify(updated);
 }
 
-function pickFormatPlaygroundNote<
-  T extends { id: string; title: string; content: string },
->(candidates: T[]): T | undefined {
+type PlaygroundPickCandidate = {
+  id: string;
+  title: string;
+  content: string;
+  isPinned?: boolean;
+  modifiedAt?: number;
+};
+
+function parsePlaygroundContentVersion(content: string): number {
+  try {
+    const parsed = JSON.parse(content) as PlaygroundDoc;
+    return parsed.attrs?.playgroundContentVersion ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+function comparePlaygroundPickCandidates(
+  a: PlaygroundPickCandidate,
+  b: PlaygroundPickCandidate,
+  locale: Locale,
+): number {
+  const localeTitle = getFormatPlaygroundTitle(locale);
+  const score = (note: PlaygroundPickCandidate) =>
+    [
+      note.title === localeTitle ? 1 : 0,
+      FORMAT_PLAYGROUND_TITLES.includes(note.title) ? 1 : 0,
+      note.isPinned ? 1 : 0,
+      parsePlaygroundContentVersion(note.content),
+      note.modifiedAt ?? 0,
+    ] as const;
+
+  const sa = score(a);
+  const sb = score(b);
+  for (let i = 0; i < sa.length; i += 1) {
+    if (sa[i] !== sb[i]) return sa[i] - sb[i];
+  }
+  return a.id.localeCompare(b.id);
+}
+
+/** Pick the canonical playground note when duplicates exist (locale title > pinned > version). */
+export function pickFormatPlaygroundNote<
+  T extends PlaygroundPickCandidate,
+>(candidates: T[], locale: Locale): T | undefined {
   const matches = candidates.filter((n) =>
     isFormatPlaygroundNote(n.title, n.content),
   );
   if (matches.length === 0) return undefined;
-  return (
-    matches.find((n) => FORMAT_PLAYGROUND_TITLES.includes(n.title)) ??
-    matches[0]
-  );
+  if (matches.length === 1) return matches[0];
+
+  return [...matches].sort((a, b) =>
+    comparePlaygroundPickCandidates(b, a, locale),
+  )[0];
 }
 
-async function findFormatPlaygroundNoteForSync() {
+async function findFormatPlaygroundNoteForSync(locale: Locale) {
   const { activeNoteId, notes } = useNoteStore.getState();
 
   if (activeNoteId) {
@@ -759,11 +801,11 @@ async function findFormatPlaygroundNoteForSync() {
     }
   }
 
-  const inStore = pickFormatPlaygroundNote(notes);
+  const inStore = pickFormatPlaygroundNote(notes, locale);
   if (inStore) return inStore;
 
   const storedNotes = await noteStorage.list();
-  return pickFormatPlaygroundNote(storedNotes);
+  return pickFormatPlaygroundNote(storedNotes, locale);
 }
 
 /** Flush-aware playground sync when settings locale changes (Settings or URL bootstrap). */
@@ -771,7 +813,7 @@ export async function syncFormatPlaygroundOnLocaleChange(
   locale: Locale,
   flushedContent?: string | null,
 ): Promise<void> {
-  const note = await findFormatPlaygroundNoteForSync();
+  const note = await findFormatPlaygroundNoteForSync(locale);
   if (!note) return;
 
   const { activeNoteId, saveNoteContent, saveNoteTitle } =
