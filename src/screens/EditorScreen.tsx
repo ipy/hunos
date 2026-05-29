@@ -56,6 +56,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const [findOpen, setFindOpen] = useState(false);
   const [editorInstance, setEditorInstance] = useState<Editor | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const lastPlaygroundMigrateKeyRef = useRef<string | null>(null);
 
   const note = notes.find((n) => n.id === activeNoteId);
   const showBackButton = layout === "mobile";
@@ -109,15 +110,22 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   }, []);
 
   useEffect(() => {
-    if (!note || !isFormatPlaygroundNote(note.title, note.content)) return;
+    if (!note?.id || !isFormatPlaygroundNote(note.title, note.content)) return;
+
+    const migrateKey = `${note.id}:${settings.locale}`;
+    if (lastPlaygroundMigrateKeyRef.current === migrateKey) {
+      return;
+    }
+    lastPlaygroundMigrateKeyRef.current = migrateKey;
+
     const migrated = migratePlaygroundContentIfStale(
       note.content,
       settings.locale,
     );
     if (migrated) {
-      saveNoteContent(note.id, migrated);
+      void saveNoteContent(note.id, migrated);
     }
-  }, [note?.id, note?.title, note?.content, settings.locale, saveNoteContent]);
+  }, [note, settings.locale, saveNoteContent]);
 
   useEffect(() => {
     setFindOpen(false);

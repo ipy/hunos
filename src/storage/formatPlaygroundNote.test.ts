@@ -437,4 +437,54 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(labels).toEqual(["Open task", "Pending task", "Completed task"]);
     expect(checked).toEqual([false, false, true]);
   });
+
+  it("leaves reordered task lists alone when content version is current", () => {
+    const edited = JSON.parse(JSON.stringify(buildPlaygroundContent("en"))) as {
+      type: "doc";
+      attrs?: { playgroundContentVersion?: number };
+      content: Array<{ type: string; content?: unknown[] }>;
+    };
+    const taskListIndex = edited.content.findIndex(
+      (node) => node.type === "taskList",
+    );
+    edited.content[taskListIndex] = {
+      type: "taskList",
+      content: [
+        {
+          type: "taskItem",
+          attrs: { checked: false },
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "Open task" }],
+            },
+          ],
+        },
+        {
+          type: "taskItem",
+          attrs: { checked: true },
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "Completed task" }],
+            },
+          ],
+        },
+        {
+          type: "taskItem",
+          attrs: { checked: true },
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "Pending task" }],
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(
+      migratePlaygroundContentIfStale(JSON.stringify(edited), "en"),
+    ).toBeNull();
+  });
 });
