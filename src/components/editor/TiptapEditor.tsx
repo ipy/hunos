@@ -44,6 +44,7 @@ import { shouldAutolinkUrl } from "./linkAutolinkUtils";
 import { isValidLinkUrl } from "./inlineFormatActions";
 import { TableKeyboardShortcuts } from "./TableKeyboardShortcuts";
 import { SelectAllShortcuts } from "./SelectAllShortcuts";
+import { PlaygroundDocument } from "./PlaygroundDocument";
 import { getHunosCodeBlockExtension } from "./HunosCodeBlock";
 import { getCodeBlockHighlightStyles } from "./codeBlockHighlightStyles";
 import ListItem from "@tiptap/extension-list-item";
@@ -144,6 +145,7 @@ export function TiptapEditor({
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
+        document: false,
         heading: { levels: [1, 2, 3] },
         bold: false,
         bulletList: false,
@@ -153,6 +155,7 @@ export function TiptapEditor({
         history: false,
         codeBlock: false,
       }),
+      PlaygroundDocument,
       getHunosCodeBlockExtension(),
       History.extend({
         addKeyboardShortcuts() {

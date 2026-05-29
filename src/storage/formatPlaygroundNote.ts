@@ -577,7 +577,7 @@ export function migratePlaygroundContentIfStale(
       if (
         imageNode?.type === "image" &&
         imageNode.attrs?.src === PLAYGROUND_SAMPLE_IMAGE_SRC &&
-        imageNode.attrs?.height !== PLAYGROUND_SAMPLE_IMAGE_HEIGHT
+        imageNode.attrs?.height == null
       ) {
         contentNodes[i + 2] = {
           ...imageNode,

@@ -321,6 +321,46 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(migratedImage?.attrs?.height).toBe(PLAYGROUND_SAMPLE_IMAGE_HEIGHT);
   });
 
+  it("preserves user-resized sample image height during version migration", () => {
+    const stale = buildPlaygroundContent("zh") as {
+      type: "doc";
+      attrs?: { playgroundContentVersion?: number };
+      content: Array<{
+        type: string;
+        attrs?: { src?: string; alt?: string; height?: number };
+        content?: Array<{ text?: string }>;
+      }>;
+    };
+    stale.attrs = { playgroundContentVersion: 16 };
+
+    const imagesSectionIndex = stale.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "图片",
+    );
+    const imageNode = stale.content[imagesSectionIndex + 2];
+    if (imageNode?.attrs) {
+      imageNode.attrs.height = 215;
+    }
+
+    const migrated = migratePlaygroundContentIfStale(
+      JSON.stringify(stale),
+      "zh",
+    );
+    expect(migrated).not.toBeNull();
+
+    const parsed = JSON.parse(migrated!) as {
+      attrs?: { playgroundContentVersion?: number };
+      content: Array<{
+        type: string;
+        attrs?: { src?: string; height?: number };
+      }>;
+    };
+    expect(parsed.attrs?.playgroundContentVersion).toBe(
+      PLAYGROUND_CONTENT_VERSION,
+    );
+    const migratedImage = parsed.content[imagesSectionIndex + 2];
+    expect(migratedImage?.attrs?.height).toBe(215);
+  });
+
   it("includes external link sample in tags section", () => {
     const content = buildPlaygroundContent("en") as {
       content: Array<{
