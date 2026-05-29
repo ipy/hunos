@@ -193,8 +193,13 @@ function tiptapToHtml(json: unknown): string {
     case "taskList":
       return `<ul class="task-list">${children}</ul>`;
     case "taskItem": {
-      const checked = doc.attrs?.checked ? " checked" : "";
-      return `<li><input type="checkbox"${checked} disabled> ${children}</li>`;
+      const checked = Boolean(doc.attrs?.checked);
+      const checkedAttr = checked ? " checked" : "";
+      const dataChecked = checked ? ' data-checked="true"' : "";
+      const label = checked
+        ? `<del class="task-done">${children}</del>`
+        : children;
+      return `<li${dataChecked}><input type="checkbox"${checkedAttr} disabled> ${label}</li>`;
     }
     case "blockquote":
       return `<blockquote>${children}</blockquote>`;
@@ -233,7 +238,10 @@ export function exportNote(
 <html><head><meta charset="utf-8"><title>${escapeHtml(note.title)}</title>
 <style>body{font-family:-apple-system,sans-serif;max-width:700px;margin:40px auto;padding:0 20px;line-height:1.7}
 mark{background:#fff3cd}code{background:#f4f4f4;padding:2px 6px;border-radius:4px}
-pre{background:#f4f4f4;padding:16px;border-radius:8px;overflow-x:auto}</style>
+pre{background:#f4f4f4;padding:16px;border-radius:8px;overflow-x:auto}
+ul.task-list{list-style:none;padding-left:0}
+ul.task-list li[data-checked="true"] del.task-done{color:#AEAEB2;text-decoration:line-through}
+ul.task-list li[data-checked="true"] del.task-done a{color:#AEAEB2}</style>
 </head><body>${tiptapToHtml(json)}</body></html>`;
     }
   } catch {

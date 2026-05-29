@@ -329,6 +329,70 @@ describe("exportNote html links", () => {
   });
 });
 
+describe("exportNote html task items", () => {
+  it("exports unchecked tasks without strike styling", () => {
+    const note = makeNote({
+      type: "doc",
+      content: [
+        {
+          type: "taskList",
+          content: [
+            {
+              type: "taskItem",
+              attrs: { checked: false },
+              content: [
+                {
+                  type: "paragraph",
+                  content: [{ type: "text", text: "Open task" }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const html = exportNote(note, "html");
+    expect(html).toContain('<ul class="task-list">');
+    expect(html).toContain('<input type="checkbox" disabled>');
+    expect(html).not.toContain(" checked");
+    expect(html).not.toContain("<del");
+    expect(html).toContain("Open task");
+  });
+
+  it("exports checked tasks with del.task-done and muted strike CSS", () => {
+    const note = makeNote({
+      type: "doc",
+      content: [
+        {
+          type: "taskList",
+          content: [
+            {
+              type: "taskItem",
+              attrs: { checked: true },
+              content: [
+                {
+                  type: "paragraph",
+                  content: [{ type: "text", text: "Completed task" }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const html = exportNote(note, "html");
+    expect(html).toContain('<input type="checkbox" checked disabled>');
+    expect(html).toContain('data-checked="true"');
+    expect(html).toContain('<del class="task-done">');
+    expect(html).toContain("Completed task");
+    expect(html).toContain(
+      'ul.task-list li[data-checked="true"] del.task-done{color:#AEAEB2;text-decoration:line-through}',
+    );
+  });
+});
+
 describe("exportNote images", () => {
   const sampleSrc =
     "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
