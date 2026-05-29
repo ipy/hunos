@@ -131,8 +131,9 @@ describe("sortMatchesForReplaceAll", () => {
 });
 
 describe("activeIndexAfterReplaceOne", () => {
-  it("advances to the next match after replace-one", () => {
-    expect(activeIndexAfterReplaceOne(1, 5, 4)).toBe(2);
+  it("keeps the same index so the next match is highlighted after removal", () => {
+    expect(activeIndexAfterReplaceOne(0, 3, 2)).toBe(0);
+    expect(activeIndexAfterReplaceOne(1, 5, 4)).toBe(1);
   });
 
   it("wraps from the last match to the first", () => {

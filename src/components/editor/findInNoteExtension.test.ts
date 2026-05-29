@@ -129,6 +129,34 @@ describe("FindInNoteExtension replace", () => {
     state = replaceActiveMatch(state);
 
     expect(docText(state)).toBe("foo bar foo baz qux");
+    expect(getFindInNoteState(state)?.activeIndex).toBe(0);
+  });
+
+  it("replace-one advances to the next match in document order", () => {
+    let state = createFindState("foo foo foo");
+    state = applyMeta(state, { type: "open" });
+    state = applyMeta(state, { type: "setQuery", query: "foo" });
+    expect(getFindInNoteState(state)?.activeIndex).toBe(0);
+
+    state = applyMeta(state, { type: "setReplaceText", replaceText: "qux" });
+    state = replaceActiveMatch(state);
+
+    expect(docText(state)).toBe("qux foo foo");
+    expect(getFindInNoteState(state)?.activeIndex).toBe(0);
+    expect(getFindInNoteState(state)?.matches[0].from).toBe(5);
+  });
+
+  it("replace-one reverts in one undo step", () => {
+    let state = createFindState("foo foo foo");
+    state = applyMeta(state, { type: "open" });
+    state = applyMeta(state, { type: "setQuery", query: "foo" });
+    state = applyMeta(state, { type: "setReplaceText", replaceText: "qux" });
+    state = replaceActiveMatch(state);
+
+    expect(docText(state)).toBe("qux foo foo");
+
+    state = applyUndo(state);
+    expect(docText(state)).toBe("foo foo foo");
   });
 
   it("replace-all applies every match in one undo step", () => {

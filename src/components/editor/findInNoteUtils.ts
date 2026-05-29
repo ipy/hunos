@@ -60,11 +60,10 @@ export function sortMatchesForReplaceAll(matches: FindMatch[]): FindMatch[] {
 
 export function activeIndexAfterReplaceOne(
   prevIndex: number,
-  prevMatchCount: number,
+  _prevMatchCount: number,
   newMatchCount: number,
 ): number {
   if (newMatchCount <= 0) return -1;
-  if (prevMatchCount <= 0) return 0;
-  const nextIndex = wrapFindIndex(prevIndex, prevMatchCount, "next");
-  return clampFindIndex(nextIndex, newMatchCount);
+  if (prevIndex >= newMatchCount) return 0;
+  return prevIndex;
 }
