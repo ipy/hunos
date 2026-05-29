@@ -2,15 +2,22 @@ import { useState, useEffect } from 'react';
 
 export type LayoutMode = 'mobile' | 'tablet' | 'desktop';
 
-const BREAKPOINTS = {
+export const BREAKPOINTS = {
   tablet: 768,
   desktop: 1024,
-};
+} as const;
 
-function getLayoutMode(width: number): LayoutMode {
+export function getLayoutMode(width: number): LayoutMode {
   if (width >= BREAKPOINTS.desktop) return 'desktop';
   if (width >= BREAKPOINTS.tablet) return 'tablet';
   return 'mobile';
+}
+
+export function isMobileViewport(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    getLayoutMode(window.innerWidth) === 'mobile'
+  );
 }
 
 export function useAdaptiveLayout(): LayoutMode {

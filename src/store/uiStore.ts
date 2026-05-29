@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { Note } from "@/types/note";
 import { noteStorage } from "@/storage/noteStorage";
+import { isMobileViewport } from "@/hooks/useAdaptiveLayout";
 
 type Screen = "tags" | "noteList" | "editor" | "settings";
 
@@ -91,8 +92,14 @@ export const useUIStore = create<UIStore>((set, get) => ({
   hideSidebar: () => set({ sidebarVisible: false }),
   toggleSidebar: () => set((s) => ({ sidebarVisible: !s.sidebarVisible })),
 
-  setFocusMode: (enabled) => set({ focusMode: enabled }),
-  toggleFocusMode: () => set((s) => ({ focusMode: !s.focusMode })),
+  setFocusMode: (enabled) => {
+    if (enabled && isMobileViewport()) return;
+    set({ focusMode: enabled });
+  },
+  toggleFocusMode: () => {
+    if (isMobileViewport()) return;
+    set((s) => ({ focusMode: !s.focusMode }));
+  },
 
   openNoteSearch: () => set({ focusMode: false, noteSearchOpen: true }),
   clearNoteSearchOpen: () => set({ noteSearchOpen: false }),

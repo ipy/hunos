@@ -58,8 +58,8 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   const note = notes.find((n) => n.id === activeNoteId);
-  const showBackButton = layout === "mobile" && !focusMode;
-  const isCompactChrome = focusMode && layout !== "desktop";
+  const showBackButton = layout === "mobile";
+  const isCompactChrome = focusMode && layout === "tablet";
   const prevFocusModeRef = useRef(focusMode);
   const [titleValue, setTitleValue] = useState("");
   const titleTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
@@ -123,6 +123,12 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     if (layout !== "desktop") return;
     setFindOpen(true);
   }, [findInNoteSignal, layout]);
+
+  useEffect(() => {
+    if (layout !== "mobile" || !focusMode) return;
+    prevFocusModeRef.current = false;
+    setFocusMode(false);
+  }, [layout, focusMode, setFocusMode]);
 
   useEffect(() => {
     if (prevFocusModeRef.current === focusMode) return;
@@ -331,56 +337,58 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           </>
         ) : (
           <>
-            <button
-              type="button"
-              onClick={toggleFocusMode}
-              aria-label={
-                focusMode
-                  ? t("editor.focusMode.exit")
-                  : t("editor.focusMode.enter")
-              }
-              aria-pressed={focusMode}
-              title={
-                focusMode
-                  ? t("editor.focusMode.exit")
-                  : t("editor.focusMode.enter")
-              }
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                padding: 7,
-                borderRadius: theme.radius.full,
-                display: "flex",
-                minWidth: 44,
-                minHeight: 44,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: focusMode
-                  ? theme.colors.accentLight
-                  : "transparent",
-                transition: "background-color 0.2s ease",
-              }}
-              onMouseEnter={(e) => {
-                if (!focusMode)
-                  e.currentTarget.style.backgroundColor =
-                    theme.colors.surfaceHover;
-              }}
-              onMouseLeave={(e) => {
-                if (!focusMode)
-                  e.currentTarget.style.backgroundColor = focusMode
-                    ? theme.colors.accentLight
-                    : "transparent";
-              }}
-            >
-              <Icon
-                name={focusMode ? "focusOff" : "focus"}
-                size={17}
-                color={
-                  focusMode ? theme.colors.accent : theme.colors.textTertiary
+            {layout !== "mobile" && (
+              <button
+                type="button"
+                onClick={toggleFocusMode}
+                aria-label={
+                  focusMode
+                    ? t("editor.focusMode.exit")
+                    : t("editor.focusMode.enter")
                 }
-              />
-            </button>
+                aria-pressed={focusMode}
+                title={
+                  focusMode
+                    ? t("editor.focusMode.exit")
+                    : t("editor.focusMode.enter")
+                }
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 7,
+                  borderRadius: theme.radius.full,
+                  display: "flex",
+                  minWidth: 44,
+                  minHeight: 44,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: focusMode
+                    ? theme.colors.accentLight
+                    : "transparent",
+                  transition: "background-color 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  if (!focusMode)
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.surfaceHover;
+                }}
+                onMouseLeave={(e) => {
+                  if (!focusMode)
+                    e.currentTarget.style.backgroundColor = focusMode
+                      ? theme.colors.accentLight
+                      : "transparent";
+                }}
+              >
+                <Icon
+                  name={focusMode ? "focusOff" : "focus"}
+                  size={17}
+                  color={
+                    focusMode ? theme.colors.accent : theme.colors.textTertiary
+                  }
+                />
+              </button>
+            )}
             {!isCompactChrome && (
               <>
                 <button
