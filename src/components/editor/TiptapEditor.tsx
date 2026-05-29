@@ -39,6 +39,7 @@ import { LinkAutolinkGuards } from "./LinkAutolinkGuards";
 import { shouldAutolinkUrl } from "./linkAutolinkUtils";
 import { isValidLinkUrl } from "./inlineFormatActions";
 import { TableKeyboardShortcuts } from "./TableKeyboardShortcuts";
+import { SelectAllShortcuts } from "./SelectAllShortcuts";
 import { getHunosCodeBlockExtension } from "./HunosCodeBlock";
 import { getCodeBlockHighlightStyles } from "./codeBlockHighlightStyles";
 import ListItem from "@tiptap/extension-list-item";
@@ -246,6 +247,7 @@ export function TiptapEditor({
       BlockMoveShortcuts,
       BlockLineShortcuts,
       HistoryKeyboardShortcuts,
+      SelectAllShortcuts,
       FindInNoteExtension,
     ],
     content: initialContent ? tryParseJson(initialContent) : undefined,
