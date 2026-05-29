@@ -4,6 +4,10 @@ import type { EditorState } from "@tiptap/pm/state";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { getMarkRevealSymbols } from "./markdownSymbols";
+import {
+  findCompleteWikiLinksInBlock,
+  isInCodeContext,
+} from "./wikiLinkSuggestionUtils";
 
 const markdownRevealKey = new PluginKey("markdownReveal");
 
@@ -72,6 +76,33 @@ function seedMarkRange(
   return expandMarkRange(parent, blockStart, mark, seedStart, seedEnd);
 }
 
+function collectWikiLinkRevealSymbolSpec(
+  state: EditorState,
+  from: number,
+): MarkdownRevealSymbolSpec | null {
+  const $pos = state.doc.resolve(from);
+  if (isInCodeContext($pos)) return null;
+
+  const blockStart = $pos.start();
+  const blockEnd = $pos.end();
+  const blockText = state.doc.textBetween(blockStart, blockEnd, "\n", "\n");
+
+  for (const span of findCompleteWikiLinksInBlock(blockText)) {
+    const contentStart = blockStart + span.start + 2;
+    const contentEnd = blockStart + span.end - 2;
+    if (from >= contentStart && from <= contentEnd) {
+      return {
+        rangeStart: contentStart,
+        rangeEnd: contentEnd,
+        open: "[[",
+        close: "]]",
+      };
+    }
+  }
+
+  return null;
+}
+
 export function collectMarkdownRevealSymbolSpecs(
   state: EditorState,
 ): MarkdownRevealSymbolSpec[] {
@@ -111,6 +142,11 @@ export function collectMarkdownRevealSymbolSpecs(
       });
     });
   });
+
+  const wikiSpec = collectWikiLinkRevealSymbolSpec(state, from);
+  if (wikiSpec) {
+    specs.push(wikiSpec);
+  }
 
   return specs;
 }

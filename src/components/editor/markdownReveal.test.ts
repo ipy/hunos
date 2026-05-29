@@ -222,3 +222,144 @@ describe("buildMarkdownRevealDecorations", () => {
     expect(decos.find(0, state.doc.content.size)).toHaveLength(2);
   });
 });
+
+function stateWithWikiParagraph(
+  prefix: string,
+  label: string,
+  suffix: string,
+  caretOffsetInParagraph: number,
+) {
+  const wikiText = `[[${label}]]`;
+  const document = doc.create({}, [
+    paragraph.create({}, [
+      schema.text(prefix),
+      schema.text(wikiText),
+      schema.text(suffix),
+    ]),
+  ]);
+  const caretPos = 1 + caretOffsetInParagraph;
+  return EditorState.create({
+    doc: document,
+    schema,
+    selection: TextSelection.create(document, caretPos),
+  });
+}
+
+describe("wiki-link markdown reveal", () => {
+  const prefix = "用 ";
+  const label = "欢迎使用 Hunos";
+  const suffix = "。";
+
+  it("reveals [[ and ]] when caret is inside the zh wiki label", () => {
+    const caretInLabel = prefix.length + 2 + 4;
+    const state = stateWithWikiParagraph(prefix, label, suffix, caretInLabel);
+
+    expect(revealedSymbolTexts(state)).toEqual(["[[", "]]"]);
+  });
+
+  it("reveals wiki delimiters at the first character boundary of zh labels", () => {
+    const caretAtFirstChar = prefix.length + 2;
+    const state = stateWithWikiParagraph(
+      prefix,
+      label,
+      suffix,
+      caretAtFirstChar,
+    );
+
+    expect(revealedSymbolTexts(state)).toEqual(["[[", "]]"]);
+  });
+
+  it("reveals wiki delimiters at the last character boundary of zh labels", () => {
+    const caretAtLastChar = prefix.length + 2 + label.length;
+    const state = stateWithWikiParagraph(
+      prefix,
+      label,
+      suffix,
+      caretAtLastChar,
+    );
+
+    expect(revealedSymbolTexts(state)).toEqual(["[[", "]]"]);
+  });
+
+  it("does not reveal wiki delimiters when caret is in plain prefix text", () => {
+    const state = stateWithWikiParagraph(prefix, label, suffix, 1);
+
+    const texts = revealedSymbolTexts(state);
+    expect(texts).not.toContain("[[");
+    expect(texts).not.toContain("]]");
+  });
+
+  it("does not reveal wiki delimiters after the wiki link", () => {
+    const caretAfterLink = prefix.length + 2 + label.length + 2;
+    const state = stateWithWikiParagraph(
+      prefix,
+      label,
+      suffix,
+      caretAfterLink,
+    );
+
+    const texts = revealedSymbolTexts(state);
+    expect(texts).not.toContain("[[");
+    expect(texts).not.toContain("]]");
+  });
+
+  it("reveals wiki delimiters for English labels at boundary positions", () => {
+    const enPrefix = "See ";
+    const enLabel = "Welcome to Hunos";
+    const enSuffix = ".";
+
+    const middle = stateWithWikiParagraph(
+      enPrefix,
+      enLabel,
+      enSuffix,
+      enPrefix.length + 2 + 3,
+    );
+    const firstChar = stateWithWikiParagraph(
+      enPrefix,
+      enLabel,
+      enSuffix,
+      enPrefix.length + 2,
+    );
+    const lastChar = stateWithWikiParagraph(
+      enPrefix,
+      enLabel,
+      enSuffix,
+      enPrefix.length + 2 + enLabel.length,
+    );
+
+    for (const state of [middle, firstChar, lastChar]) {
+      expect(revealedSymbolTexts(state)).toEqual(["[[", "]]"]);
+    }
+  });
+
+  it("still reveals external link marks when caret is inside a link label", () => {
+    const state = stateWithLinkParagraph("See ", "project docs", ".", 8);
+
+    expect(revealedSymbolTexts(state)).toEqual(["[", "](https://example.com)"]);
+    expect(revealedSymbolTexts(state)).not.toContain("[[");
+  });
+
+  it("reveals wiki delimiters once when label spans split text nodes", () => {
+    const wikiOpen = "[[";
+    const wikiClose = "]]";
+    const document = doc.create({}, [
+      paragraph.create({}, [
+        schema.text(prefix),
+        schema.text(wikiOpen),
+        schema.text("欢迎", []),
+        schema.text("使用 Hunos", []),
+        schema.text(wikiClose),
+        schema.text(suffix),
+      ]),
+    ]);
+    const caretPos = 1 + prefix.length + 2 + 2;
+    const state = EditorState.create({
+      doc: document,
+      schema,
+      selection: TextSelection.create(document, caretPos),
+    });
+
+    expect(collectMarkdownRevealSymbolSpecs(state)).toHaveLength(1);
+    expect(revealedSymbolTexts(state)).toEqual(["[[", "]]"]);
+  });
+});

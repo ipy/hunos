@@ -52,9 +52,14 @@ function buildDecorations(state: EditorState): DecorationSet {
   const decorations: Decoration[] = [];
 
   for (const wl of wikiLinks) {
-    const cursorInside = cursorPos >= wl.start && cursorPos <= wl.end;
+    const cursorInLabel =
+      cursorPos >= wl.contentStart && cursorPos <= wl.contentEnd;
+    const cursorOnBrackets =
+      cursorPos >= wl.start &&
+      cursorPos <= wl.end &&
+      !cursorInLabel;
 
-    if (cursorInside) {
+    if (cursorOnBrackets) {
       decorations.push(
         Decoration.inline(wl.start, wl.contentStart, {
           class: "wiki-link-bracket-visible",
@@ -178,10 +183,7 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
             preClickLinkSpan = null;
 
             if (
-              !shouldNavigateWikiLinkClick(
-                selectionFromBeforeClick,
-                linkAtPos,
-              )
+              !shouldNavigateWikiLinkClick(selectionFromBeforeClick, linkAtPos)
             ) {
               return false;
             }
