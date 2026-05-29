@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  LEGACY_PLAYGROUND_SAMPLE_IMAGE_SRC,
   PLAYGROUND_SAMPLE_IMAGE_HEIGHT,
   PLAYGROUND_SAMPLE_IMAGE_SRC,
+  PLAYGROUND_SAMPLE_IMAGE_TESTID,
 } from "@/components/editor/imageEmbedUtils";
 import {
   PLAYGROUND_CONTENT_VERSION,
@@ -179,8 +181,7 @@ describe("migratePlaygroundContentIfStale", () => {
       const imagesSectionIndex = stale.content.findIndex(
         (node) =>
           node.type === "heading" &&
-          node.content?.[0]?.text ===
-            (fromLocale === "zh" ? "图片" : "Images"),
+          node.content?.[0]?.text === (fromLocale === "zh" ? "图片" : "Images"),
       );
       const imageNode = stale.content[imagesSectionIndex + 2];
       if (imageNode?.attrs) {
@@ -324,7 +325,12 @@ describe("migratePlaygroundContentIfStale", () => {
     const content = buildPlaygroundContent("en") as {
       content: Array<{
         type: string;
-        attrs?: { src?: string; alt?: string };
+        attrs?: {
+          src?: string;
+          alt?: string;
+          height?: number;
+          "data-testid"?: string;
+        };
         content?: Array<{ text?: string }>;
       }>;
     };
@@ -334,9 +340,66 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(imagesSectionIndex).toBeGreaterThan(-1);
     const imageNode = content.content[imagesSectionIndex + 2];
     expect(imageNode?.type).toBe("image");
-    expect(imageNode?.attrs?.src).toMatch(/^data:image\/png;base64,/);
+    expect(imageNode?.attrs?.src).toBe(PLAYGROUND_SAMPLE_IMAGE_SRC);
     expect(imageNode?.attrs?.height).toBe(PLAYGROUND_SAMPLE_IMAGE_HEIGHT);
     expect(imageNode?.attrs?.alt).toBe("Sample");
+    expect(imageNode?.attrs?.["data-testid"]).toBe(
+      PLAYGROUND_SAMPLE_IMAGE_TESTID,
+    );
+  });
+
+  it("migrates stale v17 playground sample image to visible asset and test id", () => {
+    const stale = buildPlaygroundContent("en") as {
+      type: "doc";
+      attrs?: { playgroundContentVersion?: number };
+      content: Array<{
+        type: string;
+        attrs?: {
+          src?: string;
+          alt?: string;
+          height?: number;
+          "data-testid"?: string;
+        };
+        content?: Array<{ text?: string }>;
+      }>;
+    };
+    stale.attrs = { playgroundContentVersion: 17 };
+
+    const imagesSectionIndex = stale.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "Images",
+    );
+    const imageNode = stale.content[imagesSectionIndex + 2];
+    if (imageNode?.attrs) {
+      imageNode.attrs.src = LEGACY_PLAYGROUND_SAMPLE_IMAGE_SRC;
+      delete imageNode.attrs["data-testid"];
+    }
+
+    const migrated = migratePlaygroundContentIfStale(
+      JSON.stringify(stale),
+      "en",
+    );
+    expect(migrated).not.toBeNull();
+
+    const parsed = JSON.parse(migrated!) as {
+      attrs?: { playgroundContentVersion?: number };
+      content: Array<{
+        type: string;
+        attrs?: {
+          src?: string;
+          height?: number;
+          "data-testid"?: string;
+        };
+      }>;
+    };
+    expect(parsed.attrs?.playgroundContentVersion).toBe(
+      PLAYGROUND_CONTENT_VERSION,
+    );
+    const migratedImage = parsed.content[imagesSectionIndex + 2];
+    expect(migratedImage?.attrs?.src).toBe(PLAYGROUND_SAMPLE_IMAGE_SRC);
+    expect(migratedImage?.attrs?.["data-testid"]).toBe(
+      PLAYGROUND_SAMPLE_IMAGE_TESTID,
+    );
+    expect(migratedImage?.attrs?.height).toBe(PLAYGROUND_SAMPLE_IMAGE_HEIGHT);
   });
 
   it("migrates stale v16 playground sample image to default height", () => {

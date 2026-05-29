@@ -1,11 +1,26 @@
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
-/** Tiny 1×1 PNG used in Format Playground seed content (display size set via height attr). */
-export const PLAYGROUND_SAMPLE_IMAGE_SRC =
+/** Previous 1×1 PNG seed (migrated to {@link PLAYGROUND_SAMPLE_IMAGE_SRC}). */
+export const LEGACY_PLAYGROUND_SAMPLE_IMAGE_SRC =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
+/** Visible 32×24 gradient PNG for Format Playground seed content. */
+export const PLAYGROUND_SAMPLE_IMAGE_SRC =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAYEAIAAABEobQgAAAAcElEQVRYw+2XUQ3AMAgFWbIP5qI1sZmoyMqrCUZF9IMcAQXvQu4RrrXmHEOwc0s39S86xgGANzpAt4cN0EzljY5xAlAORANk2ICQASRDC7EB+A786vQ7gJY4gwPVQqEAKf4BtsQZNkC/A/wWKgcCZwObU0kyUSALsAAAAABJRU5ErkJggg==";
+
+/** Stable selector for automation on the Format Playground sample image. */
+export const PLAYGROUND_SAMPLE_IMAGE_TESTID = "playground-sample-image";
 
 /** Default rendered height for the Format Playground sample image block. */
 export const PLAYGROUND_SAMPLE_IMAGE_HEIGHT = 120;
+
+export function isPlaygroundSampleImageSrc(src: unknown): boolean {
+  return (
+    typeof src === "string" &&
+    (src === PLAYGROUND_SAMPLE_IMAGE_SRC ||
+      src === LEGACY_PLAYGROUND_SAMPLE_IMAGE_SRC)
+  );
+}
 
 export function isImageFile(file: File): boolean {
   return file.type.startsWith("image/");

@@ -4,9 +4,12 @@ import {
   getImageFilesFromDataTransfer,
   hasImageInDataTransfer,
   isImageFile,
+  isPlaygroundSampleImageSrc,
+  LEGACY_PLAYGROUND_SAMPLE_IMAGE_SRC,
   MAX_IMAGE_BYTES,
   PLAYGROUND_SAMPLE_IMAGE_HEIGHT,
   PLAYGROUND_SAMPLE_IMAGE_SRC,
+  PLAYGROUND_SAMPLE_IMAGE_TESTID,
   validateImageSize,
 } from "./imageEmbedUtils";
 
@@ -16,9 +19,24 @@ function makePngFile(size = 64, name = "test.png"): File {
 }
 
 describe("playground sample image constants", () => {
-  it("uses a data URL with a documented default height", () => {
+  it("uses a visible PNG data URL with stable test id and height", () => {
     expect(PLAYGROUND_SAMPLE_IMAGE_SRC).toMatch(/^data:image\/png;base64,/);
+    expect(PLAYGROUND_SAMPLE_IMAGE_SRC).not.toBe(
+      LEGACY_PLAYGROUND_SAMPLE_IMAGE_SRC,
+    );
+    expect(PLAYGROUND_SAMPLE_IMAGE_SRC.length).toBeGreaterThan(200);
+    expect(PLAYGROUND_SAMPLE_IMAGE_TESTID).toBe("playground-sample-image");
     expect(PLAYGROUND_SAMPLE_IMAGE_HEIGHT).toBe(120);
+  });
+
+  it("recognizes legacy and current playground sample sources", () => {
+    expect(isPlaygroundSampleImageSrc(PLAYGROUND_SAMPLE_IMAGE_SRC)).toBe(true);
+    expect(isPlaygroundSampleImageSrc(LEGACY_PLAYGROUND_SAMPLE_IMAGE_SRC)).toBe(
+      true,
+    );
+    expect(isPlaygroundSampleImageSrc("data:image/png;base64,other")).toBe(
+      false,
+    );
   });
 });
 

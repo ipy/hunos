@@ -231,6 +231,15 @@ export function TiptapEditor({
               },
               parseHTML: (el) => el.getAttribute("data-sketch"),
             },
+            "data-testid": {
+              default: null,
+              renderHTML: (attrs) => {
+                const testId = attrs["data-testid"];
+                if (!testId) return {};
+                return { "data-testid": testId };
+              },
+              parseHTML: (el) => el.getAttribute("data-testid"),
+            },
           };
         },
       }).configure({

@@ -72,10 +72,11 @@ export const SketchResize = Extension.create({
             },
             touchstart(view, event) {
               const target = event.target as HTMLElement;
-              if (!target.classList.contains("sketch-resize-handle"))
-                return false;
-              const touch = event.touches[0];
-              return handleDragStart(view, event, touch.clientY);
+              if (target.classList.contains("sketch-resize-handle")) {
+                const touch = event.touches[0];
+                return handleDragStart(view, event, touch.clientY);
+              }
+              return handleBlockImageMousedown(view, event);
             },
           },
         },

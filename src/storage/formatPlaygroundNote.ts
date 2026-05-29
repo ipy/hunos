@@ -3,14 +3,16 @@ import { graphEngine } from "@/graph/graphEngine";
 import { useNoteStore } from "@/store/noteStore";
 import { extractPlainTextFromTiptap } from "@/graph/linkExtractor";
 import {
+  isPlaygroundSampleImageSrc,
   PLAYGROUND_SAMPLE_IMAGE_HEIGHT,
   PLAYGROUND_SAMPLE_IMAGE_SRC,
+  PLAYGROUND_SAMPLE_IMAGE_TESTID,
 } from "@/components/editor/imageEmbedUtils";
 import type { Locale } from "@/types/settings";
 
 type PlaygroundLocale = "en" | "zh";
 
-export const PLAYGROUND_CONTENT_VERSION = 17;
+export const PLAYGROUND_CONTENT_VERSION = 18;
 
 export const FORMAT_PLAYGROUND_TITLES: readonly string[] = [
   "Format Playground",
@@ -324,6 +326,7 @@ export function buildPlaygroundContent(locale: Locale) {
           src: PLAYGROUND_SAMPLE_IMAGE_SRC,
           alt: s.imageSampleAlt,
           height: PLAYGROUND_SAMPLE_IMAGE_HEIGHT,
+          "data-testid": PLAYGROUND_SAMPLE_IMAGE_TESTID,
         },
       },
 
@@ -466,8 +469,26 @@ function findPlaygroundSeedEndIndex(nodes: PlaygroundDocNode[]): number {
 function findPlaygroundSampleImageIndex(nodes: PlaygroundDocNode[]): number {
   return nodes.findIndex(
     (node) =>
-      node.type === "image" && node.attrs?.src === PLAYGROUND_SAMPLE_IMAGE_SRC,
+      node.type === "image" && isPlaygroundSampleImageSrc(node.attrs?.src),
   );
+}
+
+function migratePlaygroundSampleImageNode(
+  imageNode: PlaygroundDocNode,
+): PlaygroundDocNode | null {
+  if (imageNode.type !== "image" || !isPlaygroundSampleImageSrc(imageNode.attrs?.src)) {
+    return null;
+  }
+  const height = imageNode.attrs?.height;
+  return {
+    ...imageNode,
+    attrs: {
+      ...imageNode.attrs,
+      src: PLAYGROUND_SAMPLE_IMAGE_SRC,
+      "data-testid": PLAYGROUND_SAMPLE_IMAGE_TESTID,
+      ...(height == null ? { height: PLAYGROUND_SAMPLE_IMAGE_HEIGHT } : {}),
+    },
+  };
 }
 
 function readPlaygroundSampleImageHeight(
@@ -594,6 +615,7 @@ export function migratePlaygroundContentIfStale(
             src: PLAYGROUND_SAMPLE_IMAGE_SRC,
             alt: s.imageSampleAlt,
             height: PLAYGROUND_SAMPLE_IMAGE_HEIGHT,
+            "data-testid": PLAYGROUND_SAMPLE_IMAGE_TESTID,
           },
         },
       );
@@ -607,18 +629,11 @@ export function migratePlaygroundContentIfStale(
     }
     if (headingText(node) === s.sectionImages) {
       const imageNode = contentNodes[i + 2];
-      if (
-        imageNode?.type === "image" &&
-        imageNode.attrs?.src === PLAYGROUND_SAMPLE_IMAGE_SRC &&
-        imageNode.attrs?.height == null
-      ) {
-        contentNodes[i + 2] = {
-          ...imageNode,
-          attrs: {
-            ...imageNode.attrs,
-            height: PLAYGROUND_SAMPLE_IMAGE_HEIGHT,
-          },
-        };
+      const migratedSample = imageNode
+        ? migratePlaygroundSampleImageNode(imageNode)
+        : null;
+      if (migratedSample) {
+        contentNodes[i + 2] = migratedSample;
       }
     }
     if (headingText(node) === s.sectionTry) {
@@ -676,6 +691,13 @@ export function migratePlaygroundContentIfStale(
           break;
         }
       }
+    }
+  }
+
+  for (let i = 0; i < contentNodes.length; i += 1) {
+    const migratedSample = migratePlaygroundSampleImageNode(contentNodes[i]);
+    if (migratedSample) {
+      contentNodes[i] = migratedSample;
     }
   }
 
