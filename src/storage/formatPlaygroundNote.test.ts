@@ -23,6 +23,19 @@ vi.mock("@/graph/graphEngine", () => ({
   },
 }));
 
+function findTryHintText(content: unknown): string {
+  const doc = content as {
+    content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+  };
+  const trySectionIndex = doc.content.findIndex(
+    (node) =>
+      node.type === "heading" &&
+      (node.content?.[0]?.text === "Try Your Own" ||
+        node.content?.[0]?.text === "自由试炼"),
+  );
+  return doc.content[trySectionIndex + 1]?.content?.[0]?.text ?? "";
+}
+
 describe("isFormatPlaygroundNote", () => {
   it("matches canonical playground titles", () => {
     expect(isFormatPlaygroundNote("Format Playground")).toBe(true);
@@ -584,6 +597,102 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(tryHintNode?.content?.[0]?.text).toContain(
       "Enter or Backspace at line start on empty blockquote lines to exit the quote",
     );
+  });
+
+  it("updates tryHint to v16 for stale v15 playground notes", () => {
+    const staleEn = buildPlaygroundContent("en") as {
+      type: "doc";
+      attrs?: { playgroundContentVersion?: number };
+      content: unknown[];
+    };
+    staleEn.attrs = { playgroundContentVersion: 15 };
+    staleEn.content = [
+      ...(staleEn.content as unknown[]),
+      {
+        type: "paragraph",
+        content: [{ type: "text", text: "user-added block after seed" }],
+      },
+    ];
+
+    const migratedEn = migratePlaygroundContentIfStale(
+      JSON.stringify(staleEn),
+      "en",
+    );
+    expect(migratedEn).not.toBeNull();
+
+    const parsedEn = JSON.parse(migratedEn!) as {
+      attrs?: { playgroundContentVersion?: number };
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    expect(parsedEn.attrs?.playgroundContentVersion).toBe(16);
+
+    const enTryIndex = parsedEn.content.findIndex(
+      (node) =>
+        node.type === "heading" && node.content?.[0]?.text === "Try Your Own",
+    );
+    const enTryHint = parsedEn.content[enTryIndex + 1]?.content?.[0]?.text;
+    expect(enTryHint).toContain(
+      "multi-line GFM pipe tables paste as native tables",
+    );
+    expect(enTryHint).toContain(
+      "hide completed tasks in Settings or the info panel",
+    );
+    expect(enTryHint).toContain("including when the checkbox is focused");
+    expect(enTryHint).toContain("invalid URLs show an error toast");
+    expect(enTryHint).toContain(
+      "Enter or Backspace at line start on empty blockquote lines to exit the quote",
+    );
+    expect(
+      parsedEn.content[parsedEn.content.length - 1]?.content?.[0]?.text,
+    ).toBe("user-added block after seed");
+
+    const staleZh = buildPlaygroundContent("zh") as {
+      type: "doc";
+      attrs?: { playgroundContentVersion?: number };
+      content: unknown[];
+    };
+    staleZh.attrs = { playgroundContentVersion: 15 };
+    const migratedZh = migratePlaygroundContentIfStale(
+      JSON.stringify(staleZh),
+      "zh",
+    );
+    expect(migratedZh).not.toBeNull();
+
+    const parsedZh = JSON.parse(migratedZh!) as {
+      attrs?: { playgroundContentVersion?: number };
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    expect(parsedZh.attrs?.playgroundContentVersion).toBe(16);
+
+    const zhTryIndex = parsedZh.content.findIndex(
+      (node) =>
+        node.type === "heading" && node.content?.[0]?.text === "自由试炼",
+    );
+    const zhTryHint = parsedZh.content[zhTryIndex + 1]?.content?.[0]?.text;
+    expect(zhTryHint).toContain("粘贴");
+    expect(zhTryHint).toContain("表格");
+    expect(zhTryHint).toContain("管道");
+    expect(zhTryHint).toContain("隐藏已完成任务");
+    expect(zhTryHint).toContain("设置");
+    expect(zhTryHint).toContain("信息面板");
+    expect(zhTryHint).toContain("复选框获得焦点");
+    expect(zhTryHint).toContain("错误提示");
+    expect(zhTryHint).toContain("空引用行按 Enter 或行首 Backspace 退出引用");
+  });
+
+  it("seeds v16 tryHint topics in fresh en and zh content", () => {
+    const enTryHint = findTryHintText(buildPlaygroundContent("en"));
+    expect(enTryHint).toContain("GFM pipe tables");
+    expect(enTryHint).toContain("hide completed tasks");
+    expect(enTryHint).toContain("checkbox is focused");
+    expect(enTryHint).toContain("error toast");
+
+    const zhTryHint = findTryHintText(buildPlaygroundContent("zh"));
+    expect(zhTryHint).toContain("粘贴");
+    expect(zhTryHint).toContain("管道表格");
+    expect(zhTryHint).toContain("隐藏已完成任务");
+    expect(zhTryHint).toContain("复选框获得焦点");
+    expect(zhTryHint).toContain("错误提示");
   });
 
   it("leaves reordered task lists alone when content version is current", () => {
