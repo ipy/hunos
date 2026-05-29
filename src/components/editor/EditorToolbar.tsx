@@ -1,10 +1,14 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useTheme } from '@/theme/ThemeContext';
-import { useAdaptiveLayout } from '@/hooks/useAdaptiveLayout';
-import { Icon } from '@/components/common/Icon';
-import { SketchPad } from './SketchPad';
-import { INLINE_FORMAT_ITEMS, type InlineFormatItem } from './inlineFormatActions';
-import type { Editor } from '@tiptap/react';
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useTheme } from "@/theme/ThemeContext";
+import { useAdaptiveLayout } from "@/hooks/useAdaptiveLayout";
+import { Icon } from "@/components/common/Icon";
+import { SketchPad } from "./SketchPad";
+import {
+  INLINE_FORMAT_ITEMS,
+  type InlineFormatItem,
+} from "./inlineFormatActions";
+import type { Editor } from "@tiptap/react";
+import { insertImageFromToolbarPicker } from "./imageInsertUtils";
 
 interface EditorToolbarProps {
   editor: Editor | null;
@@ -13,72 +17,85 @@ interface EditorToolbarProps {
 type ToolbarButton = InlineFormatItem;
 
 const BLOCK_ITEMS: ToolbarButton[] = [
-  { icon: 'heading1', label: 'H1', action: (e) => e.chain().focus().toggleHeading({ level: 1 }).run(), isActive: (e) => e.isActive('heading', { level: 1 }) },
-  { icon: 'heading2', label: 'H2', action: (e) => e.chain().focus().toggleHeading({ level: 2 }).run(), isActive: (e) => e.isActive('heading', { level: 2 }) },
-  { icon: 'heading3', label: 'H3', action: (e) => e.chain().focus().toggleHeading({ level: 3 }).run(), isActive: (e) => e.isActive('heading', { level: 3 }) },
-  { icon: 'list', label: '•', action: (e) => e.chain().focus().toggleBulletList().run(), isActive: (e) => e.isActive('bulletList') },
-  { icon: 'orderedList', label: '1.', action: (e) => e.chain().focus().toggleOrderedList().run(), isActive: (e) => e.isActive('orderedList') },
-  { icon: 'taskList', label: '☑', action: (e) => e.chain().focus().toggleTaskList().run(), isActive: (e) => e.isActive('taskList') },
-  { icon: 'quote', label: '❝', action: (e) => e.chain().focus().toggleBlockquote().run(), isActive: (e) => e.isActive('blockquote') },
-  { icon: 'code', label: '</>', action: (e) => e.chain().focus().toggleCodeBlock().run(), isActive: (e) => e.isActive('codeBlock') },
-  { icon: 'divider', label: '—', action: (e) => e.chain().focus().setHorizontalRule().run() },
+  {
+    icon: "heading1",
+    label: "H1",
+    action: (e) => e.chain().focus().toggleHeading({ level: 1 }).run(),
+    isActive: (e) => e.isActive("heading", { level: 1 }),
+  },
+  {
+    icon: "heading2",
+    label: "H2",
+    action: (e) => e.chain().focus().toggleHeading({ level: 2 }).run(),
+    isActive: (e) => e.isActive("heading", { level: 2 }),
+  },
+  {
+    icon: "heading3",
+    label: "H3",
+    action: (e) => e.chain().focus().toggleHeading({ level: 3 }).run(),
+    isActive: (e) => e.isActive("heading", { level: 3 }),
+  },
+  {
+    icon: "list",
+    label: "•",
+    action: (e) => e.chain().focus().toggleBulletList().run(),
+    isActive: (e) => e.isActive("bulletList"),
+  },
+  {
+    icon: "orderedList",
+    label: "1.",
+    action: (e) => e.chain().focus().toggleOrderedList().run(),
+    isActive: (e) => e.isActive("orderedList"),
+  },
+  {
+    icon: "taskList",
+    label: "☑",
+    action: (e) => e.chain().focus().toggleTaskList().run(),
+    isActive: (e) => e.isActive("taskList"),
+  },
+  {
+    icon: "quote",
+    label: "❝",
+    action: (e) => e.chain().focus().toggleBlockquote().run(),
+    isActive: (e) => e.isActive("blockquote"),
+  },
+  {
+    icon: "code",
+    label: "</>",
+    action: (e) => e.chain().focus().toggleCodeBlock().run(),
+    isActive: (e) => e.isActive("codeBlock"),
+  },
+  {
+    icon: "divider",
+    label: "—",
+    action: (e) => e.chain().focus().setHorizontalRule().run(),
+  },
 ];
-
-function pickImageFile(): Promise<string | null> {
-  return new Promise((resolve) => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = () => {
-      const file = input.files?.[0];
-      if (!file) { resolve(null); return; }
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.readAsDataURL(file);
-    };
-    input.click();
-  });
-}
-
-function capturePhoto(): Promise<string | null> {
-  return new Promise((resolve) => {
-    try {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'image/*';
-      try { input.capture = 'environment'; } catch { /* capture not supported */ }
-      input.onchange = () => {
-        const file = input.files?.[0];
-        if (!file) { resolve(null); return; }
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      };
-      input.click();
-    } catch {
-      resolve(null);
-    }
-  });
-}
 
 const INSERT_ITEMS_BASE: ToolbarButton[] = [
   {
-    icon: 'image', label: '🖼',
-    action: async (e) => {
-      const src = await pickImageFile();
-      if (src) e.chain().focus().setImage({ src }).run();
+    icon: "image",
+    label: "🖼",
+    action: (e) => {
+      void insertImageFromToolbarPicker(e);
     },
   },
   {
-    icon: 'camera', label: '📷',
-    action: async (e) => {
-      const src = await capturePhoto();
-      if (src) e.chain().focus().setImage({ src }).run();
+    icon: "camera",
+    label: "📷",
+    action: (e) => {
+      void insertImageFromToolbarPicker(e, { capture: "environment" });
     },
   },
   {
-    icon: 'table', label: '⊞',
-    action: (e) => e.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+    icon: "table",
+    label: "⊞",
+    action: (e) =>
+      e
+        .chain()
+        .focus()
+        .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+        .run(),
   },
 ];
 
@@ -91,7 +108,9 @@ interface SketchState {
 export function EditorToolbar({ editor }: EditorToolbarProps) {
   const theme = useTheme();
   const layout = useAdaptiveLayout();
-  const [activeTab, setActiveTab] = useState<'format' | 'blocks' | 'insert'>('format');
+  const [activeTab, setActiveTab] = useState<"format" | "blocks" | "insert">(
+    "format",
+  );
   const [sketchState, setSketchState] = useState<SketchState | null>(null);
   const [, setTick] = useState(0);
   const rafRef = useRef<number>(0);
@@ -101,30 +120,37 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
     if (!editor) return;
     const onUpdate = () => {
       cancelAnimationFrame(rafRef.current);
-      rafRef.current = requestAnimationFrame(() => setTick(t => t + 1));
+      rafRef.current = requestAnimationFrame(() => setTick((t) => t + 1));
     };
-    editor.on('transaction', onUpdate);
+    editor.on("transaction", onUpdate);
     return () => {
-      editor.off('transaction', onUpdate);
+      editor.off("transaction", onUpdate);
       cancelAnimationFrame(rafRef.current);
     };
   }, [editor]);
 
-  const handleAction = useCallback((action: (e: Editor) => void) => {
-    if (!editor) return;
-    action(editor);
-    setTick(t => t + 1);
-  }, [editor]);
+  const handleAction = useCallback(
+    (action: (e: Editor) => void) => {
+      if (!editor) return;
+      action(editor);
+      setTick((t) => t + 1);
+    },
+    [editor],
+  );
 
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (detail?.src && detail?.pos !== undefined) {
-        setSketchState({ editing: true, initialImage: detail.src, nodePos: detail.pos });
+        setSketchState({
+          editing: true,
+          initialImage: detail.src,
+          nodePos: detail.pos,
+        });
       }
     };
-    window.addEventListener('hunos-edit-sketch', handler);
-    return () => window.removeEventListener('hunos-edit-sketch', handler);
+    window.addEventListener("hunos-edit-sketch", handler);
+    return () => window.removeEventListener("hunos-edit-sketch", handler);
   }, []);
 
   if (!editor) return null;
@@ -132,7 +158,8 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
   const INSERT_ITEMS: ToolbarButton[] = [
     ...INSERT_ITEMS_BASE,
     {
-      icon: 'pencil', label: '✏',
+      icon: "pencil",
+      label: "✏",
       action: () => {
         setSketchState({ editing: false });
       },
@@ -140,7 +167,10 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
   ];
 
   const handleSketchSave = (dataUrl: string) => {
-    if (!editor) { setSketchState(null); return; }
+    if (!editor) {
+      setSketchState(null);
+      return;
+    }
     if (sketchState?.editing && sketchState.nodePos !== undefined) {
       const { tr } = editor.state;
       const node = editor.state.doc.nodeAt(sketchState.nodePos);
@@ -148,7 +178,7 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
         tr.setNodeMarkup(sketchState.nodePos, undefined, {
           ...node.attrs,
           src: dataUrl,
-          'data-sketch': 'true',
+          "data-sketch": "true",
         });
         editor.view.dispatch(tr);
       }
@@ -156,12 +186,12 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
       const { state } = editor;
       const { selection } = state;
       const selectedNode = state.doc.nodeAt(selection.from);
-      if (selectedNode && selectedNode.type.name === 'image') {
+      if (selectedNode && selectedNode.type.name === "image") {
         const insertPos = selection.from + selectedNode.nodeSize;
         const { tr } = state;
         const imgNode = state.schema.nodes.image.create({
           src: dataUrl,
-          'data-sketch': 'true',
+          "data-sketch": "true",
         });
         tr.insert(insertPos, imgNode);
         editor.view.dispatch(tr);
@@ -172,9 +202,12 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
           const { $from } = s.selection;
           const pos = $from.pos - 1;
           const node = s.doc.nodeAt(pos);
-          if (node && node.type.name === 'image') {
+          if (node && node.type.name === "image") {
             const { tr } = s;
-            tr.setNodeMarkup(pos, undefined, { ...node.attrs, 'data-sketch': 'true' });
+            tr.setNodeMarkup(pos, undefined, {
+              ...node.attrs,
+              "data-sketch": "true",
+            });
             editor.view.dispatch(tr);
           }
         });
@@ -183,140 +216,211 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
     setSketchState(null);
   };
 
-  const isMobile = layout === 'mobile';
+  const isMobile = layout === "mobile";
   const items = isMobile
-    ? (activeTab === 'format' ? INLINE_FORMAT_ITEMS : activeTab === 'blocks' ? BLOCK_ITEMS : INSERT_ITEMS)
+    ? activeTab === "format"
+      ? INLINE_FORMAT_ITEMS
+      : activeTab === "blocks"
+        ? BLOCK_ITEMS
+        : INSERT_ITEMS
     : [...INLINE_FORMAT_ITEMS, ...BLOCK_ITEMS, ...INSERT_ITEMS];
 
   return (
     <>
-    {sketchState && (
-      <SketchPad
-        onSave={handleSketchSave}
-        onCancel={() => setSketchState(null)}
-        initialImage={sketchState.initialImage}
-      />
-    )}
-    <div style={{
-      borderTop: `1px solid ${theme.colors.borderLight}`,
-      flexShrink: 0,
-      backgroundColor: theme.isDark ? 'rgba(28,28,30,0.95)' : 'rgba(255,255,255,0.95)',
-      backdropFilter: 'blur(12px)',
-      WebkitBackdropFilter: 'blur(12px)',
-    }}>
-      {isMobile && (
-        <div style={{
-          display: 'flex',
-          borderBottom: `1px solid ${theme.colors.borderLight}`,
-          padding: '0 8px',
-        }}>
-          <button
-            onMouseDown={(e) => { e.preventDefault(); setActiveTab('format'); }}
-            style={{
-              flex: 1, padding: '8px 0', border: 'none', cursor: 'pointer',
-              background: 'none', fontSize: 12, fontWeight: '600',
-              color: activeTab === 'format' ? theme.colors.accent : theme.colors.textTertiary,
-              borderBottom: activeTab === 'format' ? `2px solid ${theme.colors.accent}` : '2px solid transparent',
-              touchAction: 'manipulation',
-              transition: 'color 0.15s ease, border-color 0.15s ease',
-            }}
-          >
-            Aa
-          </button>
-          <button
-            onMouseDown={(e) => { e.preventDefault(); setActiveTab('blocks'); }}
-            style={{
-              flex: 1, padding: '8px 0', border: 'none', cursor: 'pointer',
-              background: 'none', fontSize: 12, fontWeight: '600',
-              color: activeTab === 'blocks' ? theme.colors.accent : theme.colors.textTertiary,
-              borderBottom: activeTab === 'blocks' ? `2px solid ${theme.colors.accent}` : '2px solid transparent',
-              touchAction: 'manipulation',
-              transition: 'color 0.15s ease, border-color 0.15s ease',
-            }}
-          >
-            ¶
-          </button>
-          <button
-            onMouseDown={(e) => { e.preventDefault(); setActiveTab('insert'); }}
-            style={{
-              flex: 1, padding: '8px 0', border: 'none', cursor: 'pointer',
-              background: 'none', fontSize: 12, fontWeight: '600',
-              color: activeTab === 'insert' ? theme.colors.accent : theme.colors.textTertiary,
-              borderBottom: activeTab === 'insert' ? `2px solid ${theme.colors.accent}` : '2px solid transparent',
-              touchAction: 'manipulation',
-              transition: 'color 0.15s ease, border-color 0.15s ease',
-            }}
-          >
-            +
-          </button>
-          <button
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => editor.commands.blur()}
-            style={{
-              padding: '8px 12px', border: 'none', cursor: 'pointer',
-              background: 'none', fontSize: 12, fontWeight: '500',
-              color: theme.colors.textTertiary,
-              touchAction: 'manipulation',
-            }}
-          >
-            ⌨↓
-          </button>
-        </div>
+      {sketchState && (
+        <SketchPad
+          onSave={handleSketchSave}
+          onCancel={() => setSketchState(null)}
+          initialImage={sketchState.initialImage}
+        />
       )}
-      <div style={{
-        display: 'flex',
-        overflowX: 'auto',
-        padding: '6px 8px',
-        gap: 3,
-        WebkitOverflowScrolling: 'touch',
-        scrollbarWidth: 'none',
-      }}>
-        {items.map((item, idx) => {
-          const active = item.isActive?.(editor) ?? false;
-          return (
+      <div
+        style={{
+          borderTop: `1px solid ${theme.colors.borderLight}`,
+          flexShrink: 0,
+          backgroundColor: theme.isDark
+            ? "rgba(28,28,30,0.95)"
+            : "rgba(255,255,255,0.95)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+        }}
+      >
+        {isMobile && (
+          <div
+            style={{
+              display: "flex",
+              borderBottom: `1px solid ${theme.colors.borderLight}`,
+              padding: "0 8px",
+            }}
+          >
             <button
-              key={`${item.icon}-${idx}`}
               onMouseDown={(e) => {
                 e.preventDefault();
-                if (touchHandledRef.current) { touchHandledRef.current = false; return; }
-                handleAction(item.action);
-              }}
-              onTouchEnd={(e) => {
-                e.preventDefault();
-                touchHandledRef.current = true;
-                handleAction(item.action);
+                setActiveTab("format");
               }}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 36,
-                height: 36,
-                minWidth: 36,
-                borderRadius: 8,
-                border: 'none',
-                cursor: 'pointer',
-                backgroundColor: active ? theme.colors.accentLight : 'transparent',
-                touchAction: 'manipulation',
-                transition: 'background-color 0.15s ease, transform 0.1s ease',
-              }}
-              onMouseEnter={(e) => {
-                if (!active) e.currentTarget.style.backgroundColor = theme.colors.surfaceHover;
-              }}
-              onMouseLeave={(e) => {
-                if (!active) e.currentTarget.style.backgroundColor = active ? theme.colors.accentLight : 'transparent';
+                flex: 1,
+                padding: "8px 0",
+                border: "none",
+                cursor: "pointer",
+                background: "none",
+                fontSize: 12,
+                fontWeight: "600",
+                color:
+                  activeTab === "format"
+                    ? theme.colors.accent
+                    : theme.colors.textTertiary,
+                borderBottom:
+                  activeTab === "format"
+                    ? `2px solid ${theme.colors.accent}`
+                    : "2px solid transparent",
+                touchAction: "manipulation",
+                transition: "color 0.15s ease, border-color 0.15s ease",
               }}
             >
-              <Icon
-                name={item.icon}
-                size={17}
-                color={active ? theme.colors.accent : theme.colors.textSecondary}
-              />
+              Aa
             </button>
-          );
-        })}
+            <button
+              onMouseDown={(e) => {
+                e.preventDefault();
+                setActiveTab("blocks");
+              }}
+              style={{
+                flex: 1,
+                padding: "8px 0",
+                border: "none",
+                cursor: "pointer",
+                background: "none",
+                fontSize: 12,
+                fontWeight: "600",
+                color:
+                  activeTab === "blocks"
+                    ? theme.colors.accent
+                    : theme.colors.textTertiary,
+                borderBottom:
+                  activeTab === "blocks"
+                    ? `2px solid ${theme.colors.accent}`
+                    : "2px solid transparent",
+                touchAction: "manipulation",
+                transition: "color 0.15s ease, border-color 0.15s ease",
+              }}
+            >
+              ¶
+            </button>
+            <button
+              onMouseDown={(e) => {
+                e.preventDefault();
+                setActiveTab("insert");
+              }}
+              style={{
+                flex: 1,
+                padding: "8px 0",
+                border: "none",
+                cursor: "pointer",
+                background: "none",
+                fontSize: 12,
+                fontWeight: "600",
+                color:
+                  activeTab === "insert"
+                    ? theme.colors.accent
+                    : theme.colors.textTertiary,
+                borderBottom:
+                  activeTab === "insert"
+                    ? `2px solid ${theme.colors.accent}`
+                    : "2px solid transparent",
+                touchAction: "manipulation",
+                transition: "color 0.15s ease, border-color 0.15s ease",
+              }}
+            >
+              +
+            </button>
+            <button
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => editor.commands.blur()}
+              style={{
+                padding: "8px 12px",
+                border: "none",
+                cursor: "pointer",
+                background: "none",
+                fontSize: 12,
+                fontWeight: "500",
+                color: theme.colors.textTertiary,
+                touchAction: "manipulation",
+              }}
+            >
+              ⌨↓
+            </button>
+          </div>
+        )}
+        <div
+          style={{
+            display: "flex",
+            overflowX: "auto",
+            padding: "6px 8px",
+            gap: 3,
+            WebkitOverflowScrolling: "touch",
+            scrollbarWidth: "none",
+          }}
+        >
+          {items.map((item, idx) => {
+            const active = item.isActive?.(editor) ?? false;
+            return (
+              <button
+                key={`${item.icon}-${idx}`}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  if (touchHandledRef.current) {
+                    touchHandledRef.current = false;
+                    return;
+                  }
+                  handleAction(item.action);
+                }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  touchHandledRef.current = true;
+                  handleAction(item.action);
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 36,
+                  height: 36,
+                  minWidth: 36,
+                  borderRadius: 8,
+                  border: "none",
+                  cursor: "pointer",
+                  backgroundColor: active
+                    ? theme.colors.accentLight
+                    : "transparent",
+                  touchAction: "manipulation",
+                  transition:
+                    "background-color 0.15s ease, transform 0.1s ease",
+                }}
+                onMouseEnter={(e) => {
+                  if (!active)
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.surfaceHover;
+                }}
+                onMouseLeave={(e) => {
+                  if (!active)
+                    e.currentTarget.style.backgroundColor = active
+                      ? theme.colors.accentLight
+                      : "transparent";
+                }}
+              >
+                <Icon
+                  name={item.icon}
+                  size={17}
+                  color={
+                    active ? theme.colors.accent : theme.colors.textSecondary
+                  }
+                />
+              </button>
+            );
+          })}
+        </div>
       </div>
-    </div>
     </>
   );
 }

@@ -1,70 +1,14 @@
 import { Extension } from "@tiptap/core";
 import { Plugin } from "@tiptap/pm/state";
-import i18n from "@/i18n";
-import { useUIStore } from "@/store/uiStore";
 import {
   getImageFileFromClipboard,
   getImageFilesFromDataTransfer,
   hasImageInDataTransfer,
-  readImageFileAsDataUrl,
-  validateImageSize,
 } from "./imageEmbedUtils";
-
-async function insertImageAtCursor(
-  editor: {
-    chain: () => {
-      focus: () => {
-        setImage: (attrs: { src: string }) => { run: () => boolean };
-      };
-    };
-  },
-  file: File,
-): Promise<boolean> {
-  if (!validateImageSize(file.size)) {
-    useUIStore.getState().showToast(i18n.t("editor.image.tooLarge"), "error");
-    return false;
-  }
-
-  const src = await readImageFileAsDataUrl(file);
-  if (!src) {
-    return false;
-  }
-
-  editor.chain().focus().setImage({ src }).run();
-  return true;
-}
-
-async function insertImageAtPosition(
-  editor: {
-    chain: () => {
-      focus: () => {
-        insertContentAt: (
-          pos: number,
-          content: { type: string; attrs: { src: string } },
-        ) => { run: () => boolean };
-      };
-    };
-  },
-  file: File,
-  pos: number,
-): Promise<boolean> {
-  if (!validateImageSize(file.size)) {
-    useUIStore.getState().showToast(i18n.t("editor.image.tooLarge"), "error");
-    return false;
-  }
-
-  const src = await readImageFileAsDataUrl(file);
-  if (!src) {
-    return false;
-  }
-
-  editor
-    .chain()
-    .focus()
-    .insertContentAt(pos, { type: "image", attrs: { src } })
-    .run();
-  return true;
-}
+import {
+  insertImageFromFileAtCursor,
+  insertImageFromFileAtPosition,
+} from "./imageInsertUtils";
 
 export const ImagePasteDrop = Extension.create({
   name: "imagePasteDrop",
@@ -88,7 +32,7 @@ export const ImagePasteDrop = Extension.create({
             }
 
             event.preventDefault();
-            void insertImageAtCursor(editor, imageFile);
+            void insertImageFromFileAtCursor(editor, imageFile);
             return true;
           },
           handleDrop: (view, event, _slice, moved) => {
@@ -112,7 +56,7 @@ export const ImagePasteDrop = Extension.create({
             const pos =
               view.posAtCoords(coords)?.pos ?? view.state.selection.from;
 
-            void insertImageAtPosition(editor, files[0], pos);
+            void insertImageFromFileAtPosition(editor, files[0], pos);
             return true;
           },
           handleDOMEvents: {
