@@ -141,23 +141,24 @@ export type ParsedPipeTable = {
   dataRows: string[][];
 };
 
-/** Parse multi-line GFM pipe table text; null when the clipboard is not a pipe table. */
-export function parsePipeTableText(text: string): ParsedPipeTable | null {
-  const lines = text
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-
-  if (lines.length < 2) {
-    return null;
-  }
-
-  const headerCells = parsePipeTableRow(lines[0]!);
+function parsePipeTableBlockAt(
+  lines: string[],
+  startIndex: number,
+): ParsedPipeTable | null {
+  const headerCells = parsePipeTableRow(lines[startIndex]!);
   if (!headerCells || isTableSeparatorRow(headerCells)) {
     return null;
   }
 
-  const separatorCells = parsePipeTableRow(lines[1]!);
+  let separatorIndex = startIndex + 1;
+  while (separatorIndex < lines.length && lines[separatorIndex]!.length === 0) {
+    separatorIndex += 1;
+  }
+  if (separatorIndex >= lines.length) {
+    return null;
+  }
+
+  const separatorCells = parsePipeTableRow(lines[separatorIndex]!);
   if (!separatorCells || !isTableSeparatorRow(separatorCells)) {
     return null;
   }
@@ -167,10 +168,15 @@ export function parsePipeTableText(text: string): ParsedPipeTable | null {
   }
 
   const dataRows: string[][] = [];
-  for (let i = 2; i < lines.length; i += 1) {
-    const cells = parsePipeTableRow(lines[i]!);
+  for (let i = separatorIndex + 1; i < lines.length; i += 1) {
+    const line = lines[i]!;
+    if (line.length === 0) {
+      continue;
+    }
+
+    const cells = parsePipeTableRow(line);
     if (!cells || isTableSeparatorRow(cells)) {
-      return null;
+      break;
     }
     if (cells.length !== headerCells.length) {
       return null;
@@ -179,6 +185,24 @@ export function parsePipeTableText(text: string): ParsedPipeTable | null {
   }
 
   return { headerCells, dataRows };
+}
+
+/** Parse multi-line GFM pipe table text; null when the clipboard is not a pipe table. */
+export function parsePipeTableText(text: string): ParsedPipeTable | null {
+  const lines = text.split(/\r?\n/).map((line) => line.trim());
+
+  for (let i = 0; i < lines.length; i += 1) {
+    if (lines[i]!.length === 0) {
+      continue;
+    }
+
+    const parsed = parsePipeTableBlockAt(lines, i);
+    if (parsed) {
+      return parsed;
+    }
+  }
+
+  return null;
 }
 
 function createTableDataCell(schema: Schema, value: string): ProseMirrorNode {

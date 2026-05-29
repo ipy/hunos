@@ -93,11 +93,58 @@ describe("parsePipeTableText", () => {
   it("returns null for non-table text", () => {
     expect(parsePipeTableText("plain text")).toBeNull();
     expect(parsePipeTableText("| Alpha | Beta |")).toBeNull();
-    expect(
-      parsePipeTableText(
-        ["intro", "| Alpha | Beta |", "| --- | --- |"].join("\n"),
-      ),
-    ).toBeNull();
+  });
+
+  it("finds the first pipe table after intro text", () => {
+    const text = [
+      "表格示例：",
+      "| 名称 | 类型 |",
+      "| --- | --- |",
+      "| 粗体 | 样式 |",
+      "| 列表 | 块 |",
+    ].join("\n");
+
+    expect(parsePipeTableText(text)).toEqual({
+      headerCells: ["名称", "类型"],
+      dataRows: [
+        ["粗体", "样式"],
+        ["列表", "块"],
+      ],
+    });
+  });
+
+  it("finds a pipe table after leading blank lines", () => {
+    const text = [
+      "",
+      "",
+      "| 名称 | 类型 |",
+      "| --- | --- |",
+      "| 粗体 | 样式 |",
+      "| 列表 | 块 |",
+    ].join("\n");
+
+    expect(parsePipeTableText(text)).toEqual({
+      headerCells: ["名称", "类型"],
+      dataRows: [
+        ["粗体", "样式"],
+        ["列表", "块"],
+      ],
+    });
+  });
+
+  it("stops at trailing non-table lines after a valid block", () => {
+    const text = [
+      "caption",
+      "| Alpha | Beta |",
+      "| --- | --- |",
+      "| one | two |",
+      "footnote",
+    ].join("\n");
+
+    expect(parsePipeTableText(text)).toEqual({
+      headerCells: ["Alpha", "Beta"],
+      dataRows: [["one", "two"]],
+    });
   });
 
   it("returns null when column counts mismatch", () => {

@@ -2,11 +2,9 @@ import { describe, expect, it } from "vitest";
 import { Schema } from "@tiptap/pm/model";
 import { resolveMarkdownPasteAction } from "./markdownPasteUtils";
 
-const GFM_TABLE = [
-  "| 名称 | 类型 |",
-  "| --- | --- |",
-  "| 粗体 | 样式 |",
-].join("\n");
+const GFM_TABLE = ["| 名称 | 类型 |", "| --- | --- |", "| 粗体 | 样式 |"].join(
+  "\n",
+);
 
 describe("resolveMarkdownPasteAction", () => {
   const schema = new Schema({
@@ -49,9 +47,7 @@ describe("resolveMarkdownPasteAction", () => {
     const document = doc.create({}, [
       table.create({}, [
         tableRow.create({}, [
-          tableCell.create({}, [
-            paragraph.create({}, schema.text("cell")),
-          ]),
+          tableCell.create({}, [paragraph.create({}, schema.text("cell"))]),
         ]),
       ]),
     ]);
@@ -64,9 +60,7 @@ describe("resolveMarkdownPasteAction", () => {
   it("uses plain paste in table cells for GFM pipe tables", () => {
     const document = doc.create({}, [
       table.create({}, [
-        tableRow.create({}, [
-          tableCell.create({}, [paragraph.create()]),
-        ]),
+        tableRow.create({}, [tableCell.create({}, [paragraph.create()])]),
       ]),
     ]);
     const $from = document.resolve(4);
@@ -92,5 +86,26 @@ describe("resolveMarkdownPasteAction", () => {
     expect(resolveMarkdownPasteAction("**bold** and # heading", $from)).toEqual(
       { kind: "markdown" },
     );
+  });
+
+  it("inserts native tables from mixed intro plus pipe table text", () => {
+    const text = [
+      "表格示例：",
+      "| 名称 | 类型 |",
+      "| --- | --- |",
+      "| 粗体 | 样式 |",
+      "| 列表 | 块 |",
+    ].join("\n");
+    const document = doc.create({}, [paragraph.create()]);
+    const $from = document.resolve(1);
+    const action = resolveMarkdownPasteAction(text, $from);
+    expect(action.kind).toBe("table");
+    if (action.kind === "table") {
+      expect(action.parsed.headerCells).toEqual(["名称", "类型"]);
+      expect(action.parsed.dataRows).toEqual([
+        ["粗体", "样式"],
+        ["列表", "块"],
+      ]);
+    }
   });
 });
