@@ -3,13 +3,90 @@ import type {
   ResolvedPos,
   Schema,
 } from "@tiptap/pm/model";
-import { TextSelection, type Transaction } from "@tiptap/pm/state";
+import { EditorState, TextSelection, type Transaction } from "@tiptap/pm/state";
 
 const SEPARATOR_CELL_REGEX = /^:?-{3,}:?$/;
 
+/** GFM pipe row on Enter — capture group 1 is the row without trailing newline. */
+export const PIPE_TABLE_INPUT_REGEX = /^\s*(\|(?:[^|\n]+\|)+)\s*\n$/;
+
+export type PipeTableInputMatch = {
+  0: string;
+  1?: string;
+};
+
 /** Match a GFM pipe row ending with Enter (input-rule text includes trailing newline). */
 export function findPipeTableInputMatch(text: string): RegExpExecArray | null {
-  return /^\s*(\|(?:[^|\n]+\|)+)\s*\n$/.exec(text);
+  return PIPE_TABLE_INPUT_REGEX.exec(text);
+}
+
+/** Mutates `tr` when the pipe-table input rule applies; returns whether the doc changed. */
+export function applyPipeTableInputToTransaction(
+  state: EditorState,
+  tr: Transaction,
+  range: { from: number; to: number },
+  match: PipeTableInputMatch,
+): boolean {
+  const rawLine = match[1];
+  if (!rawLine) {
+    return false;
+  }
+  const cells = parsePipeTableRow(rawLine);
+  if (!cells) {
+    return false;
+  }
+
+  const $from = state.doc.resolve(range.from);
+  if (isBlockedForTableInput($from)) {
+    return false;
+  }
+
+  const { schema } = state;
+  const blockDepth = $from.depth;
+  const blockStart = $from.before(blockDepth);
+  const blockEnd = $from.after(blockDepth);
+  const blockIndex = $from.index(blockDepth - 1);
+  const parent = $from.node(blockDepth - 1);
+  const isSeparator = isTableSeparatorRow(cells);
+
+  if (isSeparator) {
+    if (blockIndex > 0) {
+      const prev = parent.child(blockIndex - 1);
+      if (prev.type.name === "paragraph") {
+        const prevCells = parsePipeTableRow(prev.textContent);
+        if (prevCells && !isTableSeparatorRow(prevCells)) {
+          const prevStart = blockStart - prev.nodeSize;
+          const table = createTableWithHeaderRow(schema, prevCells);
+          tr.replaceWith(prevStart, blockEnd, table);
+          setSelectionInTableCell(tr, prevStart, 1, 0);
+          return true;
+        }
+      }
+      if (prev.type.name === "table") {
+        tr.delete(blockStart, blockEnd);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  const table = createTableWithHeaderRow(schema, cells);
+  tr.replaceWith(blockStart, blockEnd, table);
+  setSelectionInTableCell(tr, blockStart, 1, 0);
+  return true;
+}
+
+/** Apply pipe-table input rule; returns updated state or null when the rule does not apply. */
+export function applyPipeTableInputRule(
+  state: EditorState,
+  range: { from: number; to: number },
+  match: PipeTableInputMatch,
+): EditorState | null {
+  const tr = state.tr;
+  if (!applyPipeTableInputToTransaction(state, tr, range, match)) {
+    return null;
+  }
+  return state.apply(tr);
 }
 
 export function parsePipeTableRow(line: string): string[] | null {
@@ -92,9 +169,13 @@ export function setSelectionInTableCell(
   }
 
   const row = table.child(rowIndex);
+  pos += 1;
+
   for (let col = 0; col < colIndex; col += 1) {
     pos += row.child(col).nodeSize;
   }
+
+  pos += 1;
 
   const cell = row.child(colIndex);
   const paragraph = cell.firstChild;

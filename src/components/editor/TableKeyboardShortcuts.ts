@@ -6,6 +6,7 @@ import {
   shouldBlockTableShortcutForSuggestionMenu,
 } from "./tableKeyboardUtils";
 
+// Priority 260 beats ListOutlineShortcuts (250) so Tab navigates cells, not list indent.
 export const TableKeyboardShortcuts = Extension.create({
   name: "tableKeyboardShortcuts",
   priority: 260,
