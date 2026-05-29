@@ -1,9 +1,18 @@
+import i18n from "@/i18n";
+import { useUIStore } from "@/store/uiStore";
 import type { Editor } from "@tiptap/react";
 import type { EditorState } from "@tiptap/pm/state";
+import { isValidLinkUrl } from "./inlineFormatActions";
 import {
   applyMarkdownLinkInputToTransaction,
   findMarkdownLinkInputMatch,
 } from "./markdownLinkUtils";
+
+function showInvalidMarkdownLinkUrlToast(): void {
+  useUIStore
+    .getState()
+    .showToast(i18n.t("editor.link.invalidUrl"), "error");
+}
 
 export function tryApplyMarkdownLinkOnSpace(editor: {
   state: EditorState;
@@ -23,6 +32,11 @@ export function tryApplyMarkdownLinkOnSpace(editor: {
   );
   const match = findMarkdownLinkInputMatch(`${textBefore} `);
   if (!match) {
+    return false;
+  }
+
+  if (!isValidLinkUrl(match[2])) {
+    showInvalidMarkdownLinkUrlToast();
     return false;
   }
 
@@ -61,6 +75,11 @@ export function tryApplyMarkdownLinkAtCursor(editor: {
   );
   const match = findMarkdownLinkInputMatch(textBefore);
   if (!match) {
+    return false;
+  }
+
+  if (!isValidLinkUrl(match[2])) {
+    showInvalidMarkdownLinkUrlToast();
     return false;
   }
 
