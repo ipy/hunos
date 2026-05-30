@@ -17,28 +17,53 @@ echo "=== Building web assets (IIFE for HarmonyOS) ==="
 cd "$PROJECT_ROOT"
 npx vite build --config vite.config.harmony.ts
 
-echo "=== Creating single-file HTML for rawfile ==="
+echo "=== Packaging web assets for rawfile ==="
 RAWFILE_DIR="$SCRIPT_DIR/entry/src/main/resources/rawfile"
-rm -rf "$RAWFILE_DIR"/*
+DIST_DIR="$PROJECT_ROOT/dist-harmony"
+JS_FILE="$DIST_DIR/app.js"
+ASSETS_DIR="$DIST_DIR/assets"
 
-JS_FILE="$PROJECT_ROOT/dist-harmony/app.js"
 if [ ! -f "$JS_FILE" ]; then
   echo "ERROR: app.js not found in dist-harmony/"
   exit 1
 fi
 
-# Build a single HTML file with inlined JS (no external script imports)
+if [ ! -d "$ASSETS_DIR" ]; then
+  echo "ERROR: assets directory not found in dist-harmony/"
+  exit 1
+fi
+
+rm -rf "$RAWFILE_DIR"/*
+mkdir -p "$RAWFILE_DIR/assets"
+
+CSS_FILE="$(find "$ASSETS_DIR" -maxdepth 1 -name 'style-*.css' -print -quit)"
+if [ -z "$CSS_FILE" ]; then
+  echo "ERROR: style-*.css not found in dist-harmony/assets/"
+  exit 1
+fi
+
+CSS_BASENAME="$(basename "$CSS_FILE")"
+
+# Copy font and other static assets; rewrite absolute /assets/ URLs to same-dir relative paths.
+cp -R "$ASSETS_DIR"/. "$RAWFILE_DIR/assets/"
+sed -i '' 's|url(/assets/|url(|g' "$RAWFILE_DIR/assets/$CSS_BASENAME"
+
+ASSET_COUNT="$(find "$RAWFILE_DIR/assets" -type f | wc -l | tr -d ' ')"
+echo "Copied $ASSET_COUNT asset files (including $CSS_BASENAME)"
+
+# JS stays inlined (ArkWeb rawfile cannot load external scripts reliably).
 {
-cat << 'HTMLEOF'
+cat << HTMLEOF
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
 <title>Hunos</title>
+<link rel="stylesheet" href="assets/$CSS_BASENAME"/>
 <style>
 *{box-sizing:border-box}
-html,body,#root{margin:0;padding:0;height:100%;width:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;-webkit-font-smoothing:antialiased;position:fixed;inset:0}
+html,body,#root{margin:0;padding:0;height:100%;width:100%;overflow:hidden;font-family:"HarmonyOS Sans SC","HarmonyOS Sans",sans-serif;-webkit-font-smoothing:antialiased;position:fixed;inset:0}
 ::-webkit-scrollbar{width:0;height:0}
 ::selection{background:rgba(232,93,74,0.2)}
 </style>
@@ -51,7 +76,9 @@ cat "$JS_FILE"
 printf '\n</script>\n</body>\n</html>\n'
 } > "$RAWFILE_DIR/index.html"
 
-echo "=== Inlined HTML created ($(wc -c < "$RAWFILE_DIR/index.html" | tr -d ' ') bytes) ==="
+HTML_BYTES="$(wc -c < "$RAWFILE_DIR/index.html" | tr -d ' ')"
+RAWFILE_BYTES="$(du -sk "$RAWFILE_DIR" | awk '{print $1}')"
+echo "=== rawfile ready: index.html ${HTML_BYTES} bytes, total ${RAWFILE_BYTES} KB ==="
 
 echo "=== Building HarmonyOS HAP ==="
 cd "$SCRIPT_DIR"

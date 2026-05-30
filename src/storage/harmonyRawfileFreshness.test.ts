@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -64,5 +64,35 @@ describe("harmony rawfile freshness", () => {
 
   it("includes addToHistory false on note-switch setContent (iter 81 undo isolation)", () => {
     expect(rawfile).toContain("addToHistory");
+  });
+
+  it("links bundled font CSS with relative asset paths (iter 90)", () => {
+    expect(rawfile).toMatch(
+      /<link rel="stylesheet" href="assets\/style-[^"]+\.css"\/>/,
+    );
+    expect(rawfile).not.toContain('href="/assets/');
+    expect(rawfile).toContain("HarmonyOS Sans SC");
+    expect(rawfile).not.toMatch(/font-family:-apple-system,BlinkMacSystemFont/);
+  });
+
+  it("ships bundled woff/woff2 font files in rawfile assets (iter 90)", () => {
+    const assetsDir = join(
+      process.cwd(),
+      "harmony/entry/src/main/resources/rawfile/assets",
+    );
+    const cssFiles = readdirSync(assetsDir).filter((f) =>
+      f.startsWith("style-"),
+    );
+    expect(cssFiles.length).toBeGreaterThan(0);
+
+    const css = readFileSync(join(assetsDir, cssFiles[0]!), "utf-8");
+    expect(css).toContain("@font-face");
+    expect(css).toMatch(/url\(\.\/inter-[^)]+\.woff2\)/);
+    expect(css).not.toContain("url(/assets/");
+
+    const fontFiles = readdirSync(assetsDir).filter((f) =>
+      /\.(woff2?|ttf)$/i.test(f),
+    );
+    expect(fontFiles.length).toBeGreaterThanOrEqual(100);
   });
 });
