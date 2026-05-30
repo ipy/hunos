@@ -27,6 +27,10 @@ import { WikiLinkSuggestion } from "./WikiLinkSuggestion";
 import { TagSuggestion } from "./TagSuggestion";
 import { TagDecoration } from "./TagDecoration";
 import { SketchResize } from "./SketchNodeView";
+import {
+  BLOCK_IMAGE_WITHOUT_INLINE_HEIGHT_SELECTOR,
+  MIN_BLOCK_IMAGE_HEIGHT,
+} from "./imageResizeUtils";
 import { FocusModeShortcuts } from "./FocusModeShortcuts";
 import { EditorKeyboardShortcuts } from "./EditorKeyboardShortcuts";
 import { ListOutlineShortcuts } from "./ListOutlineShortcuts";
@@ -457,6 +461,9 @@ export function TiptapEditor({
           border-radius: 8px;
           margin: 0.6em 0;
           display: block;
+        }
+        .hunos-editor ${BLOCK_IMAGE_WITHOUT_INLINE_HEIGHT_SELECTOR} {
+          min-height: ${MIN_BLOCK_IMAGE_HEIGHT}px;
         }
         .hunos-editor img[data-sketch="true"] {
           cursor: pointer;

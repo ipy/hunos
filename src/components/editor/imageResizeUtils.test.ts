@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { Schema } from "@tiptap/pm/model";
 import { EditorState, NodeSelection, TextSelection } from "@tiptap/pm/state";
 import {
+  BLOCK_IMAGE_WITHOUT_INLINE_HEIGHT_SELECTOR,
   buildBlockImageInsertAttrs,
   computeImageResizeHeight,
   getSelectedBlockImagePos,
@@ -265,6 +266,14 @@ describe("handleBlockImageClick", () => {
     >[0];
 
     expect(handleBlockImageClick(view, image, 0)).toBe(false);
+  });
+});
+
+describe("BLOCK_IMAGE_WITHOUT_INLINE_HEIGHT_SELECTOR", () => {
+  it("excludes images with an explicit inline height", () => {
+    expect(BLOCK_IMAGE_WITHOUT_INLINE_HEIGHT_SELECTOR).toBe(
+      '.editor-image:not([style*="height"])',
+    );
   });
 });
 
