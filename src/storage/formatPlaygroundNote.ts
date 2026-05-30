@@ -467,6 +467,54 @@ export function playgroundPersistedContentForRow(content: string): string {
   return sanitizeBlockImageNoteContent(content).content;
 }
 
+/** True when a write would replace canonical stored seed with drift (flush, autosave, backup). */
+export function playgroundWriteRegressesCanonicalStored(
+  storedTitle: string,
+  storedContent: string,
+  candidateContent: string,
+  fallbackLocale: Locale,
+): boolean {
+  const storedRow = playgroundPersistedContentForRow(storedContent);
+  const storedSeedLocale = resolvePlaygroundSeedLocale(storedRow, fallbackLocale);
+  if (
+    !formatPlaygroundMatchesCanonicalSeed(
+      storedTitle,
+      storedRow,
+      storedSeedLocale,
+    )
+  ) {
+    return false;
+  }
+
+  const candidateRow = playgroundPersistedContentForRow(candidateContent);
+  const candidateSeedLocale = resolvePlaygroundSeedLocale(
+    candidateRow,
+    fallbackLocale,
+  );
+  if (candidateSeedLocale !== storedSeedLocale) {
+    return false;
+  }
+  if (
+    formatPlaygroundMatchesCanonicalSeed(
+      getFormatPlaygroundTitle(candidateSeedLocale),
+      candidateRow,
+      candidateSeedLocale,
+    )
+  ) {
+    return false;
+  }
+
+  const storedFingerprint = normalizePlaygroundContentSnapshot(
+    storedRow,
+    storedSeedLocale,
+  );
+  const candidateFingerprint = normalizePlaygroundContentSnapshot(
+    candidateRow,
+    storedSeedLocale,
+  );
+  return candidateFingerprint !== storedFingerprint;
+}
+
 /** Stable JSON fingerprint for canonical seed comparison (editor round-trip tolerant). */
 export function normalizePlaygroundContentSnapshot(
   content: string,

@@ -3,7 +3,10 @@ import type { Note, NoteFilter } from "@/types/note";
 import type { Locale } from "@/types/settings";
 import { noteStorage } from "@/storage/noteStorage";
 import { graphEngine } from "@/graph/graphEngine";
-import { restoreFormatPlaygroundContent } from "@/storage/formatPlaygroundNote";
+import {
+  playgroundWriteRegressesCanonicalStored,
+  restoreFormatPlaygroundContent,
+} from "@/storage/formatPlaygroundNote";
 import {
   clearStashedEditorAutosave,
   flushEditorAutosave,
@@ -15,6 +18,7 @@ import {
   isStalePlaygroundWrite,
 } from "@/store/noteStorePlaygroundWriteEpoch";
 import { enqueueActiveNoteSwitch } from "@/store/noteStoreActiveNoteSwitch";
+import { useSettingsStore } from "@/store/settingsStore";
 import { useTagStore } from "@/store/tagStore";
 function sortByModifiedDesc(notes: Note[]): Note[] {
   return [...notes].sort((a, b) => b.modifiedAt - a.modifiedAt);
@@ -71,6 +75,19 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
 
   saveNoteContent: async (id, content, writeEpoch) => {
     if (isStalePlaygroundWrite(id, writeEpoch)) {
+      return;
+    }
+    const existing =
+      get().notes.find((n) => n.id === id) ?? (await noteStorage.get(id));
+    if (
+      existing?.content &&
+      playgroundWriteRegressesCanonicalStored(
+        existing.title,
+        existing.content,
+        content,
+        useSettingsStore.getState().locale,
+      )
+    ) {
       return;
     }
     const applied = await noteStorage.update(id, { content });

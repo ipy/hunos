@@ -11,6 +11,7 @@ import {
   filterNotesForPlaygroundList,
   getFormatPlaygroundIntroExcerpt,
   getFormatPlaygroundTitle,
+  playgroundWriteRegressesCanonicalStored,
   isFormatPlaygroundNote,
   migratePlaygroundContentIfStale,
   playgroundContentMatchesLocale,
@@ -1345,6 +1346,39 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(
       migratePlaygroundContentIfStale(JSON.stringify(edited), "en"),
     ).toBeNull();
+  });
+});
+
+describe("playgroundWriteRegressesCanonicalStored", () => {
+  it("blocks drift writes over canonical stored seed", () => {
+    const seed = JSON.stringify(buildPlaygroundContent("en"));
+    const parsed = JSON.parse(seed) as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    parsed.content.push({
+      type: "paragraph",
+      content: [{ type: "text", text: "T6-MIXED-marker" }],
+    });
+    expect(
+      playgroundWriteRegressesCanonicalStored(
+        "Format Playground",
+        seed,
+        JSON.stringify(parsed),
+        "en",
+      ),
+    ).toBe(true);
+  });
+
+  it("allows canonical round-trip writes", () => {
+    const seed = JSON.stringify(buildPlaygroundContent("zh"));
+    expect(
+      playgroundWriteRegressesCanonicalStored(
+        "格式试炼场",
+        seed,
+        seed,
+        "zh",
+      ),
+    ).toBe(false);
   });
 });
 

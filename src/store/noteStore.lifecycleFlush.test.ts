@@ -65,6 +65,12 @@ vi.mock("@/store/tagStore", () => ({
   },
 }));
 
+vi.mock("@/store/settingsStore", () => ({
+  useSettingsStore: {
+    getState: () => ({ locale: "zh" as const }),
+  },
+}));
+
 vi.mock("@/graph/graphEngine", () => ({
   graphEngine: {
     syncNoteLinks: vi.fn(),
@@ -155,6 +161,40 @@ describe("noteStore lifecycle rapid saves", () => {
       .getState()
       .notes.find((n) => n.id === note.id);
     expect(inMemory?.content).not.toContain("T4-MIXED-persist");
+  });
+
+  it("saveNoteContent ignores autosave drift over canonical playground after restore", async () => {
+    const seed = JSON.stringify(buildPlaygroundContent("zh"));
+    const note = await noteStorage.create({
+      title: "格式试炼场",
+      content: seed,
+      contentPlain: "格式试炼场",
+    });
+    useNoteStore.setState({ notes: [note] });
+
+    const polluted = JSON.stringify({
+      type: "doc",
+      attrs: {
+        playgroundContentVersion: 22,
+        playgroundContentLocale: "zh",
+      },
+      content: (() => {
+        const parsed = JSON.parse(seed) as {
+          content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+        };
+        parsed.content.push({
+          type: "paragraph",
+          content: [{ type: "text", text: "T6-MIXED-reload" }],
+        });
+        return parsed.content;
+      })(),
+    });
+
+    await useNoteStore.getState().restoreFormatPlayground(note.id, "zh");
+    await useNoteStore.getState().saveNoteContent(note.id, polluted);
+
+    const stored = notesById.get(note.id);
+    expect(stored?.content).not.toContain("T6-MIXED-reload");
   });
 
   it("reload recover does not resurrect pollution after restoreFormatPlayground", async () => {

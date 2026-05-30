@@ -516,6 +516,44 @@ describe("syncFormatPlaygroundOnLocaleChange", () => {
     expect(saved).not.toContain("locale-switch-pending-marker");
   });
 
+  it("skips flushApplied drift when canonical EN playground is already stored", async () => {
+    const seed = JSON.stringify(buildPlaygroundContent("en"));
+    const parsed = JSON.parse(seed) as {
+      attrs?: Record<string, unknown>;
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    parsed.attrs = {
+      ...parsed.attrs,
+      playgroundContentVersion: PLAYGROUND_CONTENT_VERSION - 1,
+    };
+    const listsIndex = parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "Lists",
+    );
+    parsed.content.splice(listsIndex + 2, 0, {
+      type: "paragraph",
+      content: [{ type: "text", text: "T6-MIXED-lists" }],
+    });
+    const polluted = JSON.stringify(parsed);
+
+    mockNoteStoreState.activeNoteId = "pg-en";
+    mockNoteStoreState.notes = [
+      {
+        id: "pg-en",
+        title: "Format Playground",
+        content: seed,
+        isPinned: true,
+        modifiedAt: 500,
+      },
+    ];
+
+    await syncFormatPlaygroundOnLocaleChange("en", polluted, {
+      focusCanonical: true,
+    });
+
+    expect(saveNoteContent).not.toHaveBeenCalled();
+    expect(saveNoteContent.mock.calls.join("")).not.toContain("T6-MIXED-lists");
+  });
+
   it("skips flushDropped polluted flush when canonical playground is already stored", async () => {
     const polluted = JSON.stringify({
       type: "doc",
