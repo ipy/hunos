@@ -27,6 +27,7 @@ const saveNoteTitle = mockNoteStoreState.saveNoteTitle;
 const setActiveNote = mockNoteStoreState.setActiveNote;
 
 const noteStorageList = vi.fn();
+const noteStorageGet = vi.fn();
 
 function playgroundContentWithVersion(
   locale: "en" | "zh",
@@ -72,6 +73,7 @@ vi.mock("@/store/noteStore", () => ({
 vi.mock("./noteStorage", () => ({
   noteStorage: {
     list: (...args: unknown[]) => noteStorageList(...args),
+    get: (...args: unknown[]) => noteStorageGet(...args),
   },
 }));
 
@@ -81,6 +83,8 @@ describe("syncFormatPlaygroundOnLocaleChange", () => {
     saveNoteTitle.mockClear();
     setActiveNote.mockClear();
     noteStorageList.mockReset();
+    noteStorageGet.mockReset();
+    noteStorageGet.mockResolvedValue(undefined);
     mockNoteStoreState.activeNoteId = "pg-1";
     mockNoteStoreState.notes = [
       {
@@ -182,7 +186,10 @@ describe("syncFormatPlaygroundOnLocaleChange", () => {
     await syncFormatPlaygroundOnLocaleChange("zh");
 
     expect(saveNoteTitle).toHaveBeenCalledWith("pg-1", "格式试炼场");
-    expect(saveNoteTitle).not.toHaveBeenCalledWith("welcome-1", expect.anything());
+    expect(saveNoteTitle).not.toHaveBeenCalledWith(
+      "welcome-1",
+      expect.anything(),
+    );
   });
 
   it("prefers zh-titled playground when syncing zh locale with duplicate canonical notes", async () => {
@@ -193,11 +200,11 @@ describe("syncFormatPlaygroundOnLocaleChange", () => {
     await syncFormatPlaygroundOnLocaleChange("zh");
 
     expect(saveNoteContent).toHaveBeenCalledTimes(1);
-    expect(saveNoteContent).toHaveBeenCalledWith(
-      "pg-zh",
-      expect.any(String),
+    expect(saveNoteContent).toHaveBeenCalledWith("pg-zh", expect.any(String));
+    expect(saveNoteContent).not.toHaveBeenCalledWith(
+      "pg-en",
+      expect.anything(),
     );
-    expect(saveNoteContent).not.toHaveBeenCalledWith("pg-en", expect.anything());
   });
 
   it("syncs zh canonical when active EN duplicate is open", async () => {
@@ -208,11 +215,11 @@ describe("syncFormatPlaygroundOnLocaleChange", () => {
 
     expect(saveNoteContent).toHaveBeenCalledTimes(1);
     expect(saveNoteContent).toHaveBeenCalledWith("pg-zh", expect.any(String));
-    expect(saveNoteContent).not.toHaveBeenCalledWith("pg-en", expect.anything());
-    expect(saveNoteTitle).not.toHaveBeenCalledWith(
+    expect(saveNoteContent).not.toHaveBeenCalledWith(
       "pg-en",
-      "格式试炼场",
+      expect.anything(),
     );
+    expect(saveNoteTitle).not.toHaveBeenCalledWith("pg-en", "格式试炼场");
   });
 
   it("syncs en canonical when active zh duplicate is open", async () => {
@@ -238,7 +245,10 @@ describe("syncFormatPlaygroundOnLocaleChange", () => {
 
     expect(saveNoteContent).toHaveBeenCalledTimes(1);
     expect(saveNoteContent).toHaveBeenCalledWith("pg-en", expect.any(String));
-    expect(saveNoteContent).not.toHaveBeenCalledWith("pg-zh", expect.anything());
+    expect(saveNoteContent).not.toHaveBeenCalledWith(
+      "pg-zh",
+      expect.anything(),
+    );
     expect(saveNoteTitle).not.toHaveBeenCalledWith("pg-zh", expect.anything());
     expect(saveNoteTitle).not.toHaveBeenCalledWith(
       "pg-zh",
@@ -255,8 +265,7 @@ describe("syncFormatPlaygroundOnLocaleChange", () => {
       }>;
     };
     const imagesIndex = enDoc.content.findIndex(
-      (node) =>
-        node.type === "heading" && node.content?.[0]?.text === "Images",
+      (node) => node.type === "heading" && node.content?.[0]?.text === "Images",
     );
     const imageNode = enDoc.content[imagesIndex + 2];
     if (imageNode?.attrs) {
@@ -301,11 +310,11 @@ describe("syncFormatPlaygroundOnLocaleChange", () => {
     await syncFormatPlaygroundOnLocaleChange("en");
 
     expect(saveNoteContent).toHaveBeenCalledTimes(1);
-    expect(saveNoteContent).toHaveBeenCalledWith(
-      "pg-en",
-      expect.any(String),
+    expect(saveNoteContent).toHaveBeenCalledWith("pg-en", expect.any(String));
+    expect(saveNoteContent).not.toHaveBeenCalledWith(
+      "pg-zh",
+      expect.anything(),
     );
-    expect(saveNoteContent).not.toHaveBeenCalledWith("pg-zh", expect.anything());
   });
 
   it("prefers pinned attr-match playground when neither title is canonical", async () => {
@@ -384,6 +393,55 @@ describe("syncFormatPlaygroundOnLocaleChange", () => {
     expect(result.canonicalNoteId).toBe("pg-zh");
   });
 
+  it("focuses canonical playground when active duplicate is absent from store slice", async () => {
+    mockNoteStoreState.activeNoteId = "pg-en";
+    mockNoteStoreState.notes = [
+      {
+        id: "pg-zh",
+        title: "格式试炼场",
+        content: JSON.stringify(buildPlaygroundContent("zh")),
+        isPinned: false,
+        modifiedAt: 200,
+      },
+    ];
+    noteStorageGet.mockResolvedValue({
+      id: "pg-en",
+      title: "Format Playground",
+      content: JSON.stringify(buildPlaygroundContent("en")),
+    });
+
+    const result = await syncFormatPlaygroundOnLocaleChange("zh", null, {
+      focusCanonical: true,
+    });
+
+    expect(noteStorageGet).toHaveBeenCalledWith("pg-en");
+    expect(setActiveNote).toHaveBeenCalledWith("pg-zh");
+    expect(result.switchedFromNoteId).toBe("pg-en");
+    expect(result.canonicalNoteId).toBe("pg-zh");
+  });
+
+  it("focuses canonical playground from flushed editor JSON when active note is absent from store", async () => {
+    const flushed = JSON.stringify(buildPlaygroundContent("en"));
+    mockNoteStoreState.activeNoteId = "pg-en";
+    mockNoteStoreState.notes = [
+      {
+        id: "pg-zh",
+        title: "格式试炼场",
+        content: JSON.stringify(buildPlaygroundContent("zh")),
+        isPinned: false,
+        modifiedAt: 200,
+      },
+    ];
+
+    const result = await syncFormatPlaygroundOnLocaleChange("zh", flushed, {
+      focusCanonical: true,
+    });
+
+    expect(setActiveNote).toHaveBeenCalledWith("pg-zh");
+    expect(result.switchedFromNoteId).toBe("pg-en");
+    expect(result.flushDropped).toBe(true);
+  });
+
   it("does not switch focus when focusCanonical is false", async () => {
     mockNoteStoreState.activeNoteId = "pg-en";
     mockNoteStoreState.notes = duplicatePlaygroundPair();
@@ -431,7 +489,10 @@ describe("syncFormatPlaygroundOnLocaleChange", () => {
 
     expect(saveNoteContent).toHaveBeenCalledTimes(1);
     expect(saveNoteContent).toHaveBeenCalledWith("pg-zh", expect.any(String));
-    expect(saveNoteContent).not.toHaveBeenCalledWith("pg-en", expect.anything());
+    expect(saveNoteContent).not.toHaveBeenCalledWith(
+      "pg-en",
+      expect.anything(),
+    );
     const saved = saveNoteContent.mock.calls[0][1] as string;
     expect(saved).toContain("locale-switch-pending-marker");
   });
