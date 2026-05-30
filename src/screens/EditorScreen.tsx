@@ -34,6 +34,7 @@ import {
   isFormatPlaygroundNote,
   normalizePlaygroundContentSnapshot,
   playgroundEditorContentMatchesStored,
+  playgroundPersistedContentForRow,
   resolvePlaygroundSeedLocale,
   shouldShowPlaygroundRestoreButton,
   migratePlaygroundContentIfStale,
@@ -124,7 +125,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const note = notes.find((n) => n.id === activeNoteId);
   const noteContentForEditor = useMemo(() => {
     if (!note?.content) return "";
-    return sanitizeBlockImageNoteContent(note.content).content;
+    return playgroundPersistedContentForRow(note.content);
   }, [note?.content]);
   const showBackButton = layout === "mobile";
   const isCompactChrome = focusMode && layout === "tablet";
@@ -668,7 +669,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         .notes.find((candidate) => candidate.id === note.id);
       const restoredRaw = restoredNote?.content ?? "";
       const restoredContent = restoredRaw
-        ? sanitizeBlockImageNoteContent(restoredRaw).content
+        ? playgroundPersistedContentForRow(restoredRaw)
         : "";
       const applied = finalizePlaygroundRestoreInEditor({
         session: restoreSession,

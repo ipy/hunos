@@ -467,6 +467,33 @@ export function playgroundPersistedContentForRow(content: string): string {
   return sanitizeBlockImageNoteContent(content).content;
 }
 
+export type FormatPlaygroundCanonicalRow = {
+  rowContent: string;
+  seedLocale: PlaygroundLocale;
+  canonicalTitle: string;
+  isCanonical: boolean;
+};
+
+/** Single read path for persisted playground row — preview, restore chip, bootstrap sync. */
+export function readFormatPlaygroundCanonicalRow(
+  title: string,
+  rawContent: string,
+  fallbackLocale: Locale,
+): FormatPlaygroundCanonicalRow | null {
+  const rowContent = playgroundPersistedContentForRow(rawContent);
+  if (!isFormatPlaygroundNote(title, rowContent)) {
+    return null;
+  }
+  const seedLocale = resolvePlaygroundSeedLocale(rowContent, fallbackLocale);
+  const canonicalTitle = getFormatPlaygroundTitle(seedLocale);
+  const isCanonical = formatPlaygroundMatchesCanonicalSeed(
+    title,
+    rowContent,
+    seedLocale,
+  );
+  return { rowContent, seedLocale, canonicalTitle, isCanonical };
+}
+
 /** True when a write would replace canonical stored seed with drift (flush, autosave, backup). */
 export function playgroundWriteRegressesCanonicalStored(
   storedTitle: string,
@@ -474,15 +501,12 @@ export function playgroundWriteRegressesCanonicalStored(
   candidateContent: string,
   fallbackLocale: Locale,
 ): boolean {
-  const storedRow = playgroundPersistedContentForRow(storedContent);
-  const storedSeedLocale = resolvePlaygroundSeedLocale(storedRow, fallbackLocale);
-  if (
-    !formatPlaygroundMatchesCanonicalSeed(
-      storedTitle,
-      storedRow,
-      storedSeedLocale,
-    )
-  ) {
+  const stored = readFormatPlaygroundCanonicalRow(
+    storedTitle,
+    storedContent,
+    fallbackLocale,
+  );
+  if (!stored?.isCanonical) {
     return false;
   }
 
@@ -491,12 +515,12 @@ export function playgroundWriteRegressesCanonicalStored(
     candidateRow,
     fallbackLocale,
   );
-  if (candidateSeedLocale !== storedSeedLocale) {
+  if (candidateSeedLocale !== stored.seedLocale) {
     return false;
   }
   if (
     formatPlaygroundMatchesCanonicalSeed(
-      getFormatPlaygroundTitle(candidateSeedLocale),
+      stored.canonicalTitle,
       candidateRow,
       candidateSeedLocale,
     )
@@ -505,12 +529,12 @@ export function playgroundWriteRegressesCanonicalStored(
   }
 
   const storedFingerprint = normalizePlaygroundContentSnapshot(
-    storedRow,
-    storedSeedLocale,
+    stored.rowContent,
+    stored.seedLocale,
   );
   const candidateFingerprint = normalizePlaygroundContentSnapshot(
     candidateRow,
-    storedSeedLocale,
+    stored.seedLocale,
   );
   return candidateFingerprint !== storedFingerprint;
 }
@@ -629,23 +653,30 @@ export function shouldShowPlaygroundRestoreButton(options: {
     isRestoringPlayground = false,
   } = options;
 
-  const seedLocale = resolvePlaygroundSeedLocale(storedContent, fallbackLocale);
-  const canonicalTitle = getFormatPlaygroundTitle(seedLocale);
-  const storedRowCanonical = formatPlaygroundMatchesCanonicalSeed(
+  const storedRow = readFormatPlaygroundCanonicalRow(
     storedTitle,
     storedContent,
-    seedLocale,
+    fallbackLocale,
   );
+  if (!storedRow) {
+    return formatPlaygroundNeedsRestore(
+      storedTitle,
+      storedContent,
+      fallbackLocale,
+    );
+  }
 
-  if (isRestoringPlayground && storedRowCanonical) {
+  const { rowContent, seedLocale, canonicalTitle, isCanonical } = storedRow;
+
+  if (isRestoringPlayground && isCanonical) {
     return false;
   }
 
-  if (storedRowCanonical) {
+  if (isCanonical) {
     if (pendingDraftContent != null) {
       return playgroundLiveContentNeedsRestore({
         displayTitle,
-        storedContent,
+        storedContent: rowContent,
         liveContent: pendingDraftContent,
         fallbackLocale: seedLocale,
       });
@@ -667,7 +698,7 @@ export function shouldShowPlaygroundRestoreButton(options: {
     );
   }
 
-  return formatPlaygroundNeedsRestore(storedTitle, storedContent, seedLocale);
+  return formatPlaygroundNeedsRestore(storedTitle, rowContent, seedLocale);
 }
 
 export async function createFormatPlaygroundNote(
@@ -1172,14 +1203,31 @@ export async function syncFormatPlaygroundOnLocaleChange(
     FORMAT_PLAYGROUND_TITLES.includes(note.title) &&
     note.title !== expectedTitle;
 
+  const storedRow = readFormatPlaygroundCanonicalRow(
+    note.title,
+    note.content,
+    locale,
+  );
+
   if (migrated) {
-    await saveNoteContent(note.id, migrated);
-  } else if (flushDropped) {
     if (
-      !formatPlaygroundMatchesCanonicalSeed(
+      !playgroundWriteRegressesCanonicalStored(
         note.title,
         note.content,
-        resolvePlaygroundSeedLocale(note.content, locale),
+        migrated,
+        locale,
+      )
+    ) {
+      await saveNoteContent(note.id, migrated);
+    }
+  } else if (flushDropped) {
+    if (
+      !storedRow?.isCanonical &&
+      !playgroundWriteRegressesCanonicalStored(
+        note.title,
+        note.content,
+        sourceContent,
+        locale,
       )
     ) {
       await saveNoteContent(note.id, sourceContent);

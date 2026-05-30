@@ -20,12 +20,12 @@ describe("playground restore visibility", () => {
   });
 
   it("shows restore after non-canonical title rename with seed body", () => {
-    expect(isFormatPlaygroundNote("NonCanonicalTitleFinal6", seedContent)).toBe(
+    expect(isFormatPlaygroundNote("NonCanonicalTitleFinal7", seedContent)).toBe(
       true,
     );
     expect(
       formatPlaygroundNeedsRestore(
-        "NonCanonicalTitleFinal6",
+        "NonCanonicalTitleFinal7",
         seedContent,
         "zh",
       ),
@@ -41,7 +41,7 @@ describe("playground restore visibility", () => {
     };
     parsed.content.push({
       type: "paragraph",
-      content: [{ type: "text", text: "T6-MIXED-marker" }],
+      content: [{ type: "text", text: "T7-MIXED-marker" }],
     });
     const drifted = JSON.stringify(parsed);
     expect(formatPlaygroundNeedsRestore("格式试炼场", drifted, "zh")).toBe(
@@ -72,13 +72,13 @@ describe("playground restore visibility", () => {
     ).toBe(false);
   });
 
-  it("shows restore when pending draft inserts T6-MIXED drift", () => {
+  it("shows restore when pending draft inserts T7-MIXED drift", () => {
     const parsed = JSON.parse(seedContent) as {
       content: Array<{ type: string; content?: Array<{ text?: string }> }>;
     };
     parsed.content.splice(10, 0, {
       type: "paragraph",
-      content: [{ type: "text", text: "T6-MIXED-lists" }],
+      content: [{ type: "text", text: "T7-MIXED-lists" }],
     });
     const pendingDraft = JSON.stringify(parsed);
 
@@ -145,7 +145,7 @@ describe("playground restore visibility", () => {
   it("hides restore immediately when stored canonical after restore tap", () => {
     expect(
       shouldShowPlaygroundRestoreButton({
-        displayTitle: "NonCanonicalTitleFinal6",
+        displayTitle: "NonCanonicalTitleFinal7",
         storedTitle: "格式试炼场",
         storedContent: seedContent,
         pendingDraftContent: null,
@@ -157,7 +157,7 @@ describe("playground restore visibility", () => {
   it("hides restore during active restore session when stored row is canonical", () => {
     expect(
       shouldShowPlaygroundRestoreButton({
-        displayTitle: "NonCanonicalTitleFinal6",
+        displayTitle: "NonCanonicalTitleFinal7",
         storedTitle: "格式试炼场",
         storedContent: seedContent,
         pendingDraftContent: null,
@@ -170,11 +170,11 @@ describe("playground restore visibility", () => {
   it("shows restore when pending title draft renames canonical playground", () => {
     expect(
       shouldShowPlaygroundRestoreButton({
-        displayTitle: "NonCanonicalTitleFinal6",
+        displayTitle: "NonCanonicalTitleFinal7",
         storedTitle: "格式试炼场",
         storedContent: seedContent,
         pendingDraftContent: null,
-        pendingTitleDraft: "NonCanonicalTitleFinal6",
+        pendingTitleDraft: "NonCanonicalTitleFinal7",
         fallbackLocale: "zh",
       }),
     ).toBe(true);

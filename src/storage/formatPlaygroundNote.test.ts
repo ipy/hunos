@@ -11,6 +11,7 @@ import {
   filterNotesForPlaygroundList,
   getFormatPlaygroundIntroExcerpt,
   getFormatPlaygroundTitle,
+  readFormatPlaygroundCanonicalRow,
   playgroundWriteRegressesCanonicalStored,
   isFormatPlaygroundNote,
   migratePlaygroundContentIfStale,
@@ -1349,6 +1350,44 @@ describe("migratePlaygroundContentIfStale", () => {
   });
 });
 
+describe("readFormatPlaygroundCanonicalRow", () => {
+  it("returns canonical row for unmodified zh seed", () => {
+    const seed = JSON.stringify(buildPlaygroundContent("zh"));
+    const row = readFormatPlaygroundCanonicalRow("格式试炼场", seed, "en");
+    expect(row).not.toBeNull();
+    expect(row?.seedLocale).toBe("zh");
+    expect(row?.canonicalTitle).toBe("格式试炼场");
+    expect(row?.isCanonical).toBe(true);
+  });
+
+  it("returns non-canonical row when title drifts", () => {
+    const seed = JSON.stringify(buildPlaygroundContent("en"));
+    const row = readFormatPlaygroundCanonicalRow(
+      "NonCanonicalTitleFinal7",
+      seed,
+      "en",
+    );
+    expect(row?.isCanonical).toBe(false);
+  });
+
+  it("returns non-canonical row when body drifts with T7-MIXED marker", () => {
+    const seed = JSON.stringify(buildPlaygroundContent("en"));
+    const parsed = JSON.parse(seed) as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    parsed.content.splice(10, 0, {
+      type: "paragraph",
+      content: [{ type: "text", text: "T7-MIXED-lists" }],
+    });
+    const row = readFormatPlaygroundCanonicalRow(
+      "Format Playground",
+      JSON.stringify(parsed),
+      "en",
+    );
+    expect(row?.isCanonical).toBe(false);
+  });
+});
+
 describe("playgroundWriteRegressesCanonicalStored", () => {
   it("blocks drift writes over canonical stored seed", () => {
     const seed = JSON.stringify(buildPlaygroundContent("en"));
@@ -1372,12 +1411,7 @@ describe("playgroundWriteRegressesCanonicalStored", () => {
   it("allows canonical round-trip writes", () => {
     const seed = JSON.stringify(buildPlaygroundContent("zh"));
     expect(
-      playgroundWriteRegressesCanonicalStored(
-        "格式试炼场",
-        seed,
-        seed,
-        "zh",
-      ),
+      playgroundWriteRegressesCanonicalStored("格式试炼场", seed, seed, "zh"),
     ).toBe(false);
   });
 });

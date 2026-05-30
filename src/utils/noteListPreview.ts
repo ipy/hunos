@@ -1,9 +1,6 @@
 import {
-  formatPlaygroundMatchesCanonicalSeed,
   getFormatPlaygroundIntroExcerpt,
-  isFormatPlaygroundNote,
-  playgroundPersistedContentForRow,
-  resolvePlaygroundSeedLocale,
+  readFormatPlaygroundCanonicalRow,
 } from "@/storage/formatPlaygroundNote";
 import type { Note } from "@/types/note";
 import type { Locale } from "@/types/settings";
@@ -20,11 +17,14 @@ export function deriveNoteListPreview(
   _playgroundLabel: string,
   locale: Locale,
 ): string {
-  const rowContent = playgroundPersistedContentForRow(note.content);
-  if (isFormatPlaygroundNote(note.title, rowContent)) {
-    const seedLocale = resolvePlaygroundSeedLocale(rowContent, locale);
-    if (formatPlaygroundMatchesCanonicalSeed(note.title, rowContent, seedLocale)) {
-      return getFormatPlaygroundIntroExcerpt(seedLocale);
+  const storedRow = readFormatPlaygroundCanonicalRow(
+    note.title,
+    note.content,
+    locale,
+  );
+  if (storedRow) {
+    if (storedRow.isCanonical) {
+      return getFormatPlaygroundIntroExcerpt(storedRow.seedLocale);
     }
     const plain = normalizePlainExcerpt(note.contentPlain ?? "");
     return plain.length > PREVIEW_CHAR_LIMIT
