@@ -8,8 +8,7 @@ import {
   INLINE_FORMAT_ITEMS,
   type InlineFormatItem,
 } from "./inlineFormatActions";
-import type { Editor } from "@tiptap/react";
-import { insertImageFromToolbarPicker } from "./imageInsertUtils";
+import { runToolbarActionWithOverlaySelection } from "@/utils/editorOverlaySelection";
 
 const TOOLBAR_I18N_KEYS: Record<string, string> = {
   bold: "editor.toolbar.bold",
@@ -35,6 +34,7 @@ const TOOLBAR_I18N_KEYS: Record<string, string> = {
 
 interface EditorToolbarProps {
   editor: Editor | null;
+  formatOverlayOpen?: boolean;
 }
 
 type ToolbarButton = InlineFormatItem;
@@ -128,7 +128,10 @@ interface SketchState {
   nodePos?: number;
 }
 
-export function EditorToolbar({ editor }: EditorToolbarProps) {
+export function EditorToolbar({
+  editor,
+  formatOverlayOpen = false,
+}: EditorToolbarProps) {
   const { t } = useTranslation();
   const theme = useTheme();
   const layout = useAdaptiveLayout();
@@ -156,10 +159,14 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
   const handleAction = useCallback(
     (action: (e: Editor) => void) => {
       if (!editor) return;
-      action(editor);
+      runToolbarActionWithOverlaySelection(
+        editor,
+        formatOverlayOpen,
+        action,
+      );
       setTick((t) => t + 1);
     },
-    [editor],
+    [editor, formatOverlayOpen],
   );
 
   useEffect(() => {

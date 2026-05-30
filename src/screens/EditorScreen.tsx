@@ -964,7 +964,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           <>
             <button
               data-testid="info-panel-toggle"
-              onMouseDown={() => {
+              onPointerDownCapture={() => {
                 if (!showStats) captureSelectionForOverlay();
               }}
               onClick={() => setShowStats(!showStats)}
@@ -1081,7 +1081,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
               <>
                 <button
                   data-testid="info-panel-toggle"
-                  onMouseDown={() => {
+                  onPointerDownCapture={() => {
                     if (!showStats) captureSelectionForOverlay();
                   }}
                   onClick={() => setShowStats(!showStats)}
@@ -1124,7 +1124,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
                   />
                 </button>
                 <button
-                  onMouseDown={() => {
+                  onPointerDownCapture={() => {
                     if (!showActions) captureSelectionForOverlay();
                   }}
                   onClick={() => setShowActions(!showActions)}
@@ -1433,7 +1433,10 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           data-testid="editor-toolbar-layer"
           style={{ position: "relative", zIndex: 65, flexShrink: 0 }}
         >
-          <EditorToolbar editor={editorInstance} />
+          <EditorToolbar
+            editor={editorInstance}
+            formatOverlayOpen={showActions || showStats}
+          />
         </div>
       )}
     </div>

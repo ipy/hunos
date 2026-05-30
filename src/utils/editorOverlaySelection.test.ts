@@ -2,11 +2,19 @@ import { describe, expect, it, vi } from "vitest";
 import {
   captureEditorOverlaySelection,
   clearEditorOverlaySelection,
+  focusEditorWithOverlaySelection,
   getSavedEditorOverlaySelection,
   restoreEditorOverlaySelection,
+  runToolbarActionWithOverlaySelection,
 } from "./editorOverlaySelection";
 
 function mockEditor(selection: { from: number; to: number }, docSize = 100) {
+  const chain = {
+    focus: vi.fn().mockReturnThis(),
+    setTextSelection: vi.fn().mockReturnThis(),
+    run: vi.fn(() => true),
+  };
+
   return {
     isDestroyed: false,
     state: {
@@ -14,8 +22,11 @@ function mockEditor(selection: { from: number; to: number }, docSize = 100) {
       doc: { content: { size: docSize } },
     },
     commands: {
+      focus: vi.fn(() => true),
       setTextSelection: vi.fn(() => true),
     },
+    chain: vi.fn(() => chain),
+    _chain: chain,
   };
 }
 
@@ -33,6 +44,35 @@ describe("editorOverlaySelection", () => {
       from: 42,
       to: 58,
     });
+  });
+
+  it("focuses and restores selection in one chain for toolbar commands", () => {
+    clearEditorOverlaySelection();
+    const editor = mockEditor({ from: 10, to: 20 });
+
+    captureEditorOverlaySelection(editor as never);
+    expect(focusEditorWithOverlaySelection(editor as never)).toBe(true);
+    expect(editor._chain.focus).toHaveBeenCalled();
+    expect(editor._chain.setTextSelection).toHaveBeenCalledWith({
+      from: 10,
+      to: 20,
+    });
+    expect(editor._chain.run).toHaveBeenCalled();
+  });
+
+  it("runs toolbar actions after restoring overlay selection when panel is open", () => {
+    clearEditorOverlaySelection();
+    const editor = mockEditor({ from: 5, to: 15 });
+    captureEditorOverlaySelection(editor as never);
+    const action = vi.fn();
+
+    runToolbarActionWithOverlaySelection(editor as never, true, action);
+
+    expect(editor._chain.setTextSelection).toHaveBeenCalledWith({
+      from: 5,
+      to: 15,
+    });
+    expect(action).toHaveBeenCalledWith(editor);
   });
 
   it("clears saved selection when overlays close", () => {

@@ -1,6 +1,6 @@
 import i18n from "@/i18n";
 import { useUIStore } from "@/store/uiStore";
-import { restoreEditorOverlaySelection } from "@/utils/editorOverlaySelection";
+import { focusEditorWithOverlaySelection } from "@/utils/editorOverlaySelection";
 import type { Editor } from "@tiptap/react";
 import {
   captureLinkEditorSelection,
@@ -20,7 +20,7 @@ export function toggleMark(
   markName: string,
   toggleCmd: () => boolean,
 ) {
-  restoreEditorOverlaySelection(editor);
+  focusEditorWithOverlaySelection(editor);
   if (editor.isActive(markName)) {
     editor.chain().focus().extendMarkRange(markName).unsetMark(markName).run();
   } else if (editor.state.selection.empty) {

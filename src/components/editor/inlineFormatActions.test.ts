@@ -120,6 +120,12 @@ describe("link editor helpers", () => {
 describe("toggleMark with overlay selection", () => {
   it("restores saved selection before applying a mark", () => {
     clearEditorOverlaySelection();
+    const chain = {
+      focus: vi.fn().mockReturnThis(),
+      setTextSelection: vi.fn().mockReturnThis(),
+      toggleBold: vi.fn().mockReturnThis(),
+      run: vi.fn(() => true),
+    };
     const editor = {
       isActive: vi.fn(() => false),
       isDestroyed: false,
@@ -127,12 +133,9 @@ describe("toggleMark with overlay selection", () => {
         selection: { empty: false, $from: { start: () => 1, end: () => 5 } },
         doc: { content: { size: 100 } },
       },
-      chain: vi.fn(() => ({
-        focus: vi.fn().mockReturnThis(),
-        toggleBold: vi.fn().mockReturnThis(),
-        run: vi.fn(() => true),
-      })),
+      chain: vi.fn(() => chain),
       commands: {
+        focus: vi.fn(() => true),
         setTextSelection: vi.fn(() => true),
       },
     };
@@ -148,7 +151,7 @@ describe("toggleMark with overlay selection", () => {
       editor.chain().focus().toggleBold().run(),
     );
 
-    expect(editor.commands.setTextSelection).toHaveBeenCalledWith({
+    expect(chain.setTextSelection).toHaveBeenCalledWith({
       from: 42,
       to: 58,
     });

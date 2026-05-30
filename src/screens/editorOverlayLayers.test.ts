@@ -19,9 +19,11 @@ describe("editor overlay layers", () => {
 
     expect(editor).toContain('data-testid="editor-toolbar-layer"');
     expect(editor).toContain("zIndex: 65");
+    expect(editor).toContain("formatOverlayOpen={showActions || showStats}");
     expect(editor).toContain('data-testid="editor-more-actions-backdrop"');
     expect(infoPanel).toContain('data-testid="stats-panel-backdrop"');
     expect(infoPanel).toContain("zIndex: 48");
+    expect(toolbar).toContain("runToolbarActionWithOverlaySelection");
     expect(toolbar).toContain('data-testid="editor-toolbar"');
   });
 
