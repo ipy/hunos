@@ -108,6 +108,44 @@ describe("noteStorage.get", () => {
     });
     expect(notesById.get(note.id)?.content).toBe(loaded!.content);
   });
+
+  it("backfills missing contentPlain from content and persists", async () => {
+    const content = JSON.stringify({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "Hello world" }],
+        },
+      ],
+    });
+    const note = await noteStorage.create({ title: "No plain", content });
+    notesById.set(note.id, {
+      ...note,
+      contentPlain: undefined as unknown as string,
+    });
+
+    const loaded = await noteStorage.get(note.id);
+
+    expect(loaded?.contentPlain).toBe("Hello world\n");
+    expect(dbUpdate).toHaveBeenCalledWith(note.id, {
+      contentPlain: "Hello world\n",
+    });
+    expect(notesById.get(note.id)?.contentPlain).toBe("Hello world\n");
+  });
+
+  it("backfills empty string contentPlain for empty doc", async () => {
+    const note = await noteStorage.create({ title: "Empty" });
+    notesById.set(note.id, {
+      ...note,
+      contentPlain: undefined as unknown as string,
+    });
+
+    const loaded = await noteStorage.get(note.id);
+
+    expect(loaded?.contentPlain).toBe("");
+    expect(dbUpdate).toHaveBeenCalledWith(note.id, { contentPlain: "" });
+  });
 });
 
 describe("noteStorage.list", () => {
@@ -138,6 +176,31 @@ describe("noteStorage.list", () => {
 
     const cleanListed = listed.find((n) => n.id === clean.id);
     expect(cleanListed?.content).toBe("");
+  });
+
+  it("backfills missing contentPlain for each listed note", async () => {
+    const content = JSON.stringify({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "Snippet text" }],
+        },
+      ],
+    });
+    const note = await noteStorage.create({ title: "Listed", content });
+    notesById.set(note.id, {
+      ...note,
+      contentPlain: undefined as unknown as string,
+    });
+
+    const listed = await noteStorage.list({ status: "active" });
+    const found = listed.find((n) => n.id === note.id);
+
+    expect(found?.contentPlain).toBe("Snippet text\n");
+    expect(dbUpdate).toHaveBeenCalledWith(note.id, {
+      contentPlain: "Snippet text\n",
+    });
   });
 });
 

@@ -98,11 +98,10 @@ export function InfoPanel({
     };
   }, [editor, note.content]);
 
-  const charCount = note.contentPlain.length;
-  const wordCount =
-    note.wordCount || note.contentPlain.split(/\s+/).filter(Boolean).length;
-  const paragraphCount =
-    note.contentPlain.split(/\n\s*\n/).filter(Boolean).length || 1;
+  const plain = note.contentPlain ?? "";
+  const charCount = plain.length;
+  const wordCount = note.wordCount || plain.split(/\s+/).filter(Boolean).length;
+  const paragraphCount = plain.split(/\n\s*\n/).filter(Boolean).length || 1;
   const readingTime = Math.max(1, Math.ceil(wordCount / 200));
   const toc = extractToc(note.content);
 

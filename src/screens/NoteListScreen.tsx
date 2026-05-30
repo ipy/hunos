@@ -55,7 +55,7 @@ function SwipeableNoteCard({
   index?: number;
 }) {
   const theme = useTheme();
-  const snippet = note.contentPlain.slice(0, 100).replace(/\n/g, " ");
+  const snippet = (note.contentPlain ?? "").slice(0, 100).replace(/\n/g, " ");
   const [offsetX, setOffsetX] = useState(0);
   const [isSwipeOpen, setIsSwipeOpen] = useState(false);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(

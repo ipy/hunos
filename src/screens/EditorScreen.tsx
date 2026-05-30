@@ -232,8 +232,9 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       return;
     }
 
+    const sanitized = sanitizeEditorStashContent(taken.content);
     setEditorSeedContent(null);
-    void saveNoteContent(note.id, taken.content);
+    void saveNoteContent(note.id, sanitized);
   }, [note?.id, note?.title, note?.content, saveNoteContent, settings.locale]);
 
   useEffect(() => {

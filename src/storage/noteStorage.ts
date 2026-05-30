@@ -1,15 +1,42 @@
 import { db } from "./database";
 import type { Note, NoteFilter, NoteStatus } from "@/types/note";
 import { generateId } from "@/utils/uuid";
+import { extractPlainTextFromTiptap } from "@/graph/linkExtractor";
 import { sanitizeBlockImageNoteContent } from "@/utils/migrateBlockImageFloor";
 
+function deriveContentPlain(content: string): string {
+  if (!content) {
+    return "";
+  }
+  try {
+    return extractPlainTextFromTiptap(JSON.parse(content));
+  } catch {
+    return content;
+  }
+}
+
 async function hydrateNoteFromDb(note: Note): Promise<Note> {
-  const { content, changed } = sanitizeBlockImageNoteContent(note.content);
-  if (!changed) {
+  const { content, changed: contentChanged } = sanitizeBlockImageNoteContent(
+    note.content,
+  );
+  const needsPlainBackfill = note.contentPlain == null;
+  const contentPlain = needsPlainBackfill
+    ? deriveContentPlain(content)
+    : note.contentPlain;
+
+  if (!contentChanged && !needsPlainBackfill) {
     return note;
   }
-  await db.notes.update(note.id, { content });
-  return { ...note, content };
+
+  const updates: Partial<Note> = {};
+  if (contentChanged) {
+    updates.content = content;
+  }
+  if (needsPlainBackfill) {
+    updates.contentPlain = contentPlain;
+  }
+  await db.notes.update(note.id, updates);
+  return { ...note, content, contentPlain };
 }
 
 function sanitizeContentForWrite(content: string): string {
@@ -136,7 +163,7 @@ export const noteStorage = {
         (note) =>
           note.status === "active" &&
           (note.title.toLowerCase().includes(lower) ||
-            note.contentPlain.toLowerCase().includes(lower)),
+            (note.contentPlain ?? "").toLowerCase().includes(lower)),
       )
       .toArray()
       .then((notes) => Promise.all(notes.map(hydrateNoteFromDb)));
