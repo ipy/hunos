@@ -44,6 +44,10 @@ import {
 } from "@/store/editorAutosaveRegistry";
 import { bindEditorLifecycleAutosaveFlush } from "@/store/editorLifecycleAutosave";
 import {
+  registerUnloadDraftCollector,
+  unregisterUnloadDraftCollector,
+} from "@/store/lifecycleUnload";
+import {
   sanitizeBlockImageNoteContent,
   sanitizeEditorStashContent,
 } from "@/utils/migrateBlockImageFloor";
@@ -232,6 +236,24 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     return json;
   }, [activeNoteId, editorInstance]);
 
+  const collectUnloadDraft = useCallback(() => {
+    const noteId = activeNoteId;
+    if (!noteId) return null;
+
+    const pendingTitle = pendingTitleRef.current;
+    const title = pendingTitle ?? titleValue;
+    const content = collectPendingAutosave();
+
+    if (pendingTitle == null && !content) return null;
+
+    return {
+      noteId,
+      title: pendingTitle != null ? title : null,
+      content,
+      savedAt: Date.now(),
+    };
+  }, [activeNoteId, collectPendingAutosave, titleValue]);
+
   const flushPendingTitle = useCallback(async (): Promise<boolean> => {
     const noteId = activeNoteId;
     if (!noteId) return true;
@@ -274,6 +296,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
   useEffect(() => {
     registerEditorAutosaveFlush(flushPendingAutosave);
+    registerUnloadDraftCollector(collectUnloadDraft);
     const unbindLifecycle = bindEditorLifecycleAutosaveFlush();
     return () => {
       unbindLifecycle();
@@ -298,6 +321,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         }
       }
       unregisterEditorAutosaveFlush(flushPendingAutosave);
+      unregisterUnloadDraftCollector(collectUnloadDraft);
       const pendingTitle = takePendingTitle(pendingTitleRef, titleTimeoutRef);
       if (pendingTitle && activeNoteId) {
         void persistEditorTitle(activeNoteId, pendingTitle);
@@ -306,6 +330,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   }, [
     activeNoteId,
     collectPendingAutosave,
+    collectUnloadDraft,
     flushPendingAutosave,
     notes,
     persistEditorContent,
@@ -645,6 +670,8 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           borderBottom: `1px solid ${theme.colors.borderLight}`,
           flexShrink: 0,
           minHeight: 44,
+          position: "relative",
+          zIndex: showStats ? 70 : undefined,
         }}
       >
         {showBackButton && (

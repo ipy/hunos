@@ -52,6 +52,10 @@
       "restorePlaygroundShort": "Restore",
       "restorePlaygroundDone": "Format Playground restored"
     },
+    "list": {
+      "emptyPreview": "Empty note",
+      "playgroundPreview": "Formatting samples"
+    },
     "sort": {
       "modifiedAt": "Date Modified",
       "createdAt": "Date Created",
@@ -77,7 +81,11 @@
       "blockquote": "Quote",
       "codeBlock": "Code Block",
       "link": "Link",
-      "horizontalRule": "Divider"
+      "horizontalRule": "Divider",
+      "image": "Insert Image",
+      "camera": "Take Photo",
+      "table": "Insert Table",
+      "sketch": "Sketch"
     },
     "status": {
       "words": "words",

@@ -1,9 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const flushEditorAutosave = vi.fn().mockResolvedValue(null);
+const flushForDocumentHide = vi.fn().mockResolvedValue({ content: null, persisted: true });
+const flushForPageUnload = vi.fn().mockResolvedValue({ content: null, persisted: true });
 
-vi.mock("@/store/editorAutosaveRegistry", () => ({
-  flushEditorAutosave: () => flushEditorAutosave(),
+vi.mock("@/store/lifecycleUnload", () => ({
+  flushForDocumentHide: () => flushForDocumentHide(),
+  flushForPageUnload: (event?: PageTransitionEvent) => flushForPageUnload(event),
+  resetLifecycleUnloadForTests: vi.fn(),
 }));
 
 import {
@@ -67,7 +70,8 @@ describe("editorLifecycleAutosave", () => {
   let dom: ReturnType<typeof createDomStub>;
 
   beforeEach(() => {
-    flushEditorAutosave.mockClear();
+    flushForDocumentHide.mockClear();
+    flushForPageUnload.mockClear();
     resetEditorLifecycleAutosaveForTests();
     dom = createDomStub();
     vi.stubGlobal("document", dom.document);
@@ -85,7 +89,7 @@ describe("editorLifecycleAutosave", () => {
     dom.document.visibilityState = "hidden";
     dom.document.dispatchEvent(new Event("visibilitychange"));
 
-    expect(flushEditorAutosave).toHaveBeenCalledOnce();
+    expect(flushForDocumentHide).toHaveBeenCalledOnce();
   });
 
   it("does not flush on visibilitychange when document is visible", () => {
@@ -94,7 +98,7 @@ describe("editorLifecycleAutosave", () => {
     dom.document.visibilityState = "visible";
     dom.document.dispatchEvent(new Event("visibilitychange"));
 
-    expect(flushEditorAutosave).not.toHaveBeenCalled();
+    expect(flushForDocumentHide).not.toHaveBeenCalled();
   });
 
   it("flushes on pagehide", () => {
@@ -102,7 +106,7 @@ describe("editorLifecycleAutosave", () => {
 
     dom.window.dispatchEvent(new Event("pagehide"));
 
-    expect(flushEditorAutosave).toHaveBeenCalledOnce();
+    expect(flushForPageUnload).toHaveBeenCalledOnce();
   });
 
   it("flushes on beforeunload", () => {
@@ -110,17 +114,18 @@ describe("editorLifecycleAutosave", () => {
 
     dom.window.dispatchEvent(new Event("beforeunload"));
 
-    expect(flushEditorAutosave).toHaveBeenCalledOnce();
+    expect(flushForPageUnload).toHaveBeenCalledOnce();
   });
 
-  it("dedupes concurrent lifecycle flush requests", () => {
+  it("dedupes concurrent lifecycle flush requests via lifecycleUnload", () => {
     bindEditorLifecycleAutosaveFlush();
 
     dom.document.visibilityState = "hidden";
     dom.document.dispatchEvent(new Event("visibilitychange"));
     dom.window.dispatchEvent(new Event("pagehide"));
 
-    expect(flushEditorAutosave).toHaveBeenCalledOnce();
+    expect(flushForDocumentHide).toHaveBeenCalledOnce();
+    expect(flushForPageUnload).toHaveBeenCalledOnce();
   });
 
   it("unbind removes lifecycle listeners", () => {
@@ -132,7 +137,8 @@ describe("editorLifecycleAutosave", () => {
     dom.window.dispatchEvent(new Event("pagehide"));
     dom.window.dispatchEvent(new Event("beforeunload"));
 
-    expect(flushEditorAutosave).not.toHaveBeenCalled();
+    expect(flushForDocumentHide).not.toHaveBeenCalled();
+    expect(flushForPageUnload).not.toHaveBeenCalled();
   });
 
   it("registers Harmony native background listener", () => {
@@ -140,7 +146,7 @@ describe("editorLifecycleAutosave", () => {
 
     expect(isHarmonyLifecycleListenerBound()).toBe(true);
     dom.window.dispatchEvent(new CustomEvent(HUNOS_LIFECYCLE_HIDE_EVENT));
-    expect(flushEditorAutosave).toHaveBeenCalledOnce();
+    expect(flushForDocumentHide).toHaveBeenCalledOnce();
   });
 
   it("flushes on Harmony lifecycle hide event", () => {
@@ -148,7 +154,7 @@ describe("editorLifecycleAutosave", () => {
 
     dom.window.dispatchEvent(new CustomEvent(HUNOS_LIFECYCLE_HIDE_EVENT));
 
-    expect(flushEditorAutosave).toHaveBeenCalledOnce();
+    expect(flushForDocumentHide).toHaveBeenCalledOnce();
   });
 
   it("dispatchHarmonyLifecycleHide triggers flush when bound", () => {
@@ -156,7 +162,7 @@ describe("editorLifecycleAutosave", () => {
 
     dispatchHarmonyLifecycleHide();
 
-    expect(flushEditorAutosave).toHaveBeenCalledOnce();
+    expect(flushForDocumentHide).toHaveBeenCalledOnce();
   });
 
   it("clears Harmony listener on unbind", () => {
@@ -165,6 +171,6 @@ describe("editorLifecycleAutosave", () => {
 
     expect(isHarmonyLifecycleListenerBound()).toBe(false);
     dispatchHarmonyLifecycleHide();
-    expect(flushEditorAutosave).not.toHaveBeenCalled();
+    expect(flushForDocumentHide).not.toHaveBeenCalled();
   });
 });

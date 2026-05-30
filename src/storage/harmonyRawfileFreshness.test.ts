@@ -116,6 +116,10 @@ describe("harmony rawfile freshness", () => {
     expect(rawfile()).toContain("beforeunload");
   });
 
+  it("includes unload backup key for durable tab-close flush (iter 2)", () => {
+    expect(rawfile()).toContain("hunos:unload-backup");
+  });
+
   it("ships bundled woff/woff2 font files in rawfile assets (iter 90)", () => {
     const assetsDir = join(
       process.cwd(),

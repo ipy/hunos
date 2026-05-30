@@ -1,33 +1,29 @@
-import { flushEditorAutosave } from "@/store/editorAutosaveRegistry";
+import {
+  flushForDocumentHide,
+  flushForPageUnload,
+  resetLifecycleUnloadForTests,
+} from "@/store/lifecycleUnload";
 import { HUNOS_LIFECYCLE_HIDE_EVENT } from "@/store/harmonyLifecycleBridge";
 
 let lifecycleBound = false;
 let harmonyLifecycleBound = false;
-let inFlightFlush: Promise<string | null> | null = null;
 
 function onHarmonyLifecycleHide(): void {
-  scheduleLifecycleFlush();
-}
-
-function scheduleLifecycleFlush(): void {
-  if (inFlightFlush) return;
-  inFlightFlush = flushEditorAutosave().finally(() => {
-    inFlightFlush = null;
-  });
+  void flushForDocumentHide();
 }
 
 function onVisibilityChange(): void {
   if (document.visibilityState === "hidden") {
-    scheduleLifecycleFlush();
+    void flushForDocumentHide();
   }
 }
 
-function onPageHide(): void {
-  scheduleLifecycleFlush();
+function onPageHide(event: PageTransitionEvent): void {
+  void flushForPageUnload(event);
 }
 
 function onBeforeUnload(): void {
-  scheduleLifecycleFlush();
+  void flushForPageUnload();
 }
 
 /** Flush debounced editor content when the page hides or unloads (ArkWeb + web). */
@@ -77,5 +73,5 @@ export function isHarmonyLifecycleListenerBound(): boolean {
 /** @internal Test-only reset for listener state between cases. */
 export function resetEditorLifecycleAutosaveForTests(): void {
   unbindEditorLifecycleAutosaveFlush();
-  inFlightFlush = null;
+  resetLifecycleUnloadForTests();
 }

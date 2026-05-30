@@ -6,12 +6,15 @@ import { useSettingsStore } from "@/store/settingsStore";
 import { useUIStore } from "@/store/uiStore";
 import { useTagStore } from "@/store/tagStore";
 import { filterNotesForPlaygroundList } from "@/storage/formatPlaygroundNote";
+import { deriveNoteListPreview } from "@/utils/noteListPreview";
 import { Icon } from "@/components/common/Icon";
 import { FAB } from "@/components/common/FAB";
 import type { LayoutMode } from "@/hooks/useAdaptiveLayout";
 import type { Note } from "@/types/note";
 
 export const NOTE_LIST_TAG_FILTER_TESTID = "note-list-tag-filter";
+export const NOTE_LIST_ITEM_TITLE_TESTID = "note-list-item-title";
+export const NOTE_LIST_ITEM_PREVIEW_TESTID = "note-list-item-preview";
 
 interface NoteListScreenProps {
   layout?: LayoutMode;
@@ -43,6 +46,8 @@ function SwipeableNoteCard({
   onSelect,
   actions,
   index = 0,
+  previewText,
+  emptyPreviewLabel,
 }: {
   note: {
     id: string;
@@ -55,9 +60,11 @@ function SwipeableNoteCard({
   onSelect: () => void;
   actions: SwipeAction[];
   index?: number;
+  previewText: string;
+  emptyPreviewLabel: string;
 }) {
   const theme = useTheme();
-  const snippet = (note.contentPlain ?? "").slice(0, 100).replace(/\n/g, " ");
+  const snippet = previewText;
   const [offsetX, setOffsetX] = useState(0);
   const [isSwipeOpen, setIsSwipeOpen] = useState(false);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(
@@ -217,6 +224,7 @@ function SwipeableNoteCard({
             <Icon name="pin" size={11} color={theme.colors.accent} />
           )}
           <span
+            data-testid={NOTE_LIST_ITEM_TITLE_TESTID}
             style={{
               fontSize: 15,
               fontWeight: 600,
@@ -232,17 +240,19 @@ function SwipeableNoteCard({
           </span>
         </div>
         <div
+          data-testid={NOTE_LIST_ITEM_PREVIEW_TESTID}
           style={{
             fontSize: 13,
             color: theme.colors.textSecondary,
             overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
             marginBottom: 5,
             lineHeight: 1.4,
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
           }}
         >
-          {snippet || "Empty note"}
+          {snippet || emptyPreviewLabel}
         </div>
         <div
           style={{
@@ -310,6 +320,11 @@ export function NoteListScreen({ layout = "mobile" }: NoteListScreenProps) {
 
   const pinnedNotes = displayedNotes.filter((n) => n.isPinned);
   const unpinnedNotes = displayedNotes.filter((n) => !n.isPinned);
+  const playgroundListPreview = t("notes.list.playgroundPreview");
+  const emptyPreviewLabel = t("notes.list.emptyPreview");
+
+  const previewForNote = (note: Note) =>
+    deriveNoteListPreview(note, playgroundListPreview);
 
   const showMenuButton = layout === "mobile" || layout === "tablet";
 
@@ -577,6 +592,8 @@ export function NoteListScreen({ layout = "mobile" }: NoteListScreenProps) {
                 onSelect={() => handleSelectNote(note.id)}
                 actions={getSwipeActions(note)}
                 index={i}
+                previewText={previewForNote(note)}
+                emptyPreviewLabel={emptyPreviewLabel}
               />
             ))}
             {pinnedNotes.length > 0 && unpinnedNotes.length > 0 && (
@@ -595,6 +612,8 @@ export function NoteListScreen({ layout = "mobile" }: NoteListScreenProps) {
                 onSelect={() => handleSelectNote(note.id)}
                 actions={getSwipeActions(note)}
                 index={pinnedNotes.length + i}
+                previewText={previewForNote(note)}
+                emptyPreviewLabel={emptyPreviewLabel}
               />
             ))}
           </>

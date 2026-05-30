@@ -82,6 +82,16 @@ export function InfoPanel({
     };
   }, [editor]);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
   const { charCount, wordCount, paragraphCount, readingTimeMinutes } = useMemo(
     () => deriveNoteStats(note, editor),
     [note, editor, statsRevision],
@@ -127,8 +137,9 @@ export function InfoPanel({
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop — below editor header (z 70) so toolbar actions stay clickable */}
       <div
+        data-testid="stats-panel-backdrop"
         onClick={onClose}
         style={{
           position: "fixed",
@@ -206,6 +217,8 @@ export function InfoPanel({
               alignItems: "center",
               justifyContent: "center",
               padding: "6px 20px 10px",
+              gap: 8,
+              position: "relative",
             }}
           >
             <span
@@ -214,12 +227,31 @@ export function InfoPanel({
                 fontWeight: "600",
                 color: theme.colors.text,
                 letterSpacing: -0.2,
+                flex: 1,
+                textAlign: "center",
               }}
             >
               {activeTab === "stats"
                 ? t("editor.stats.title")
                 : t("editor.toc.title")}
             </span>
+            <button
+              type="button"
+              data-testid="stats-panel-close"
+              onClick={onClose}
+              aria-label={t("common.actions.done")}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 4,
+                display: "flex",
+                position: "absolute",
+                right: 16,
+              }}
+            >
+              <Icon name="close" size={16} color={theme.colors.textTertiary} />
+            </button>
           </div>
         </div>
 

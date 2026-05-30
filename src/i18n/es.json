@@ -52,6 +52,10 @@
       "restorePlaygroundShort": "Restaurar",
       "restorePlaygroundDone": "Patio de formatos restaurado"
     },
+    "list": {
+      "emptyPreview": "Nota vacía",
+      "playgroundPreview": "Muestras de formato"
+    },
     "sort": {
       "modifiedAt": "Fecha de Modificación",
       "createdAt": "Fecha de Creación",
@@ -77,7 +81,11 @@
       "blockquote": "Cita",
       "codeBlock": "Bloque de Código",
       "link": "Enlace",
-      "horizontalRule": "Separador"
+      "horizontalRule": "Separador",
+      "image": "Insertar imagen",
+      "camera": "Tomar foto",
+      "table": "Insertar tabla",
+      "sketch": "Boceto"
     },
     "status": {
       "words": "palabras",

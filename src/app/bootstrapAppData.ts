@@ -5,6 +5,7 @@ import {
   clearStashedEditorAutosave,
   flushEditorAutosave,
 } from "@/store/editorAutosaveRegistry";
+import { recoverPendingUnloadBackup } from "@/store/lifecycleUnload";
 import { useNoteStore } from "@/store/noteStore";
 import { useTagStore } from "@/store/tagStore";
 import { noteStorage } from "@/storage/noteStorage";
@@ -16,6 +17,7 @@ export async function bootstrapAppData(locale: Locale): Promise<void> {
   await createWelcomeNotesIfNeeded(locale);
   const flushedContent = await flushEditorAutosave();
   await useNoteStore.getState().loadNotes({ status: "active" });
+  await recoverPendingUnloadBackup();
   await syncFormatPlaygroundOnLocaleChange(locale, flushedContent, {
     focusCanonical: true,
   });

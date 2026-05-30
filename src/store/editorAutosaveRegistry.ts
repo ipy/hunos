@@ -53,7 +53,7 @@ export function clearStashedEditorAutosave(): void {
 }
 
 /** Collect pending editor JSON before locale migration (handler or unmount stash). */
-export async function flushEditorAutosave(): Promise<string | null> {
+export async function flushEditorAutosaveResult(): Promise<EditorAutosaveFlushResult> {
   let result: EditorAutosaveFlushResult = { content: null, persisted: true };
   if (flushHandler) {
     result = await flushHandler();
@@ -66,5 +66,10 @@ export async function flushEditorAutosave(): Promise<string | null> {
   if (result.persisted) {
     await checkpointStorageAfterFlush();
   }
+  return result;
+}
+
+export async function flushEditorAutosave(): Promise<string | null> {
+  const result = await flushEditorAutosaveResult();
   return result.content;
 }

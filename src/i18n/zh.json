@@ -52,6 +52,10 @@
       "restorePlaygroundShort": "恢复",
       "restorePlaygroundDone": "格式试炼场已恢复"
     },
+    "list": {
+      "emptyPreview": "空笔记",
+      "playgroundPreview": "格式示例"
+    },
     "sort": {
       "modifiedAt": "修改日期",
       "createdAt": "创建日期",
@@ -77,7 +81,11 @@
       "blockquote": "引用",
       "codeBlock": "代码块",
       "link": "链接",
-      "horizontalRule": "分隔线"
+      "horizontalRule": "分隔线",
+      "image": "插入图片",
+      "camera": "拍照",
+      "table": "插入表格",
+      "sketch": "涂鸦"
     },
     "status": {
       "words": "字",
