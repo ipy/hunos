@@ -12,6 +12,7 @@ import { useUIStore } from "@/store/uiStore";
 import { useSettingsStore } from "@/store/settingsStore";
 import { Icon } from "@/components/common/Icon";
 import { TiptapEditor } from "@/components/editor/TiptapEditor";
+import { editorContentMatchesStoredJson } from "@/components/editor/noteSwitchContentUtils";
 import { EditorToolbar } from "@/components/editor/EditorToolbar";
 import { EditorFindBar } from "@/components/editor/EditorFindBar";
 import { BacklinksPanel } from "@/components/backlinks/BacklinksPanel";
@@ -43,6 +44,7 @@ import {
 } from "@/utils/migrateBlockImageFloor";
 import {
   createPlaygroundRestoreSession,
+  shouldEndPlaygroundRestoreSession,
   shouldStashAutosaveOnEffectCleanup,
 } from "@/screens/playgroundRestoreEditorSync";
 
@@ -99,6 +101,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const [editorSeedContent, setEditorSeedContent] = useState<string | null>(
     null,
   );
+  const [restoreEditorSyncTick, setRestoreEditorSyncTick] = useState(0);
   const titleTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
@@ -134,6 +137,12 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const handleContentChange = useCallback(
     (json: string, flushSave?: boolean) => {
       if (!activeNoteId) return;
+      if (playgroundRestoreSessionRef.current.isActive()) {
+        setRestoreEditorSyncTick((tick) => tick + 1);
+        if (editorContentMatchesStoredJson(json, noteContentForEditor)) {
+          playgroundRestoreSessionRef.current.end();
+        }
+      }
       pendingContentRef.current = json;
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       if (flushSave) {
@@ -146,7 +155,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         pendingContentRef.current = null;
       }, 400);
     },
-    [activeNoteId, saveNoteContent],
+    [activeNoteId, noteContentForEditor, saveNoteContent],
   );
 
   const collectPendingAutosave = useCallback((): string | null => {
@@ -253,6 +262,29 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     setEditorSeedContent(null);
     void saveNoteContent(note.id, sanitized);
   }, [note?.id, note?.title, note?.content, saveNoteContent, settings.locale]);
+
+  useEffect(() => {
+    const session = playgroundRestoreSessionRef.current;
+    if (
+      !shouldEndPlaygroundRestoreSession({
+        isRestoringPlayground: session.isActive(),
+        hasNoteContent: Boolean(note?.content),
+        editorContentJson: editorInstance
+          ? JSON.stringify(editorInstance.getJSON())
+          : null,
+        restoredContent: noteContentForEditor,
+        editorContentMatchesStoredJson,
+      })
+    ) {
+      return;
+    }
+    session.end();
+  }, [
+    note?.content,
+    noteContentForEditor,
+    editorInstance,
+    restoreEditorSyncTick,
+  ]);
 
   useEffect(() => {
     if (!note?.id) return;
@@ -381,8 +413,8 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       setTitleValue(getFormatPlaygroundTitle(settings.locale));
       showToast(t("notes.actions.restorePlaygroundDone"));
       setShowActions(false);
-    } finally {
-      queueMicrotask(() => restoreSession.end());
+    } catch {
+      restoreSession.end();
     }
   };
 
