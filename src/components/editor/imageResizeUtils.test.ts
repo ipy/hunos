@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import { Schema } from "@tiptap/pm/model";
 import { EditorState, NodeSelection, TextSelection } from "@tiptap/pm/state";
 import {
-  BLOCK_IMAGE_TINY_FLOOR_SELECTOR,
   buildBlockImageInsertAttrs,
   buildInitialBlockImageInsertAttrs,
   computeImageResizeHeight,
@@ -272,14 +271,6 @@ describe("handleBlockImageClick", () => {
   });
 });
 
-describe("BLOCK_IMAGE_TINY_FLOOR_SELECTOR", () => {
-  it("targets only images flagged as likely tiny pastes", () => {
-    expect(BLOCK_IMAGE_TINY_FLOOR_SELECTOR).toBe(
-      '.editor-image[data-block-image-floor="true"]',
-    );
-  });
-});
-
 describe("isLikelyTinyPasteFile", () => {
   it("treats small pasted files as likely tiny", () => {
     expect(isLikelyTinyPasteFile(32)).toBe(true);
@@ -293,16 +284,16 @@ describe("isLikelyTinyPasteFile", () => {
 });
 
 describe("buildInitialBlockImageInsertAttrs", () => {
-  it("sets floor attr for likely tiny files", () => {
+  it("sets durable height for likely tiny files", () => {
     expect(
       buildInitialBlockImageInsertAttrs("data:image/png;base64,tiny", 32),
     ).toEqual({
       src: "data:image/png;base64,tiny",
-      dataBlockImageFloor: true,
+      height: MIN_BLOCK_IMAGE_HEIGHT,
     });
   });
 
-  it("leaves large files without floor attr", () => {
+  it("leaves large files without height", () => {
     expect(
       buildInitialBlockImageInsertAttrs("data:image/png;base64,large", 2048),
     ).toEqual({ src: "data:image/png;base64,large" });

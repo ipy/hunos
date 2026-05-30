@@ -6,14 +6,9 @@ import { TINY_PASTE_FILE_BYTES } from "./imageEmbedUtils";
 /** Minimum display height for block images (matches sketch resize). */
 export const MIN_BLOCK_IMAGE_HEIGHT = 80;
 
-/** Block images flagged as likely tiny pastes (CSS visual floor only). */
-export const BLOCK_IMAGE_TINY_FLOOR_SELECTOR =
-  '.editor-image[data-block-image-floor="true"]';
-
 export type BlockImageInsertAttrs = {
   src: string;
   height?: number;
-  dataBlockImageFloor?: boolean;
 };
 
 export function isLikelyTinyPasteFile(fileSize: number): boolean {
@@ -26,7 +21,7 @@ export function buildInitialBlockImageInsertAttrs(
   fileSize: number,
 ): BlockImageInsertAttrs {
   if (isLikelyTinyPasteFile(fileSize)) {
-    return { src, dataBlockImageFloor: true };
+    return { src, height: MIN_BLOCK_IMAGE_HEIGHT };
   }
   return { src };
 }

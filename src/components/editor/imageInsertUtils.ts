@@ -10,6 +10,7 @@ import {
   buildBlockImageInsertAttrs,
   buildInitialBlockImageInsertAttrs,
   getSelectedBlockImagePos,
+  MIN_BLOCK_IMAGE_HEIGHT,
   type BlockImageInsertAttrs,
 } from "./imageResizeUtils";
 
@@ -80,16 +81,19 @@ export function applyDeferredBlockImageMinHeight(
     const nextAttrs = { ...node.attrs };
     let changed = false;
 
-    if (nextAttrs.dataBlockImageFloor) {
-      nextAttrs.dataBlockImageFloor = null;
-      changed = true;
-    }
-
     if (
       targetAttrs.height !== undefined &&
       nextAttrs.height !== targetAttrs.height
     ) {
       nextAttrs.height = targetAttrs.height;
+      changed = true;
+    } else if (
+      targetAttrs.height === undefined &&
+      typeof dims?.height === "number" &&
+      dims.height >= MIN_BLOCK_IMAGE_HEIGHT &&
+      nextAttrs.height === MIN_BLOCK_IMAGE_HEIGHT
+    ) {
+      nextAttrs.height = null;
       changed = true;
     }
 

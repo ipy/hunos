@@ -51,7 +51,6 @@ const testSchema = new Schema({
       attrs: {
         src: {},
         height: { default: null },
-        dataBlockImageFloor: { default: null },
       },
       parseDOM: [{ tag: "img[src]" }],
       toDOM(node) {
@@ -62,15 +61,10 @@ const testSchema = new Schema({
   },
 });
 
-function createStateWithImage(
-  src: string,
-  height: number | null = null,
-  dataBlockImageFloor: boolean | null = null,
-) {
+function createStateWithImage(src: string, height: number | null = null) {
   const image = testSchema.nodes.image.create({
     src,
     height,
-    dataBlockImageFloor,
   });
   const doc = testSchema.nodes.doc.create(null, [image]);
   return EditorState.create({ schema: testSchema, doc });
@@ -186,7 +180,7 @@ describe("insertImageFromFileAtCursor", () => {
     expect(editor._dispatch).not.toHaveBeenCalled();
   });
 
-  it("defers min height for tiny images after insert", async () => {
+  it("sets min height immediately for tiny images on insert", async () => {
     loadImageDimensions.mockResolvedValue({ width: 2, height: 2 });
 
     const src = "data:image/png;base64,tiny";
@@ -198,19 +192,17 @@ describe("insertImageFromFileAtCursor", () => {
 
     expect(editor._chain.setImage).toHaveBeenCalledWith({
       src,
-      dataBlockImageFloor: true,
+      height: MIN_BLOCK_IMAGE_HEIGHT,
     });
-    await Promise.resolve();
-    expect(loadImageDimensions).toHaveBeenCalledWith(src);
-    await Promise.resolve();
-    expect(editor._dispatch).toHaveBeenCalled();
     const node = editor.view.state.doc.firstChild;
     expect(node?.type.name).toBe("image");
     expect(node?.attrs.height).toBe(MIN_BLOCK_IMAGE_HEIGHT);
-    expect(node?.attrs.dataBlockImageFloor).toBeNull();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(editor._dispatch).not.toHaveBeenCalled();
   });
 
-  it("does not set floor attr for large files on insert", async () => {
+  it("does not set height for large files on insert", async () => {
     loadImageDimensions.mockResolvedValue({ width: 800, height: 600 });
     readImageFileAsDataUrl.mockResolvedValue("data:image/png;base64,large");
     const editor = createMockEditor();
@@ -224,9 +216,6 @@ describe("insertImageFromFileAtCursor", () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(editor.view.state.doc.firstChild?.attrs.height).toBeNull();
-    expect(
-      editor.view.state.doc.firstChild?.attrs.dataBlockImageFloor,
-    ).toBeNull();
   });
 });
 
@@ -243,10 +232,10 @@ describe("applyDeferredBlockImageMinHeight", () => {
     loadImageDimensions.mockReset();
   });
 
-  it("sets min height when intrinsic height is tiny", async () => {
+  it("preserves height when intrinsic height is tiny", async () => {
     const src = "data:image/png;base64,tiny";
     loadImageDimensions.mockResolvedValue({ width: 2, height: 2 });
-    const state = createStateWithImage(src, null, true);
+    const state = createStateWithImage(src, MIN_BLOCK_IMAGE_HEIGHT);
     const dispatch = vi.fn((tr) => {
       editorState = editorState.apply(tr);
     });
@@ -266,16 +255,15 @@ describe("applyDeferredBlockImageMinHeight", () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(dispatch).toHaveBeenCalled();
+    expect(dispatch).not.toHaveBeenCalled();
     const node = editorState.doc.nodeAt(0);
     expect(node?.attrs.height).toBe(MIN_BLOCK_IMAGE_HEIGHT);
-    expect(node?.attrs.dataBlockImageFloor).toBeNull();
   });
 
-  it("clears floor attr for large intrinsic images", async () => {
+  it("clears optimistic height for large intrinsic images", async () => {
     const src = "data:image/png;base64,large";
     loadImageDimensions.mockResolvedValue({ width: 800, height: 600 });
-    const state = createStateWithImage(src, null, true);
+    const state = createStateWithImage(src, MIN_BLOCK_IMAGE_HEIGHT);
     const dispatch = vi.fn((tr) => {
       editorState = editorState.apply(tr);
     });
@@ -298,7 +286,6 @@ describe("applyDeferredBlockImageMinHeight", () => {
     expect(dispatch).toHaveBeenCalled();
     const node = editorState.doc.nodeAt(0);
     expect(node?.attrs.height).toBeNull();
-    expect(node?.attrs.dataBlockImageFloor).toBeNull();
   });
 
   it("skips update when node is missing", async () => {
@@ -325,19 +312,19 @@ describe("insertImageFromFileAtPosition", () => {
     loadImageDimensions.mockResolvedValue({ width: 2, height: 2 });
   });
 
-  it("inserts with floor attr for tiny files at the given position", async () => {
+  it("inserts with durable height for tiny files at the given position", async () => {
     const editor = createMockEditor();
     const file = makePngFile(32);
 
-    await expect(
-      insertImageFromFileAtPosition(editor, file, 0),
-    ).resolves.toBe(true);
+    await expect(insertImageFromFileAtPosition(editor, file, 0)).resolves.toBe(
+      true,
+    );
 
     expect(editor._chain.insertContentAt).toHaveBeenCalledWith(0, {
       type: "image",
       attrs: {
         src: "data:image/png;base64,tiny",
-        dataBlockImageFloor: true,
+        height: MIN_BLOCK_IMAGE_HEIGHT,
       },
     });
   });
