@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { isTextSelection } from "@tiptap/core";
-import { BubbleMenu } from "@tiptap/react";
+import { BubbleMenuPlugin } from "@tiptap/extension-bubble-menu";
 import type { Editor } from "@tiptap/react";
 import type { EditorState } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
@@ -12,6 +12,9 @@ import {
   isLinkEditorOpen,
 } from "@/utils/editorSuggestionMenu";
 import { useUIStore } from "@/store/uiStore";
+import { reparentBubbleMenuElement } from "./bubbleMenuHostUtils";
+
+const SELECTION_BUBBLE_MENU_KEY = "selectionBubbleMenu";
 
 function shouldShowSelectionBubbleMenu({
   editor,
@@ -56,6 +59,52 @@ export function SelectionBubbleMenu({ editor }: SelectionBubbleMenuProps) {
   const [, setTick] = useState(0);
   const rafRef = useRef<number>(0);
   const touchHandledRef = useRef(false);
+  const hostRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const element = menuRef.current;
+    const host = hostRef.current;
+    if (!editor || !element || editor.isDestroyed) return;
+
+    const plugin = BubbleMenuPlugin({
+      pluginKey: SELECTION_BUBBLE_MENU_KEY,
+      editor,
+      element,
+      updateDelay: 100,
+      shouldShow: shouldShowSelectionBubbleMenu,
+      tippyOptions: {
+        duration: 150,
+        placement: "top",
+        offset: [0, 10],
+        zIndex: 200,
+        popperOptions: {
+          modifiers: [
+            {
+              name: "flip",
+              options: { fallbackPlacements: ["bottom", "top"] },
+            },
+            {
+              name: "preventOverflow",
+              options: {
+                boundary: "viewport",
+                padding: 8,
+                altAxis: true,
+              },
+            },
+          ],
+        },
+      },
+    });
+
+    editor.registerPlugin(plugin);
+    return () => {
+      if (!editor.isDestroyed) {
+        editor.unregisterPlugin(SELECTION_BUBBLE_MENU_KEY);
+      }
+      reparentBubbleMenuElement(host, element);
+    };
+  }, [editor]);
 
   useEffect(() => {
     if (!editor) return;
@@ -86,112 +135,87 @@ export function SelectionBubbleMenu({ editor }: SelectionBubbleMenuProps) {
   void linkEditorOpen;
 
   return (
-    <BubbleMenu
-      editor={editor}
-      pluginKey="selectionBubbleMenu"
-      updateDelay={100}
-      shouldShow={shouldShowSelectionBubbleMenu}
-      tippyOptions={{
-        duration: 150,
-        placement: "top",
-        offset: [0, 10],
-        zIndex: 200,
-        popperOptions: {
-          modifiers: [
-            {
-              name: "flip",
-              options: { fallbackPlacements: ["bottom", "top"] },
-            },
-            {
-              name: "preventOverflow",
-              options: {
-                boundary: "viewport",
-                padding: 8,
-                altAxis: true,
-              },
-            },
-          ],
-        },
-      }}
-    >
-      <div
-        role="toolbar"
-        aria-label="Text formatting"
-        style={{
-          display: "flex",
-          gap: 4,
-          padding: "4px 6px",
-          borderRadius: 10,
-          border: `1px solid ${theme.colors.borderLight}`,
-          backgroundColor: theme.isDark
-            ? "rgba(28,28,30,0.95)"
-            : "rgba(255,255,255,0.95)",
-          backdropFilter: "blur(12px)",
-          WebkitBackdropFilter: "blur(12px)",
-          boxShadow: theme.isDark
-            ? "0 4px 20px rgba(0,0,0,0.45)"
-            : "0 4px 20px rgba(0,0,0,0.12)",
-        }}
-      >
-        {INLINE_FORMAT_ITEMS.map((item) => {
-          const active = item.isActive?.(editor) ?? false;
-          return (
-            <button
-              key={item.icon}
-              type="button"
-              aria-label={item.label}
-              aria-pressed={active}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                if (touchHandledRef.current) {
-                  touchHandledRef.current = false;
-                  return;
-                }
-                handleAction(item.action);
-              }}
-              onTouchEnd={(e) => {
-                e.preventDefault();
-                touchHandledRef.current = true;
-                handleAction(item.action);
-              }}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 44,
-                height: 44,
-                minWidth: 44,
-                borderRadius: 8,
-                border: "none",
-                cursor: "pointer",
-                backgroundColor: active
-                  ? theme.colors.accentLight
-                  : "transparent",
-                touchAction: "manipulation",
-                transition: "background-color 0.15s ease",
-              }}
-              onMouseEnter={(e) => {
-                if (!active)
-                  e.currentTarget.style.backgroundColor =
-                    theme.colors.surfaceHover;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = active
-                  ? theme.colors.accentLight
-                  : "transparent";
-              }}
-            >
-              <Icon
-                name={item.icon}
-                size={18}
-                color={
-                  active ? theme.colors.accent : theme.colors.textSecondary
-                }
-              />
-            </button>
-          );
-        })}
+    <div ref={hostRef} aria-hidden="true">
+      <div ref={menuRef} style={{ visibility: "hidden" }}>
+        <div
+          role="toolbar"
+          aria-label="Text formatting"
+          style={{
+            display: "flex",
+            gap: 4,
+            padding: "4px 6px",
+            borderRadius: 10,
+            border: `1px solid ${theme.colors.borderLight}`,
+            backgroundColor: theme.isDark
+              ? "rgba(28,28,30,0.95)"
+              : "rgba(255,255,255,0.95)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            boxShadow: theme.isDark
+              ? "0 4px 20px rgba(0,0,0,0.45)"
+              : "0 4px 20px rgba(0,0,0,0.12)",
+          }}
+        >
+          {INLINE_FORMAT_ITEMS.map((item) => {
+            const active = item.isActive?.(editor) ?? false;
+            return (
+              <button
+                key={item.icon}
+                type="button"
+                aria-label={item.label}
+                aria-pressed={active}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  if (touchHandledRef.current) {
+                    touchHandledRef.current = false;
+                    return;
+                  }
+                  handleAction(item.action);
+                }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  touchHandledRef.current = true;
+                  handleAction(item.action);
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 44,
+                  height: 44,
+                  minWidth: 44,
+                  borderRadius: 8,
+                  border: "none",
+                  cursor: "pointer",
+                  backgroundColor: active
+                    ? theme.colors.accentLight
+                    : "transparent",
+                  touchAction: "manipulation",
+                  transition: "background-color 0.15s ease",
+                }}
+                onMouseEnter={(e) => {
+                  if (!active)
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.surfaceHover;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = active
+                    ? theme.colors.accentLight
+                    : "transparent";
+                }}
+              >
+                <Icon
+                  name={item.icon}
+                  size={18}
+                  color={
+                    active ? theme.colors.accent : theme.colors.textSecondary
+                  }
+                />
+              </button>
+            );
+          })}
+        </div>
       </div>
-    </BubbleMenu>
+    </div>
   );
 }
