@@ -1,6 +1,11 @@
 import { Schema } from "prosemirror-model";
 import { describe, expect, it } from "vitest";
 import { applyBulletListToolbarCommand } from "./listToolbarUtils";
+import {
+  captureEditorOverlaySelection,
+  clearEditorOverlaySelection,
+  runToolbarActionWithOverlaySelection,
+} from "@/utils/editorOverlaySelection";
 
 const schema = new Schema({
   nodes: {
@@ -42,17 +47,17 @@ function findSecondItemTextPos(
 
 describe("applyBulletListToolbarCommand", () => {
   it("converts ordered list to bullet in place without orphan paragraph siblings", () => {
+    clearEditorOverlaySelection();
     const document = buildOrderedSecondItemDoc();
     const { from } = findSecondItemTextPos(document);
     const chainSteps: string[] = [];
     const $from = document.resolve(from + 1);
 
     const editor = {
-      isActive: (name: string) =>
-        name === "orderedList" ? true : name === "bulletList" ? false : false,
       state: {
         schema,
-        selection: { $from },
+        doc: document,
+        selection: { from: from + 1, to: from + 1, $from },
       },
     };
 
@@ -65,10 +70,7 @@ describe("applyBulletListToolbarCommand", () => {
         fn: (ctx: { tr: { setNodeMarkup: () => void } }) => boolean,
       ) => {
         chainSteps.push("setNodeMarkup");
-        const tr = {
-          setNodeMarkup: () => {},
-        };
-        fn({ tr });
+        fn({ tr: { setNodeMarkup: () => {} } });
         return chain;
       },
     };
@@ -79,14 +81,56 @@ describe("applyBulletListToolbarCommand", () => {
     expect(chainSteps).not.toContain("toggleBulletList");
   });
 
-  it("uses default toggle when caret is not inside an ordered list", () => {
-    const document = doc.create({}, [paragraph.create({}, textNode("plain"))]);
+  it("uses saved overlay anchor when editor selection is stale at document start", () => {
+    clearEditorOverlaySelection();
+    const document = buildOrderedSecondItemDoc();
+    const { from, to } = findSecondItemTextPos(document);
     const chainSteps: string[] = [];
+    const stale$from = document.resolve(1);
+
     const editor = {
-      isActive: () => false,
       state: {
         schema,
-        selection: { $from: document.resolve(1) },
+        doc: document,
+        selection: { from: 1, to: 1, empty: true, $from: stale$from },
+      },
+    };
+
+    captureEditorOverlaySelection({
+      state: { selection: { from, to }, doc: document },
+    } as never);
+
+    const chain = {
+      toggleBulletList: () => {
+        chainSteps.push("toggleBulletList");
+        return chain;
+      },
+      command: (
+        fn: (ctx: { tr: { setNodeMarkup: () => void } }) => boolean,
+      ) => {
+        chainSteps.push("setNodeMarkup");
+        fn({ tr: { setNodeMarkup: () => {} } });
+        return chain;
+      },
+    };
+
+    runToolbarActionWithOverlaySelection(editor as never, true, (ed) =>
+      applyBulletListToolbarCommand(ed, chain as never),
+    );
+
+    expect(chainSteps).toEqual(["setNodeMarkup"]);
+  });
+
+  it("uses default toggle when caret is not inside an ordered list", () => {
+    clearEditorOverlaySelection();
+    const document = doc.create({}, [paragraph.create({}, textNode("plain"))]);
+    const chainSteps: string[] = [];
+    const $from = document.resolve(1);
+    const editor = {
+      state: {
+        schema,
+        doc: document,
+        selection: { from: 1, to: 1, $from },
       },
     };
     const chain = {
@@ -102,17 +146,19 @@ describe("applyBulletListToolbarCommand", () => {
   });
 
   it("toggles bullet off when already inside a bullet list", () => {
+    clearEditorOverlaySelection();
     const document = doc.create({}, [
       bulletList.create({}, [
         listItem.create({}, [paragraph.create({}, textNode("item"))]),
       ]),
     ]);
     const chainSteps: string[] = [];
+    const $from = document.resolve(2);
     const editor = {
-      isActive: (name: string) => name === "bulletList",
       state: {
         schema,
-        selection: { $from: document.resolve(2) },
+        doc: document,
+        selection: { from: 2, to: 2, $from },
       },
     };
     const chain = {

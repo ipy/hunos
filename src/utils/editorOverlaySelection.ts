@@ -50,6 +50,17 @@ export function isToolbarFormatOverlayOpen(): boolean {
   return toolbarFormatOverlayOpen;
 }
 
+/** Document position for toolbar list/mark commands while an overlay has focus. */
+export function getOverlayToolbarAnchorPos(editor: Editor): number {
+  if (isToolbarFormatOverlayOpen()) {
+    const selection = clampSavedSelection(editor);
+    if (selection) {
+      return selection.from;
+    }
+  }
+  return editor.state.selection.from;
+}
+
 function clampSavedSelection(editor: Editor): SavedEditorSelection | null {
   if (!savedSelection || editor.isDestroyed) return null;
 

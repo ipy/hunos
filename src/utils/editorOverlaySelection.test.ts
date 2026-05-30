@@ -6,6 +6,7 @@ import {
   getSavedEditorOverlaySelection,
   restoreEditorOverlaySelection,
   runToolbarActionWithOverlaySelection,
+  getOverlayToolbarAnchorPos,
   runToolbarChain,
   syncEditorOverlaySelectionBeforeToolbarCommand,
 } from "./editorOverlaySelection";
@@ -93,6 +94,17 @@ describe("editorOverlaySelection", () => {
     captureEditorOverlaySelection(mockEditor({ from: 1, to: 3 }) as never);
     clearEditorOverlaySelection();
     expect(getSavedEditorOverlaySelection()).toBeNull();
+  });
+
+  it("returns saved overlay anchor while toolbar overlay context is open", () => {
+    clearEditorOverlaySelection();
+    const editor = mockEditor({ from: 1, to: 2 });
+    captureEditorOverlaySelection(editor as never);
+    editor.state.selection = { from: 0, to: 0 };
+
+    runToolbarActionWithOverlaySelection(editor as never, true, () => {
+      expect(getOverlayToolbarAnchorPos(editor as never)).toBe(1);
+    });
   });
 
   it("refreshes bookmark from a live non-empty range before toolbar commands", () => {
