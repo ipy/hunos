@@ -590,7 +590,9 @@ export function TiptapEditor({
           padding: 0.05em 0;
         }
       `}</style>
-      <EditorContent editor={editor} />
+      <div data-testid="note-editor">
+        <EditorContent editor={editor} />
+      </div>
       <SelectionBubbleMenu editor={editor} />
       <LinkEditorBubble editor={editor} />
     </>

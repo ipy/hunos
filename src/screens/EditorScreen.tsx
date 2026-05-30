@@ -78,6 +78,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     findInNoteSignal,
     findInNoteReplaceMode,
     requestFindInNote,
+    focusNewNoteTitleSignal,
   } = useUIStore();
   const settings = useSettingsStore();
   const { hideCompletedTasks, setHideCompletedTasks } = settings;
@@ -107,6 +108,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   );
   const [restoreEditorSyncTick, setRestoreEditorSyncTick] = useState(0);
   const titleTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
   const handleEditorReady = useCallback((editor: Editor) => {
     editorInstanceRef.current = editor;
@@ -376,6 +378,14 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     if (layout !== "desktop") return;
     setFindOpen(true);
   }, [findInNoteSignal, layout]);
+
+  useEffect(() => {
+    if (focusNewNoteTitleSignal === 0) return;
+    if (layout !== "mobile") return;
+    requestAnimationFrame(() => {
+      titleInputRef.current?.focus();
+    });
+  }, [focusNewNoteTitleSignal, layout]);
 
   useEffect(() => {
     if (layout !== "mobile" || !focusMode) return;
@@ -1001,7 +1011,9 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           }}
         >
           <input
+            ref={titleInputRef}
             data-field="note-title"
+            data-testid="note-title"
             value={titleValue}
             onChange={(e) => handleTitleChange(e.target.value)}
             onKeyDown={(e) => {

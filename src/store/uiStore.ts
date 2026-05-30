@@ -23,6 +23,7 @@ interface UIStore {
   noteSearchOpen: boolean;
   findInNoteSignal: number;
   findInNoteReplaceMode: boolean;
+  focusNewNoteTitleSignal: number;
   linkEditorOpen: boolean;
   toasts: Toast[];
 
@@ -39,6 +40,7 @@ interface UIStore {
   openNoteSearch: () => void;
   clearNoteSearchOpen: () => void;
   requestFindInNote: (options?: { replace?: boolean }) => void;
+  requestFocusNewNoteTitle: () => void;
   openLinkEditor: () => void;
   closeLinkEditor: () => void;
   showToast: (message: string, type?: Toast["type"]) => void;
@@ -56,6 +58,7 @@ export const useUIStore = create<UIStore>((set, get) => ({
   noteSearchOpen: false,
   findInNoteSignal: 0,
   findInNoteReplaceMode: false,
+  focusNewNoteTitleSignal: 0,
   linkEditorOpen: false,
   toasts: [],
 
@@ -113,6 +116,9 @@ export const useUIStore = create<UIStore>((set, get) => ({
       findInNoteSignal: s.findInNoteSignal + 1,
       findInNoteReplaceMode: options?.replace ?? false,
     })),
+
+  requestFocusNewNoteTitle: () =>
+    set((s) => ({ focusNewNoteTitleSignal: s.focusNewNoteTitleSignal + 1 })),
 
   openLinkEditor: () => set({ linkEditorOpen: true }),
   closeLinkEditor: () => {

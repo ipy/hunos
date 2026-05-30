@@ -127,6 +127,8 @@ function SwipeableNoteCard({
 
   return (
     <div
+      data-testid="note-list-item"
+      data-note-id={note.id}
       style={{
         position: "relative",
         overflow: "hidden",
@@ -279,6 +281,7 @@ export function NoteListScreen({ layout = "mobile" }: NoteListScreenProps) {
     clearSearch,
     noteSearchOpen,
     clearNoteSearchOpen,
+    requestFocusNewNoteTitle,
   } = useUIStore();
   const { activeTagId, tags } = useTagStore();
   const { locale } = useSettingsStore();
@@ -311,8 +314,10 @@ export function NoteListScreen({ layout = "mobile" }: NoteListScreenProps) {
   const handleCreate = async () => {
     const note = await createNote();
     setActiveNote(note.id);
-    if (layout === "mobile") navigate("editor");
-    else if (currentScreen === "settings") navigate("editor");
+    if (layout === "mobile") {
+      navigate("editor");
+      requestFocusNewNoteTitle();
+    } else if (currentScreen === "settings") navigate("editor");
   };
 
   const handleSelectNote = (id: string) => {
@@ -489,7 +494,7 @@ export function NoteListScreen({ layout = "mobile" }: NoteListScreenProps) {
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto" }}>
+      <div data-testid="note-list" style={{ flex: 1, overflowY: "auto" }}>
         {displayedNotes.length === 0 ? (
           <div
             style={{
