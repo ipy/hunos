@@ -131,7 +131,11 @@ function collectAndPersistSyncBackup(): void {
     .notes.find((note) => note.id === draft.noteId);
   if (
     inMemory &&
-    unloadBackupWouldRegressStoredNote(snapshot, inMemory, resolveBackupLocale(inMemory))
+    unloadBackupWouldRegressStoredNote(
+      snapshot,
+      inMemory,
+      resolveBackupLocale(inMemory),
+    )
   ) {
     return;
   }
@@ -211,10 +215,7 @@ export async function recoverPendingUnloadBackup(
   if (!backup?.noteId) return;
 
   const stored = await noteStorage.get(backup.noteId);
-  if (
-    stored &&
-    unloadBackupWouldRegressStoredNote(backup, stored, locale)
-  ) {
+  if (stored && unloadBackupWouldRegressStoredNote(backup, stored, locale)) {
     return;
   }
 

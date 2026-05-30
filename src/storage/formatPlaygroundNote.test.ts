@@ -1354,9 +1354,9 @@ describe("formatPlayground restore gating", () => {
       true,
     );
     expect(formatPlaygroundNeedsRestore("格式试炼场", seed, "zh")).toBe(false);
-    expect(formatPlaygroundNeedsRestore("NonCanonicalTitleFinal5", seed, "zh")).toBe(
-      true,
-    );
+    expect(
+      formatPlaygroundNeedsRestore("NonCanonicalTitleFinal5", seed, "zh"),
+    ).toBe(true);
 
     const parsed = JSON.parse(seed) as {
       content: Array<{ type: string; content?: Array<{ text?: string }> }>;
@@ -1366,7 +1366,9 @@ describe("formatPlayground restore gating", () => {
       content: [{ type: "text", text: "T5-MIXED-body" }],
     });
     const drifted = JSON.stringify(parsed);
-    expect(formatPlaygroundNeedsRestore("格式试炼场", drifted, "zh")).toBe(true);
+    expect(formatPlaygroundNeedsRestore("格式试炼场", drifted, "zh")).toBe(
+      true,
+    );
   });
 
   it("detects mid-document reorder drift even when plain text is unchanged", () => {
@@ -1380,9 +1382,7 @@ describe("formatPlayground restore gating", () => {
       }>;
     };
     const listsIndex = seed.content.findIndex(
-      (node) =>
-        node.type === "heading" &&
-        node.content?.[0]?.text === "列表",
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
     );
     const bulletList = seed.content[listsIndex + 1];
     const items = bulletList?.content ?? [];
@@ -1423,14 +1423,14 @@ describe("formatPlayground restore gating", () => {
     };
     while (
       parsed.content.at(-1)?.type === "paragraph" &&
-      !(parsed.content.at(-1)?.content?.length)
+      !parsed.content.at(-1)?.content?.length
     ) {
       parsed.content.pop();
     }
     const editorEcho = JSON.stringify(parsed);
-    expect(
-      playgroundEditorContentMatchesStored(editorEcho, seed, "zh"),
-    ).toBe(true);
+    expect(playgroundEditorContentMatchesStored(editorEcho, seed, "zh")).toBe(
+      true,
+    );
     expect(
       shouldShowPlaygroundRestoreButton({
         displayTitle: "格式试炼场",
@@ -1503,9 +1503,9 @@ describe("restoreFormatPlaygroundContent", () => {
       { title: string; content: string },
     ];
     expect(payload.title).toBe("格式试炼场");
-    expect(
-      JSON.parse(payload.content).attrs?.playgroundContentLocale,
-    ).toBe("zh");
+    expect(JSON.parse(payload.content).attrs?.playgroundContentLocale).toBe(
+      "zh",
+    );
   });
 
   it("restores en seed from note attrs when app fallback locale is zh", async () => {
@@ -1522,9 +1522,9 @@ describe("restoreFormatPlaygroundContent", () => {
       { title: string; content: string },
     ];
     expect(payload.title).toBe("Format Playground");
-    expect(
-      JSON.parse(payload.content).attrs?.playgroundContentLocale,
-    ).toBe("en");
+    expect(JSON.parse(payload.content).attrs?.playgroundContentLocale).toBe(
+      "en",
+    );
   });
 });
 

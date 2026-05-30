@@ -11,9 +11,9 @@ describe("playground restore visibility", () => {
   const seedContent = JSON.stringify(buildPlaygroundContent("zh"));
 
   it("hides restore when title and body match canonical zh seed", () => {
-    expect(
-      formatPlaygroundNeedsRestore("格式试炼场", seedContent, "zh"),
-    ).toBe(false);
+    expect(formatPlaygroundNeedsRestore("格式试炼场", seedContent, "zh")).toBe(
+      false,
+    );
     expect(
       formatPlaygroundMatchesCanonicalSeed("格式试炼场", seedContent, "zh"),
     ).toBe(true);
@@ -24,7 +24,11 @@ describe("playground restore visibility", () => {
       true,
     );
     expect(
-      formatPlaygroundNeedsRestore("NonCanonicalTitleFinal5", seedContent, "zh"),
+      formatPlaygroundNeedsRestore(
+        "NonCanonicalTitleFinal5",
+        seedContent,
+        "zh",
+      ),
     ).toBe(true);
     expect(
       formatPlaygroundNeedsRestore("TitleUnload3", seedContent, "zh"),
@@ -40,7 +44,9 @@ describe("playground restore visibility", () => {
       content: [{ type: "text", text: "T5-MIXED-marker" }],
     });
     const drifted = JSON.stringify(parsed);
-    expect(formatPlaygroundNeedsRestore("格式试炼场", drifted, "zh")).toBe(true);
+    expect(formatPlaygroundNeedsRestore("格式试炼场", drifted, "zh")).toBe(
+      true,
+    );
   });
 
   it("hides restore when pending draft is editor round-trip of canonical seed", () => {
@@ -49,7 +55,7 @@ describe("playground restore visibility", () => {
     };
     while (
       parsed.content.at(-1)?.type === "paragraph" &&
-      !(parsed.content.at(-1)?.content?.length)
+      !parsed.content.at(-1)?.content?.length
     ) {
       parsed.content.pop();
     }
@@ -95,7 +101,7 @@ describe("playground restore visibility", () => {
     };
     while (
       parsed.content.at(-1)?.type === "paragraph" &&
-      !(parsed.content.at(-1)?.content?.length)
+      !parsed.content.at(-1)?.content?.length
     ) {
       parsed.content.pop();
     }
@@ -120,7 +126,7 @@ describe("playground restore visibility", () => {
     };
     while (
       parsed.content.at(-1)?.type === "paragraph" &&
-      !(parsed.content.at(-1)?.content?.length)
+      !parsed.content.at(-1)?.content?.length
     ) {
       parsed.content.pop();
     }
@@ -187,7 +193,7 @@ describe("playground restore visibility", () => {
     };
     while (
       parsed.content.at(-1)?.type === "paragraph" &&
-      !(parsed.content.at(-1)?.content?.length)
+      !parsed.content.at(-1)?.content?.length
     ) {
       parsed.content.pop();
     }

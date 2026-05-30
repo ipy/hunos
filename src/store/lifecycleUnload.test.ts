@@ -248,20 +248,22 @@ describe("lifecycleUnload", () => {
     await recoverPendingUnloadBackup("zh");
 
     expect(saveNoteContent).not.toHaveBeenCalled();
-    expect(unloadBackupWouldRegressStoredNote(
-      {
-        noteId: "pg-1",
-        title: "格式试炼场",
-        content: polluted,
-        savedAt: 9_000,
-      },
-      {
-        title: "格式试炼场",
-        content: seed,
-        modifiedAt: 2_000,
-      },
-      "zh",
-    )).toBe(true);
+    expect(
+      unloadBackupWouldRegressStoredNote(
+        {
+          noteId: "pg-1",
+          title: "格式试炼场",
+          content: polluted,
+          savedAt: 9_000,
+        },
+        {
+          title: "格式试炼场",
+          content: seed,
+          modifiedAt: 2_000,
+        },
+        "zh",
+      ),
+    ).toBe(true);
   });
 
   it("recoverPendingUnloadBackup skips T5-MIXED pollution backup over canonical playground", async () => {
@@ -284,8 +286,7 @@ describe("lifecycleUnload", () => {
         };
         const listsIndex = parsed.content.findIndex(
           (node) =>
-            node.type === "heading" &&
-            node.content?.[0]?.text === "列表",
+            node.type === "heading" && node.content?.[0]?.text === "列表",
         );
         parsed.content.splice(listsIndex + 2, 0, {
           type: "paragraph",
@@ -334,8 +335,7 @@ describe("lifecycleUnload", () => {
       }>;
     };
     const listsIndex = reordered.content.findIndex(
-      (node) =>
-        node.type === "heading" && node.content?.[0]?.text === "列表",
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
     );
     const bulletList = reordered.content[listsIndex + 1];
     const items = bulletList?.content ?? [];
