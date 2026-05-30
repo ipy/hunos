@@ -13,6 +13,15 @@ export PATH="$DEVECO_HOME/tools/ohpm/bin:$DEVECO_HOME/tools/hvigor/bin:$DEVECO_H
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
+# macOS sed requires -i ''; GNU sed uses -i alone.
+sed_inplace() {
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    sed -i '' "$@"
+  else
+    sed -i "$@"
+  fi
+}
+
 echo "=== Building web assets (IIFE for HarmonyOS) ==="
 cd "$PROJECT_ROOT"
 npx vite build --config vite.config.harmony.ts
@@ -46,7 +55,7 @@ CSS_BASENAME="$(basename "$CSS_FILE")"
 
 # Copy font and other static assets; rewrite absolute /assets/ URLs to same-dir relative paths.
 cp -R "$ASSETS_DIR"/. "$RAWFILE_DIR/assets/"
-sed -i '' 's|url(/assets/|url(|g' "$RAWFILE_DIR/assets/$CSS_BASENAME"
+sed_inplace 's|url(/assets/|url(|g' "$RAWFILE_DIR/assets/$CSS_BASENAME"
 
 ASSET_COUNT="$(find "$RAWFILE_DIR/assets" -type f | wc -l | tr -d ' ')"
 echo "Copied $ASSET_COUNT asset files (including $CSS_BASENAME)"
