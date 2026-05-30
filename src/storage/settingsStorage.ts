@@ -1,5 +1,5 @@
-import { db } from './database';
-import { DEFAULT_SETTINGS, type AppSettings } from '@/types/settings';
+import { db } from "./database";
+import { DEFAULT_SETTINGS, type AppSettings } from "@/types/settings";
 
 export const settingsStorage = {
   async get<K extends keyof AppSettings>(key: K): Promise<AppSettings[K]> {
@@ -7,7 +7,15 @@ export const settingsStorage = {
     return (record?.value as AppSettings[K]) ?? DEFAULT_SETTINGS[key];
   },
 
-  async set<K extends keyof AppSettings>(key: K, value: AppSettings[K]): Promise<void> {
+  async has(key: keyof AppSettings): Promise<boolean> {
+    const record = await db.settings.get(key);
+    return record !== undefined;
+  },
+
+  async set<K extends keyof AppSettings>(
+    key: K,
+    value: AppSettings[K],
+  ): Promise<void> {
     await db.settings.put({ key, value });
   },
 

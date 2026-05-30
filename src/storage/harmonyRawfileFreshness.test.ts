@@ -47,6 +47,12 @@ describe("harmony rawfile freshness", () => {
     expect(rawfile).toContain("focusCanonical");
   });
 
+  it("defaults ArkWeb first launch to zh locale (iter 92)", () => {
+    expect(rawfile).toContain("ArkWeb");
+    expect(rawfile).toContain('has("locale")');
+    expect(rawfile).toContain("格式试炼场");
+  });
+
   it("includes zh playgroundFlushDropped copy", () => {
     expect(rawfile).toContain("playgroundFlushDropped");
   });

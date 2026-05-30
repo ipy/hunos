@@ -1,10 +1,22 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   localeToUrlParam,
   parseLocaleFromUrlParam,
   readLocaleFromUrl,
+  resolveBootstrapLocale,
   writeLocaleToUrl,
 } from "./localeBootstrap";
+
+function mockBrowser({
+  userAgent,
+  search,
+}: {
+  userAgent: string;
+  search: string;
+}) {
+  vi.stubGlobal("navigator", { userAgent });
+  vi.stubGlobal("window", { location: { search } });
+}
 
 describe("parseLocaleFromUrlParam", () => {
   it("maps zh-CN and zh variants to zh", () => {
@@ -28,6 +40,44 @@ describe("parseLocaleFromUrlParam", () => {
 describe("readLocaleFromUrl", () => {
   it("returns null in non-browser environments", () => {
     expect(readLocaleFromUrl()).toBeNull();
+  });
+});
+
+describe("resolveBootstrapLocale", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("defaults to zh on ArkWeb first launch without URL locale", () => {
+    mockBrowser({ userAgent: "Mozilla/5.0 ArkWeb/1.0", search: "" });
+    expect(resolveBootstrapLocale("en", false)).toBe("zh");
+  });
+
+  it("honors ?lang=en on ArkWeb", () => {
+    mockBrowser({
+      userAgent: "Mozilla/5.0 ArkWeb/1.0",
+      search: "?lang=en",
+    });
+    expect(resolveBootstrapLocale("zh", false)).toBe("en");
+  });
+
+  it("uses stored locale on non-ArkWeb without query", () => {
+    mockBrowser({ userAgent: "Mozilla/5.0 Chrome/120.0", search: "" });
+    expect(resolveBootstrapLocale("en", false)).toBe("en");
+    expect(resolveBootstrapLocale("zh", true)).toBe("zh");
+  });
+
+  it("keeps persisted en on ArkWeb when locale was stored", () => {
+    mockBrowser({ userAgent: "Mozilla/5.0 ArkWeb/1.0", search: "" });
+    expect(resolveBootstrapLocale("en", true)).toBe("en");
+  });
+
+  it("honors ?lang=en on web even when stored locale is zh", () => {
+    mockBrowser({
+      userAgent: "Mozilla/5.0 Chrome/120.0",
+      search: "?lang=en",
+    });
+    expect(resolveBootstrapLocale("zh", true)).toBe("en");
   });
 });
 

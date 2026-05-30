@@ -81,9 +81,13 @@ describe("bootstrapAppData", () => {
     expect(createWelcomeNotesIfNeeded).toHaveBeenCalledWith("zh");
     expect(flushEditorAutosave).toHaveBeenCalled();
     expect(loadNotes).toHaveBeenCalledWith({ status: "active" });
-    expect(syncFormatPlaygroundOnLocaleChange).toHaveBeenCalledWith("zh", null, {
-      focusCanonical: true,
-    });
+    expect(syncFormatPlaygroundOnLocaleChange).toHaveBeenCalledWith(
+      "zh",
+      null,
+      {
+        focusCanonical: true,
+      },
+    );
     expect(clearStashedEditorAutosave).toHaveBeenCalled();
     expect(loadTags).toHaveBeenCalled();
     expect(order).toEqual([

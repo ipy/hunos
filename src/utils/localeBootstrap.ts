@@ -1,4 +1,5 @@
 import type { Locale } from "@/types/settings";
+import { isHarmonyOS } from "@/utils/platform";
 
 /** Canonical `?lang=` values written when locale changes in Settings. */
 const LOCALE_URL_PARAMS: Record<Locale, string> = {
@@ -22,6 +23,17 @@ export function readLocaleFromUrl(): Locale | null {
   return parseLocaleFromUrlParam(
     new URLSearchParams(window.location.search).get("lang"),
   );
+}
+
+/** Locale for first bootstrap: URL wins, then Harmony first-launch zh, else stored. */
+export function resolveBootstrapLocale(
+  storedLocale: Locale,
+  hasStoredLocale: boolean,
+): Locale {
+  const urlLocale = readLocaleFromUrl();
+  if (urlLocale) return urlLocale;
+  if (isHarmonyOS() && !hasStoredLocale) return "zh";
+  return storedLocale;
 }
 
 export function localeToUrlParam(locale: Locale): string {

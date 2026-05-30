@@ -16,7 +16,10 @@ import {
   flushEditorAutosave,
 } from "@/store/editorAutosaveRegistry";
 import { useUIStore } from "@/store/uiStore";
-import { readLocaleFromUrl, writeLocaleToUrl } from "@/utils/localeBootstrap";
+import {
+  resolveBootstrapLocale,
+  writeLocaleToUrl,
+} from "@/utils/localeBootstrap";
 import i18n from "@/i18n";
 
 interface SettingsStore extends AppSettings {
@@ -44,12 +47,15 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 
   loadSettings: async () => {
     const settings = await settingsStorage.getAll();
-    const urlLocale = readLocaleFromUrl();
-    const effectiveLocale = urlLocale ?? settings.locale;
+    const hasStoredLocale = await settingsStorage.has("locale");
+    const effectiveLocale = resolveBootstrapLocale(
+      settings.locale,
+      hasStoredLocale,
+    );
 
-    if (urlLocale && urlLocale !== settings.locale) {
-      await settingsStorage.set("locale", urlLocale);
-      settings.locale = urlLocale;
+    if (effectiveLocale !== settings.locale) {
+      await settingsStorage.set("locale", effectiveLocale);
+      settings.locale = effectiveLocale;
     }
 
     await bootstrapAppData(effectiveLocale);
