@@ -467,7 +467,7 @@ describe("syncFormatPlaygroundOnLocaleChange", () => {
     expect(setActiveNote).toHaveBeenCalledWith("pg-zh");
   });
 
-  it("applies dropped flush to canonical playground without touching wrong duplicate", async () => {
+  it("applies clean-slate locale migration to canonical playground when flush is dropped", async () => {
     const enDoc = buildPlaygroundContent("en") as {
       content: Array<{
         type: string;
@@ -494,7 +494,8 @@ describe("syncFormatPlaygroundOnLocaleChange", () => {
       expect.anything(),
     );
     const saved = saveNoteContent.mock.calls[0][1] as string;
-    expect(saved).toContain("locale-switch-pending-marker");
+    expect(saved).toContain("格式试炼场");
+    expect(saved).not.toContain("locale-switch-pending-marker");
   });
 
   it("does not switch focus when active note is not a playground", async () => {
