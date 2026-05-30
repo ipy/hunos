@@ -58,6 +58,7 @@ import { SelectionBubbleMenu } from "./SelectionBubbleMenu";
 import { LinkEditorBubble } from "./LinkEditorBubble";
 import History from "@tiptap/extension-history";
 import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
 import { useTheme } from "@/theme/ThemeContext";
 import { resolveTextFontFamily, resolveCodeFontFamily } from "@/utils/fonts";
 import { useNoteStore } from "@/store/noteStore";
@@ -197,7 +198,18 @@ export function TiptapEditor({
         placeholder: t("editor.placeholder"),
       }),
       TaskList,
-      MarkdownTaskItem.configure({ nested: true }),
+      MarkdownTaskItem.configure({
+        nested: true,
+        a11y: {
+          checkboxLabel: (node, checked) => {
+            const text =
+              node.textContent.trim() || i18n.t("editor.task.empty");
+            return checked
+              ? i18n.t("editor.task.checkboxDone", { text })
+              : i18n.t("editor.task.checkboxOpen", { text });
+          },
+        },
+      }),
       MarkdownHighlight.configure({ multicolor: true }),
       Underline,
       Link.configure({

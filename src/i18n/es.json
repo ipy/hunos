@@ -134,6 +134,11 @@
       "previous": "Coincidencia anterior",
       "close": "Cerrar búsqueda"
     },
+    "task": {
+      "empty": "tarea vacía",
+      "checkboxOpen": "Casilla de tarea pendiente: {{text}}",
+      "checkboxDone": "Casilla de tarea completada: {{text}}"
+    },
     "focusMode": {
       "enter": "Modo enfoque",
       "exit": "Salir del modo enfoque",

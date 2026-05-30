@@ -16,4 +16,16 @@ describe("shell sidebar labels", () => {
     expect(en.notes.actions.createNote).toBe("Create new note");
     expect(en.common.actions.more).toBe("More actions");
   });
+
+  it("localizes zh export menu labels without bare Markdown or HTML toggles", () => {
+    expect(zh.export.markdown).toBe("导出 Markdown");
+    expect(zh.export.html).toBe("导出 HTML");
+    expect(zh.export.markdown).not.toBe("Markdown");
+    expect(zh.export.html).not.toBe("HTML");
+  });
+
+  it("localizes zh task checkbox aria labels", () => {
+    expect(zh.editor.task.checkboxOpen).toContain("{{text}}");
+    expect(zh.editor.task.checkboxOpen).not.toContain("Task item checkbox");
+  });
 });

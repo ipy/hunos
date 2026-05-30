@@ -3,9 +3,13 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 describe("editor overlay layers", () => {
-  it("keeps the format toolbar above more-actions backdrop so QA can still bold or list", () => {
+  it("keeps the format toolbar above more-actions and stats backdrops so QA can still bold or list", () => {
     const editor = readFileSync(
       resolve(process.cwd(), "src/screens/EditorScreen.tsx"),
+      "utf8",
+    );
+    const infoPanel = readFileSync(
+      resolve(process.cwd(), "src/components/editor/InfoPanel.tsx"),
       "utf8",
     );
     const toolbar = readFileSync(
@@ -14,8 +18,10 @@ describe("editor overlay layers", () => {
     );
 
     expect(editor).toContain('data-testid="editor-toolbar-layer"');
-    expect(editor).toContain("zIndex: 55");
+    expect(editor).toContain("zIndex: 65");
     expect(editor).toContain('data-testid="editor-more-actions-backdrop"');
+    expect(infoPanel).toContain('data-testid="stats-panel-backdrop"');
+    expect(infoPanel).toContain("zIndex: 48");
     expect(toolbar).toContain('data-testid="editor-toolbar"');
   });
 

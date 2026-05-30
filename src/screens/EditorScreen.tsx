@@ -23,9 +23,11 @@ import { resolveTextFontFamily } from "@/utils/fonts";
 import type { Editor } from "@tiptap/react";
 import type { LayoutMode } from "@/hooks/useAdaptiveLayout";
 import { registerHunosE2eEditor } from "@/testing/hunos-e2e-bridge";
-
-declare const __HUNOS_E2E__: boolean | undefined;
 import { dismissEditorOverlayOnEscape } from "@/utils/editorOverlayEscape";
+import {
+  captureEditorOverlaySelection,
+  clearEditorOverlaySelection,
+} from "@/utils/editorOverlaySelection";
 import { shouldSuppressFocusModeEscape } from "@/utils/editorSuggestionMenu";
 import { editorHasNonEmptySelection } from "@/utils/editorSelection";
 import {
@@ -81,6 +83,8 @@ import {
   persistNoteTitle,
 } from "@/screens/editorNotePersistence";
 import type { EditorAutosaveFlushResult } from "@/store/editorAutosaveRegistry";
+
+declare const __HUNOS_E2E__: boolean | undefined;
 
 interface EditorScreenProps {
   layout?: LayoutMode;
@@ -147,6 +151,18 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const pendingTitleRef = useRef<string | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const skipTitleSyncOnceRef = useRef(false);
+
+  const captureSelectionForOverlay = useCallback(() => {
+    if (editorInstanceRef.current) {
+      captureEditorOverlaySelection(editorInstanceRef.current);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!showActions && !showStats) {
+      clearEditorOverlaySelection();
+    }
+  }, [showActions, showStats]);
 
   useEffect(() => {
     restoreChipSuppressedRef.current = restoreChipSuppressed;
@@ -948,6 +964,9 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           <>
             <button
               data-testid="info-panel-toggle"
+              onMouseDown={() => {
+                if (!showStats) captureSelectionForOverlay();
+              }}
               onClick={() => setShowStats(!showStats)}
               title={t("editor.stats.title")}
               aria-label={t("editor.stats.title")}
@@ -1062,6 +1081,9 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
               <>
                 <button
                   data-testid="info-panel-toggle"
+                  onMouseDown={() => {
+                    if (!showStats) captureSelectionForOverlay();
+                  }}
                   onClick={() => setShowStats(!showStats)}
                   title={t("editor.stats.title")}
                   aria-label={t("editor.stats.title")}
@@ -1102,6 +1124,9 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
                   />
                 </button>
                 <button
+                  onMouseDown={() => {
+                    if (!showActions) captureSelectionForOverlay();
+                  }}
                   onClick={() => setShowActions(!showActions)}
                   aria-label={t("common.actions.more")}
                   style={{
@@ -1406,7 +1431,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       {!focusMode && (
         <div
           data-testid="editor-toolbar-layer"
-          style={{ position: "relative", zIndex: 55, flexShrink: 0 }}
+          style={{ position: "relative", zIndex: 65, flexShrink: 0 }}
         >
           <EditorToolbar editor={editorInstance} />
         </div>

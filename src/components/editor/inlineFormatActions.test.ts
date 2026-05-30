@@ -4,8 +4,13 @@ import {
   isValidLinkUrl,
   normalizeLinkUrl,
   prepareLinkEditor,
+  toggleMark,
 } from "./inlineFormatActions";
 import { clearLinkEditorSelection } from "./linkEditorSelection";
+import {
+  captureEditorOverlaySelection,
+  clearEditorOverlaySelection,
+} from "@/utils/editorOverlaySelection";
 
 const showToast = vi.fn();
 
@@ -108,6 +113,44 @@ describe("link editor helpers", () => {
     });
     expect(editor._chain.setLink).toHaveBeenCalledWith({
       href: "https://docs.example.com",
+    });
+  });
+});
+
+describe("toggleMark with overlay selection", () => {
+  it("restores saved selection before applying a mark", () => {
+    clearEditorOverlaySelection();
+    const editor = {
+      isActive: vi.fn(() => false),
+      isDestroyed: false,
+      state: {
+        selection: { empty: false, $from: { start: () => 1, end: () => 5 } },
+        doc: { content: { size: 100 } },
+      },
+      chain: vi.fn(() => ({
+        focus: vi.fn().mockReturnThis(),
+        toggleBold: vi.fn().mockReturnThis(),
+        run: vi.fn(() => true),
+      })),
+      commands: {
+        setTextSelection: vi.fn(() => true),
+      },
+    };
+
+    captureEditorOverlaySelection({
+      state: {
+        selection: { from: 42, to: 58 },
+        doc: { content: { size: 100 } },
+      },
+    } as never);
+
+    toggleMark(editor as never, "bold", () =>
+      editor.chain().focus().toggleBold().run(),
+    );
+
+    expect(editor.commands.setTextSelection).toHaveBeenCalledWith({
+      from: 42,
+      to: 58,
     });
   });
 });

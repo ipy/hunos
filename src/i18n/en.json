@@ -134,6 +134,11 @@
       "previous": "Previous match",
       "close": "Close find"
     },
+    "task": {
+      "empty": "empty task",
+      "checkboxOpen": "Task item checkbox for {{text}}",
+      "checkboxDone": "Completed task item checkbox for {{text}}"
+    },
     "focusMode": {
       "enter": "Enter focus mode",
       "exit": "Exit focus mode",

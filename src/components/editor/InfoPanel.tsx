@@ -137,14 +137,14 @@ export function InfoPanel({
 
   return (
     <>
-      {/* Backdrop — below editor header (z 70) so toolbar actions stay clickable */}
+      {/* Backdrop — below editor-toolbar-layer (55) so format actions stay clickable */}
       <div
         data-testid="stats-panel-backdrop"
         onClick={onClose}
         style={{
           position: "fixed",
           inset: 0,
-          zIndex: 59,
+          zIndex: 48,
           backgroundColor: theme.isDark
             ? "rgba(0,0,0,0.45)"
             : "rgba(0,0,0,0.25)",
