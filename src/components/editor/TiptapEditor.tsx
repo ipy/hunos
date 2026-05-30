@@ -144,6 +144,17 @@ export function TiptapEditor({
     }
   };
 
+  const handleTagClick = async (tagName: string) => {
+    const tag = useTagStore
+      .getState()
+      .tags.find((t) => t.name.toLowerCase() === tagName.toLowerCase());
+    if (!tag) return;
+
+    useTagStore.getState().setActiveTag(tag.id);
+    await useNoteStore.getState().loadNotesByTag(tag.id);
+    useUIStore.getState().navigate("noteList");
+  };
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -260,7 +271,7 @@ export function TiptapEditor({
       TagSuggestion.configure({
         getTags: () => tagsRef.current,
       }),
-      TagDecoration,
+      TagDecoration.configure({ onTagClick: handleTagClick }),
       SketchResize,
       FocusModeShortcuts,
       EditorKeyboardShortcuts,
@@ -553,7 +564,7 @@ export function TiptapEditor({
         .editor-tag {
           color: ${theme.colors.accent};
           font-weight: 500;
-          cursor: default;
+          cursor: pointer;
         }
         .editor-tag-hash {
           color: ${theme.colors.accent};
