@@ -1,7 +1,9 @@
 import { create } from "zustand";
 import type { Tag, TagTreeNode } from "@/types/graph";
 import { tagStorage } from "@/storage/tagStorage";
-import { isValidTagName } from "@/utils/tagPattern";
+import { getTagDisplayName, isValidTagName } from "@/utils/tagPattern";
+
+const SYNTHETIC_PARENT_PREFIX = "__parent__:";
 
 function appendUniqueChild(parent: TagTreeNode, child: TagTreeNode): void {
   const existing = parent.children.find(
@@ -37,6 +39,39 @@ function subtreeHasNotes(node: TagTreeNode): boolean {
   return node.children.some(subtreeHasNotes);
 }
 
+/** Materialize slash-path parents missing from storage so nested tags stay grouped. */
+function ensureIntermediateParents(nodeMap: Map<string, TagTreeNode>): void {
+  const byName = new Map<string, TagTreeNode>();
+  for (const node of nodeMap.values()) {
+    byName.set(node.name, node);
+  }
+
+  for (const node of [...nodeMap.values()]) {
+    if (!node.name.includes("/")) continue;
+    const segments = node.name.split("/");
+    for (let depth = segments.length - 1; depth >= 1; depth--) {
+      const parentName = segments.slice(0, depth).join("/");
+      if (byName.has(parentName)) continue;
+
+      const grandparentName =
+        depth > 1 ? segments.slice(0, depth - 1).join("/") : null;
+      const grandparent = grandparentName ? byName.get(grandparentName) : null;
+      const synthetic: TagTreeNode = {
+        id: `${SYNTHETIC_PARENT_PREFIX}${parentName}`,
+        name: parentName,
+        displayName: getTagDisplayName(parentName),
+        parentId: grandparent?.id ?? null,
+        noteCount: 0,
+        createdAt: 0,
+        children: [],
+        isExpanded: false,
+      };
+      nodeMap.set(synthetic.id, synthetic);
+      byName.set(parentName, synthetic);
+    }
+  }
+}
+
 /** Expand ancestors on paths to tags that carry notes so nested tags stay discoverable. */
 export function applyAutoExpandPaths(nodes: TagTreeNode[]): void {
   for (const node of nodes) {
@@ -53,6 +88,7 @@ export function buildTree(tags: Tag[]): TagTreeNode[] {
   tags.forEach((t) =>
     nodeMap.set(t.id, { ...t, children: [], isExpanded: false }),
   );
+  ensureIntermediateParents(nodeMap);
 
   const roots: TagTreeNode[] = [];
   nodeMap.forEach((node) => {
@@ -102,6 +138,7 @@ export const useTagStore = create<TagStore>((set, get) => ({
   loadTags: async () => {
     set({ isLoading: true });
     await tagStorage.deleteInvalid();
+    await tagStorage.repairMissingParents();
     await tagStorage.cleanOrphaned();
     const tags = (await tagStorage.listAll()).filter((t) =>
       isValidTagName(t.name),

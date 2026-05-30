@@ -4,12 +4,14 @@ import type { Tag } from "@/types/graph";
 const listAll = vi.fn();
 const deleteInvalid = vi.fn();
 const cleanOrphaned = vi.fn();
+const repairMissingParents = vi.fn();
 
 vi.mock("@/storage/tagStorage", () => ({
   tagStorage: {
     listAll: () => listAll(),
     deleteInvalid: () => deleteInvalid(),
     cleanOrphaned: () => cleanOrphaned(),
+    repairMissingParents: () => repairMissingParents(),
   },
 }));
 
@@ -18,8 +20,10 @@ describe("tagStore tree dedup", () => {
     listAll.mockReset();
     deleteInvalid.mockReset();
     cleanOrphaned.mockReset();
+    repairMissingParents.mockReset();
     deleteInvalid.mockResolvedValue(0);
     cleanOrphaned.mockResolvedValue(0);
+    repairMissingParents.mockResolvedValue(0);
   });
 
   it("shows one 欢迎 child under 格式测试 when duplicate display names exist", async () => {
@@ -107,6 +111,7 @@ describe("tagStore tree dedup", () => {
     await useTagStore.getState().loadTags();
 
     expect(cleanOrphaned).toHaveBeenCalledOnce();
+    expect(repairMissingParents).toHaveBeenCalledOnce();
   });
 
   it("auto-expands parents on paths to noted leaf tags", async () => {

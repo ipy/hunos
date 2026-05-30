@@ -59,9 +59,43 @@ export const tagStorage = {
     await db.tags.delete(tagId);
   },
 
+  /** Recreate missing slash-path parents and relink children after orphan cleanup. */
+  async repairMissingParents(): Promise<number> {
+    let repaired = 0;
+    const allTags = await db.tags.toArray();
+    const byName = new Map(allTags.map((tag) => [tag.name, tag]));
+
+    for (const tag of allTags) {
+      if (!tag.name.includes("/")) continue;
+      const parentName = tag.name.split("/").slice(0, -1).join("/");
+      if (!byName.has(parentName)) {
+        const created = await this.getOrCreate(parentName);
+        if (created) {
+          byName.set(parentName, created);
+          repaired += 1;
+        }
+      }
+      const parent = byName.get(parentName);
+      if (parent && tag.parentId !== parent.id) {
+        await db.tags.update(tag.id, { parentId: parent.id });
+        tag.parentId = parent.id;
+        repaired += 1;
+      }
+    }
+
+    return repaired;
+  },
+
   async cleanOrphaned(): Promise<number> {
     const allTags = await db.tags.toArray();
-    const orphaned = allTags.filter((t) => t.noteCount === 0);
+    const parentIdsWithChildren = new Set(
+      allTags
+        .map((tag) => tag.parentId)
+        .filter((id): id is string => Boolean(id)),
+    );
+    const orphaned = allTags.filter(
+      (tag) => tag.noteCount === 0 && !parentIdsWithChildren.has(tag.id),
+    );
     if (orphaned.length > 0) {
       await db.tags.bulkDelete(orphaned.map((t) => t.id));
     }

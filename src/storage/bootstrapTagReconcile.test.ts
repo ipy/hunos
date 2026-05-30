@@ -4,6 +4,7 @@ import type { Note } from "@/types/note";
 const list = vi.fn();
 const syncNoteLinks = vi.fn();
 const cleanOrphaned = vi.fn();
+const repairMissingParents = vi.fn();
 
 vi.mock("./noteStorage", () => ({
   noteStorage: {
@@ -14,6 +15,7 @@ vi.mock("./noteStorage", () => ({
 vi.mock("./tagStorage", () => ({
   tagStorage: {
     cleanOrphaned: () => cleanOrphaned(),
+    repairMissingParents: () => repairMissingParents(),
   },
 }));
 
@@ -28,8 +30,10 @@ describe("reconcileBootstrapTags", () => {
     list.mockReset();
     syncNoteLinks.mockReset();
     cleanOrphaned.mockReset();
+    repairMissingParents.mockReset();
     syncNoteLinks.mockResolvedValue(undefined);
     cleanOrphaned.mockResolvedValue(0);
+    repairMissingParents.mockResolvedValue(0);
   });
 
   it("re-syncs welcome and playground from locale seed content for en", async () => {
@@ -86,6 +90,7 @@ describe("reconcileBootstrapTags", () => {
       getBootstrapPlaygroundSeedContent("en"),
     );
     expect(syncNoteLinks).not.toHaveBeenCalledWith("other", expect.anything());
+    expect(repairMissingParents).toHaveBeenCalledOnce();
     expect(cleanOrphaned).toHaveBeenCalledOnce();
   });
 
@@ -131,6 +136,7 @@ describe("reconcileBootstrapTags", () => {
       "playground-zh",
       getBootstrapPlaygroundSeedContent("zh"),
     );
+    expect(repairMissingParents).toHaveBeenCalledOnce();
     expect(cleanOrphaned).toHaveBeenCalledOnce();
   });
 });

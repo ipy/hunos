@@ -31,5 +31,6 @@ export async function reconcileBootstrapTags(locale: Locale): Promise<void> {
     }
   }
 
+  await tagStorage.repairMissingParents();
   await tagStorage.cleanOrphaned();
 }

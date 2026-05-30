@@ -153,4 +153,89 @@ describe("bootstrap tag tree", () => {
       tree.find((node) => node.name === "hunos")?.children[0]?.displayName,
     ).toBe("入门指南");
   });
+
+  it("surfaces hunos parent when bootstrap storage only has leaf tags", async () => {
+    const tags: Tag[] = [
+      {
+        id: "format-test",
+        name: "format-test",
+        displayName: "format-test",
+        parentId: null,
+        noteCount: 1,
+        createdAt: 1,
+      },
+      {
+        id: "welcome",
+        name: "format-test/welcome",
+        displayName: "welcome",
+        parentId: null,
+        noteCount: 1,
+        createdAt: 2,
+      },
+      {
+        id: "getting-started",
+        name: "hunos/getting-started",
+        displayName: "getting-started",
+        parentId: null,
+        noteCount: 1,
+        createdAt: 3,
+      },
+    ];
+
+    const { buildTree } = await import("./tagStore");
+    const tree = buildTree(tags);
+
+    expect(tree.map((node) => node.name).sort()).toEqual(["format-test", "hunos"]);
+    expect(
+      tree.find((node) => node.name === "hunos")?.children.map(
+        (child) => child.displayName,
+      ),
+    ).toEqual(["getting-started"]);
+    expect(countDisplayNameInTree(tree, "getting-started")).toBe(1);
+    expect(
+      tree.find((node) => node.name === "format-test")?.children.map(
+        (child) => child.displayName,
+      ),
+    ).toEqual(["welcome"]);
+  });
+
+  it("surfaces hunos parent for zh leaf-only bootstrap storage", async () => {
+    const tags: Tag[] = [
+      {
+        id: "format",
+        name: "格式测试",
+        displayName: "格式测试",
+        parentId: null,
+        noteCount: 1,
+        createdAt: 1,
+      },
+      {
+        id: "welcome",
+        name: "格式测试/欢迎",
+        displayName: "欢迎",
+        parentId: null,
+        noteCount: 1,
+        createdAt: 2,
+      },
+      {
+        id: "guide",
+        name: "hunos/入门指南",
+        displayName: "入门指南",
+        parentId: null,
+        noteCount: 1,
+        createdAt: 3,
+      },
+    ];
+
+    const { buildTree } = await import("./tagStore");
+    const tree = buildTree(tags);
+
+    expect(tree.map((node) => node.name).sort()).toEqual(["hunos", "格式测试"]);
+    expect(
+      tree.find((node) => node.name === "hunos")?.children.map(
+        (child) => child.displayName,
+      ),
+    ).toEqual(["入门指南"]);
+    expect(countDisplayNameInTree(tree, "入门指南")).toBe(1);
+  });
 });
