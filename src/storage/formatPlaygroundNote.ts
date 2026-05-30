@@ -807,6 +807,19 @@ export function pickFormatPlaygroundNote<
   )[0];
 }
 
+/** Hide duplicate playground cards in note lists; keep only the locale-canonical note. */
+export function filterNotesForPlaygroundList<
+  T extends PlaygroundPickCandidate,
+>(notes: T[], locale: Locale): T[] {
+  const canonical = pickFormatPlaygroundNote(notes, locale);
+  if (!canonical) return notes;
+
+  return notes.filter((note) => {
+    if (!isFormatPlaygroundNote(note.title, note.content)) return true;
+    return note.id === canonical.id;
+  });
+}
+
 async function findFormatPlaygroundNoteForSync(locale: Locale) {
   const { notes } = useNoteStore.getState();
 

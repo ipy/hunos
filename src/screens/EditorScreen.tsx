@@ -892,6 +892,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           />
         </div>
         <TiptapEditor
+          key={isPlaygroundNote ? `${note.id}:${settings.locale}` : note.id}
           noteId={note.id}
           initialContent={editorSeedContent ?? note.content}
           onChange={handleContentChange}

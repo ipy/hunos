@@ -8,6 +8,7 @@ import {
 import {
   PLAYGROUND_CONTENT_VERSION,
   buildPlaygroundContent,
+  filterNotesForPlaygroundList,
   getFormatPlaygroundTitle,
   isFormatPlaygroundNote,
   migratePlaygroundContentIfStale,
@@ -1180,5 +1181,57 @@ describe("restoreFormatPlaygroundContent", () => {
       { title: string },
     ];
     expect(payload.title).toBe("Format Playground");
+  });
+});
+
+describe("filterNotesForPlaygroundList", () => {
+  const enPlayground = {
+    id: "pg-en",
+    title: "Format Playground",
+    content: JSON.stringify(buildPlaygroundContent("en")),
+    isPinned: false,
+    modifiedAt: 100,
+  };
+  const zhPlayground = {
+    id: "pg-zh",
+    title: "格式试炼场",
+    content: JSON.stringify(buildPlaygroundContent("zh")),
+    isPinned: false,
+    modifiedAt: 200,
+  };
+  const attrMatchDuplicate = {
+    id: "pg-dup",
+    title: "Playground Copy",
+    content: JSON.stringify(buildPlaygroundContent("en")),
+    isPinned: false,
+    modifiedAt: 50,
+  };
+  const regularNote = {
+    id: "note-1",
+    title: "Meeting Notes",
+    content: '{"type":"doc","content":[]}',
+    isPinned: false,
+    modifiedAt: 300,
+  };
+
+  it("shows only the zh-canonical playground when locale is zh", () => {
+    const notes = [enPlayground, zhPlayground, attrMatchDuplicate, regularNote];
+    const filtered = filterNotesForPlaygroundList(notes, "zh");
+    expect(filtered.map((n) => n.id)).toEqual(["pg-zh", "note-1"]);
+    expect(filtered.find((n) => n.id === "pg-zh")?.title).toBe("格式试炼场");
+  });
+
+  it("shows only the en-canonical playground when locale is en", () => {
+    const notes = [enPlayground, zhPlayground, attrMatchDuplicate, regularNote];
+    const filtered = filterNotesForPlaygroundList(notes, "en");
+    expect(filtered.map((n) => n.id)).toEqual(["pg-en", "note-1"]);
+    expect(filtered.find((n) => n.id === "pg-en")?.title).toBe(
+      "Format Playground",
+    );
+  });
+
+  it("leaves non-playground notes untouched when no playground exists", () => {
+    const filtered = filterNotesForPlaygroundList([regularNote], "zh");
+    expect(filtered).toEqual([regularNote]);
   });
 });
