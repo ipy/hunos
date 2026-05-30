@@ -61,6 +61,9 @@ export const noteStorage = {
     };
     if (partial?.content !== undefined) {
       note.content = sanitizeContentForWrite(partial.content);
+      if (partial.contentPlain == null) {
+        note.contentPlain = deriveContentPlain(note.content);
+      }
     }
     await db.notes.add(note);
     return note;

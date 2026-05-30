@@ -81,6 +81,46 @@ describe("noteStorage.create", () => {
     );
     expect(created.content).not.toContain("dataBlockImageFloor");
   });
+
+  it("derives contentPlain from content when contentPlain is omitted", async () => {
+    const content = JSON.stringify({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "Hello world" }],
+        },
+      ],
+    });
+
+    const created = await noteStorage.create({ content });
+
+    expect(created.contentPlain).toBe("Hello world\n");
+    expect(notesById.get(created.id)?.contentPlain).toBe("Hello world\n");
+  });
+
+  it("sets contentPlain to empty string for empty doc on create", async () => {
+    const content = JSON.stringify({ type: "doc", content: [] });
+
+    const created = await noteStorage.create({ content });
+
+    expect(created.contentPlain).toBe("");
+    expect(notesById.get(created.id)?.contentPlain).toBe("");
+  });
+
+  it("leaves contentPlain empty when create has no partial", async () => {
+    const created = await noteStorage.create();
+
+    expect(created.contentPlain).toBe("");
+    expect(notesById.get(created.id)?.contentPlain).toBe("");
+  });
+
+  it("leaves contentPlain empty when create only sets title", async () => {
+    const created = await noteStorage.create({ title: "x" });
+
+    expect(created.contentPlain).toBe("");
+    expect(notesById.get(created.id)?.contentPlain).toBe("");
+  });
 });
 
 describe("noteStorage.get", () => {

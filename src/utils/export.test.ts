@@ -17,6 +17,38 @@ function makeNote(content: object): Note {
   };
 }
 
+describe("exportNote text format", () => {
+  it("returns empty string when contentPlain is undefined", () => {
+    const note = makeNote({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "Body" }],
+        },
+      ],
+    });
+    (note as { contentPlain?: string }).contentPlain = undefined;
+
+    expect(exportNote(note, "text")).toBe("");
+  });
+
+  it("still exports markdown from content when contentPlain is undefined", () => {
+    const note = makeNote({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "Body" }],
+        },
+      ],
+    });
+    (note as { contentPlain?: string }).contentPlain = undefined;
+
+    expect(exportNote(note, "markdown")).toBe("Body");
+  });
+});
+
 describe("exportNote markdown code blocks", () => {
   it("exports plain fences when language is missing", () => {
     const note = makeNote({

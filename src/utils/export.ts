@@ -228,7 +228,7 @@ export function exportNote(
   note: Note,
   format: "markdown" | "html" | "text",
 ): string {
-  if (format === "text") return note.contentPlain;
+  if (format === "text") return note.contentPlain ?? "";
 
   try {
     const json = JSON.parse(note.content);
@@ -245,9 +245,9 @@ ul.task-list li[data-checked="true"] del.task-done a{color:#AEAEB2}</style>
 </head><body>${tiptapToHtml(json)}</body></html>`;
     }
   } catch {
-    return note.contentPlain;
+    return note.contentPlain ?? "";
   }
-  return note.contentPlain;
+  return note.contentPlain ?? "";
 }
 
 export function downloadFile(
