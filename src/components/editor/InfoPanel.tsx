@@ -360,7 +360,6 @@ export function InfoPanel({
                     type="button"
                     onClick={() => {
                       if (editor) scrollToTocIndex(editor, i);
-                      onClose();
                     }}
                     style={{
                       display: "block",
