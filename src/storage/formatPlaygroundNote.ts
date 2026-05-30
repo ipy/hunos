@@ -659,11 +659,7 @@ export function shouldShowPlaygroundRestoreButton(options: {
     fallbackLocale,
   );
   if (!storedRow) {
-    return formatPlaygroundNeedsRestore(
-      storedTitle,
-      storedContent,
-      fallbackLocale,
-    );
+    return false;
   }
 
   const { rowContent, seedLocale, canonicalTitle, isCanonical } = storedRow;

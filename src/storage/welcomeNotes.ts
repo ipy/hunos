@@ -4,8 +4,16 @@ import { db } from "./database";
 import { graphEngine } from "@/graph/graphEngine";
 import {
   createFormatPlaygroundNote,
-  resolveSeedLocale,
+  getFormatPlaygroundTitle,
+  isFormatPlaygroundNote,
 } from "./formatPlaygroundNote";
+
+export const WELCOME_NOTE_TITLES = [
+  "Welcome to Hunos",
+  "欢迎使用 Hunos",
+] as const;
+
+export type WelcomeSeedLocale = "en" | "zh";
 
 const WELCOME_CONTENT_EN = {
   type: "doc",
@@ -184,24 +192,89 @@ const WELCOME_CONTENT_ZH = {
   ],
 };
 
-export async function createWelcomeNotesIfNeeded(
-  locale: Locale = resolveSeedLocale(),
-): Promise<void> {
-  const existingNotes = await db.notes.count();
-  if (existingNotes > 0) return;
+export function resolveWelcomeSeedLocale(locale: Locale): WelcomeSeedLocale {
+  return locale === "zh" ? "zh" : "en";
+}
 
-  const seedLocale = locale === "zh" ? "zh" : "en";
+export function getWelcomeSeed(locale: Locale): {
+  seedLocale: WelcomeSeedLocale;
+  title: string;
+  content: typeof WELCOME_CONTENT_EN;
+  contentPlain: string;
+} {
+  const seedLocale = resolveWelcomeSeedLocale(locale);
   const content = seedLocale === "zh" ? WELCOME_CONTENT_ZH : WELCOME_CONTENT_EN;
-
-  const note = await noteStorage.create({
-    content: JSON.stringify(content),
+  return {
+    seedLocale,
     title: seedLocale === "zh" ? "欢迎使用 Hunos" : "Welcome to Hunos",
+    content,
     contentPlain:
       seedLocale === "zh"
         ? "欢迎使用 Hunos\nHunos 是一款美观的、支持知识图谱的笔记应用。"
         : "Welcome to Hunos\nHunos is a beautiful, graph-aware note-taking app.",
+  };
+}
+
+let bootstrapSeedInflight: Promise<void> | null = null;
+
+async function noteExistsWithTitle(title: string): Promise<boolean> {
+  const match = await db.notes.where("title").equals(title).first();
+  return Boolean(match);
+}
+
+async function hasWelcomeNote(): Promise<boolean> {
+  for (const title of WELCOME_NOTE_TITLES) {
+    if (await noteExistsWithTitle(title)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function hasFormatPlaygroundNote(): Promise<boolean> {
+  const notes = await db.notes.toArray();
+  return notes.some((note) => isFormatPlaygroundNote(note.title, note.content));
+}
+
+async function ensureWelcomeNote(locale: Locale): Promise<void> {
+  if (await hasWelcomeNote()) {
+    return;
+  }
+
+  const { title, content, contentPlain } = getWelcomeSeed(locale);
+  const note = await noteStorage.create({
+    content: JSON.stringify(content),
+    title,
+    contentPlain,
   });
 
   await graphEngine.syncNoteLinks(note.id, note.content);
+}
+
+async function ensureFormatPlaygroundNote(locale: Locale): Promise<void> {
+  const expectedTitle = getFormatPlaygroundTitle(locale);
+  if (await noteExistsWithTitle(expectedTitle)) {
+    return;
+  }
+  if (await hasFormatPlaygroundNote()) {
+    return;
+  }
   await createFormatPlaygroundNote(locale);
+}
+
+async function runBootstrapSeed(locale: Locale): Promise<void> {
+  await ensureWelcomeNote(locale);
+  await ensureFormatPlaygroundNote(locale);
+}
+
+/** Idempotent first-run seed keyed by bootstrap locale (welcome + format playground). */
+export async function createWelcomeNotesIfNeeded(
+  locale: Locale,
+): Promise<void> {
+  if (!bootstrapSeedInflight) {
+    bootstrapSeedInflight = runBootstrapSeed(locale).finally(() => {
+      bootstrapSeedInflight = null;
+    });
+  }
+  return bootstrapSeedInflight;
 }

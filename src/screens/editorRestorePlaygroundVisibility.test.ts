@@ -206,6 +206,18 @@ describe("playground restore visibility", () => {
     ).toBe(false);
   });
 
+  it("hides restore when canonical row read returns null (no raw-content fallback)", () => {
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "Meeting Notes",
+        storedTitle: "Meeting Notes",
+        storedContent: '{"type":"doc","content":[]}',
+        pendingDraftContent: null,
+        fallbackLocale: "en",
+      }),
+    ).toBe(false);
+  });
+
   it("hides restore after post-restore editor echo pending draft", () => {
     const parsed = JSON.parse(seedContent) as {
       content: Array<{ type: string; content?: Array<{ text?: string }> }>;

@@ -22,6 +22,8 @@ import {
 } from "@/utils/localeBootstrap";
 import i18n from "@/i18n";
 
+let loadSettingsInflight: Promise<void> | null = null;
+
 interface SettingsStore extends AppSettings {
   isLoaded: boolean;
   loadSettings: () => Promise<void>;
@@ -46,21 +48,34 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   isLoaded: false,
 
   loadSettings: async () => {
-    const settings = await settingsStorage.getAll();
-    const hasStoredLocale = await settingsStorage.has("locale");
-    const effectiveLocale = resolveBootstrapLocale(
-      settings.locale,
-      hasStoredLocale,
-    );
-
-    if (effectiveLocale !== settings.locale) {
-      await settingsStorage.set("locale", effectiveLocale);
-      settings.locale = effectiveLocale;
+    if (get().isLoaded) {
+      return;
+    }
+    if (loadSettingsInflight) {
+      return loadSettingsInflight;
     }
 
-    await bootstrapAppData(effectiveLocale);
+    loadSettingsInflight = (async () => {
+      const settings = await settingsStorage.getAll();
+      const hasStoredLocale = await settingsStorage.has("locale");
+      const effectiveLocale = resolveBootstrapLocale(
+        settings.locale,
+        hasStoredLocale,
+      );
 
-    set({ ...settings, isLoaded: true });
+      if (effectiveLocale !== settings.locale) {
+        await settingsStorage.set("locale", effectiveLocale);
+        settings.locale = effectiveLocale;
+      }
+
+      await bootstrapAppData(effectiveLocale);
+
+      set({ ...settings, isLoaded: true });
+    })().finally(() => {
+      loadSettingsInflight = null;
+    });
+
+    return loadSettingsInflight;
   },
 
   setTheme: async (theme) => {

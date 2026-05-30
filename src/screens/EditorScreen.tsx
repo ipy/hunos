@@ -35,6 +35,7 @@ import {
   normalizePlaygroundContentSnapshot,
   playgroundEditorContentMatchesStored,
   playgroundPersistedContentForRow,
+  playgroundWriteRegressesCanonicalStored,
   resolvePlaygroundSeedLocale,
   shouldShowPlaygroundRestoreButton,
   migratePlaygroundContentIfStale,
@@ -549,7 +550,25 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       note.title !== expectedTitle;
 
     if (migrated) {
-      void saveNoteContent(note.id, migrated);
+      const storedFingerprint = normalizePlaygroundContentSnapshot(
+        note.content,
+        seedLocale,
+      );
+      const migratedFingerprint = normalizePlaygroundContentSnapshot(
+        migrated,
+        seedLocale,
+      );
+      if (
+        migratedFingerprint !== storedFingerprint &&
+        !playgroundWriteRegressesCanonicalStored(
+          note.title,
+          note.content,
+          migrated,
+          settings.locale,
+        )
+      ) {
+        void saveNoteContent(note.id, migrated);
+      }
     }
     if (titleNeedsUpdate) {
       void saveNoteTitle(note.id, expectedTitle);
@@ -787,7 +806,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           flexShrink: 0,
           minHeight: 44,
           position: "relative",
-          zIndex: showStats ? 70 : undefined,
+          zIndex: showStats || showRestorePlayground ? 70 : undefined,
         }}
       >
         {showBackButton && (
@@ -823,6 +842,8 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
             title={restorePlaygroundLabel}
             data-testid="restore-playground-button"
             style={{
+              position: "relative",
+              zIndex: 2,
               background: theme.colors.surface,
               border: `1px solid ${theme.colors.borderLight}`,
               cursor: "pointer",

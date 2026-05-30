@@ -190,6 +190,27 @@ describe("useSettingsStore", () => {
     vi.unstubAllGlobals();
   });
 
+  it("loadSettings dedupes concurrent bootstrap calls", async () => {
+    vi.stubGlobal("navigator", { userAgent: "Mozilla/5.0 Chrome/120.0" });
+    vi.stubGlobal("window", {
+      location: { search: "?lang=en" },
+    });
+    settingsStorageGetAll.mockResolvedValue({
+      ...DEFAULT_SETTINGS,
+      locale: "zh",
+    });
+    settingsStorageHas.mockResolvedValue(true);
+
+    const { useSettingsStore } = await import("./settingsStore");
+    await Promise.all([
+      useSettingsStore.getState().loadSettings(),
+      useSettingsStore.getState().loadSettings(),
+    ]);
+
+    expect(bootstrapAppData).toHaveBeenCalledTimes(1);
+    vi.unstubAllGlobals();
+  });
+
   it("loadSettings honors ?lang=en on web", async () => {
     vi.stubGlobal("navigator", { userAgent: "Mozilla/5.0 Chrome/120.0" });
     vi.stubGlobal("window", {

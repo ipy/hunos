@@ -31,6 +31,7 @@ import { SketchResize } from "./SketchNodeView";
 import { FocusModeShortcuts } from "./FocusModeShortcuts";
 import { EditorKeyboardShortcuts } from "./EditorKeyboardShortcuts";
 import { ListOutlineShortcuts } from "./ListOutlineShortcuts";
+import { HeadingListBoundaryShortcuts } from "./HeadingListBoundaryShortcuts";
 import { ListKeyboardShortcuts } from "./ListKeyboardShortcuts";
 import { BlockLineShortcuts } from "./BlockLineShortcuts";
 import { BlockExitKeyboardShortcuts } from "./BlockExitKeyboardShortcuts";
@@ -277,6 +278,7 @@ export function TiptapEditor({
       EditorKeyboardShortcuts,
       ListOutlineShortcuts,
       TableKeyboardShortcuts,
+      HeadingListBoundaryShortcuts,
       ListKeyboardShortcuts,
       BlockExitKeyboardShortcuts,
       CodeBlockExitKeyboardShortcuts,

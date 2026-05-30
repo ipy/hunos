@@ -1350,6 +1350,20 @@ describe("migratePlaygroundContentIfStale", () => {
   });
 });
 
+describe("shouldShowPlaygroundRestoreButton null-row SSOT", () => {
+  it("returns false when row is not a playground note (no raw fallback)", () => {
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "Daily",
+        storedTitle: "Daily",
+        storedContent: '{"type":"doc","content":[]}',
+        pendingDraftContent: null,
+        fallbackLocale: "en",
+      }),
+    ).toBe(false);
+  });
+});
+
 describe("readFormatPlaygroundCanonicalRow", () => {
   it("returns canonical row for unmodified zh seed", () => {
     const seed = JSON.stringify(buildPlaygroundContent("zh"));

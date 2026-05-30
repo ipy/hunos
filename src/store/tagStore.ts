@@ -3,6 +3,17 @@ import type { Tag, TagTreeNode } from "@/types/graph";
 import { tagStorage } from "@/storage/tagStorage";
 import { isValidTagName } from "@/utils/tagPattern";
 
+function appendUniqueChild(parent: TagTreeNode, child: TagTreeNode): void {
+  if (
+    parent.children.some(
+      (existing) => existing.displayName === child.displayName,
+    )
+  ) {
+    return;
+  }
+  parent.children.push(child);
+}
+
 function buildTree(tags: Tag[]): TagTreeNode[] {
   tags = tags.filter((t) => isValidTagName(t.name));
   const nodeMap = new Map<string, TagTreeNode>();
@@ -13,8 +24,10 @@ function buildTree(tags: Tag[]): TagTreeNode[] {
   const roots: TagTreeNode[] = [];
   nodeMap.forEach((node) => {
     if (node.parentId && nodeMap.has(node.parentId)) {
-      nodeMap.get(node.parentId)!.children.push(node);
-    } else {
+      appendUniqueChild(nodeMap.get(node.parentId)!, node);
+    } else if (
+      !roots.some((existing) => existing.displayName === node.displayName)
+    ) {
       roots.push(node);
     }
   });
