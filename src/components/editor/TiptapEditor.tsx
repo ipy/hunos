@@ -47,6 +47,7 @@ import { SelectAllShortcuts } from "./SelectAllShortcuts";
 import { PlaygroundDocument } from "./PlaygroundDocument";
 import { getHunosCodeBlockExtension } from "./HunosCodeBlock";
 import { getCodeBlockHighlightStyles } from "./codeBlockHighlightStyles";
+import { resetEditorHistory } from "./resetEditorHistory";
 import ListItem from "@tiptap/extension-list-item";
 import { SelectionBubbleMenu } from "./SelectionBubbleMenu";
 import { LinkEditorBubble } from "./LinkEditorBubble";
@@ -322,13 +323,16 @@ export function TiptapEditor({
     lastExternalContentRef.current = initialContent;
 
     if (!initialContent) {
-      editor.commands.clearContent(true);
+      editor.chain().setMeta("addToHistory", false).clearContent(true).run();
     } else {
       const parsed = tryParseJson(initialContent);
-      if (parsed) editor.commands.setContent(parsed, false);
+      if (parsed) {
+        editor.chain().setMeta("addToHistory", false).setContent(parsed, false).run();
+      }
     }
 
     if (noteChanged) {
+      resetEditorHistory(editor);
       editor.commands.focus("start");
     }
   }, [noteId, editor, initialContent]);
