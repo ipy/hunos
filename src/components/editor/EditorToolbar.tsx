@@ -217,6 +217,8 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
   };
 
   const isMobile = layout === "mobile";
+  const canUndo = editor.can().undo();
+  const canRedo = editor.can().redo();
   const items = isMobile
     ? activeTab === "format"
       ? INLINE_FORMAT_ITEMS
@@ -362,6 +364,104 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
             scrollbarWidth: "none",
           }}
         >
+          {isMobile && (
+            <>
+              <button
+                type="button"
+                data-testid="editor-undo"
+                disabled={!canUndo}
+                aria-label="Undo"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  if (touchHandledRef.current) {
+                    touchHandledRef.current = false;
+                    return;
+                  }
+                  if (canUndo) {
+                    editor.commands.undo();
+                    setTick((t) => t + 1);
+                  }
+                }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  touchHandledRef.current = true;
+                  if (canUndo) {
+                    editor.commands.undo();
+                    setTick((t) => t + 1);
+                  }
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 36,
+                  height: 36,
+                  minWidth: 36,
+                  borderRadius: 8,
+                  border: "none",
+                  cursor: canUndo ? "pointer" : "default",
+                  backgroundColor: "transparent",
+                  opacity: canUndo ? 1 : 0.35,
+                  touchAction: "manipulation",
+                  transition:
+                    "background-color 0.15s ease, transform 0.1s ease",
+                }}
+              >
+                <Icon
+                  name="undo"
+                  size={17}
+                  color={theme.colors.textSecondary}
+                />
+              </button>
+              <button
+                type="button"
+                data-testid="editor-redo"
+                disabled={!canRedo}
+                aria-label="Redo"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  if (touchHandledRef.current) {
+                    touchHandledRef.current = false;
+                    return;
+                  }
+                  if (canRedo) {
+                    editor.commands.redo();
+                    setTick((t) => t + 1);
+                  }
+                }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  touchHandledRef.current = true;
+                  if (canRedo) {
+                    editor.commands.redo();
+                    setTick((t) => t + 1);
+                  }
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 36,
+                  height: 36,
+                  minWidth: 36,
+                  borderRadius: 8,
+                  border: "none",
+                  cursor: canRedo ? "pointer" : "default",
+                  backgroundColor: "transparent",
+                  opacity: canRedo ? 1 : 0.35,
+                  touchAction: "manipulation",
+                  transition:
+                    "background-color 0.15s ease, transform 0.1s ease",
+                }}
+              >
+                <Icon
+                  name="redo"
+                  size={17}
+                  color={theme.colors.textSecondary}
+                />
+              </button>
+            </>
+          )}
           {items.map((item, idx) => {
             const active = item.isActive?.(editor) ?? false;
             return (

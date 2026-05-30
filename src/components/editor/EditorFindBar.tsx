@@ -204,7 +204,7 @@ export function EditorFindBar({
           aria-label={t("editor.find.placeholder")}
           style={inputStyle(theme)}
         />
-        <span data-testid="editor-find-count" style={countStyle(theme)}>
+        <span data-testid="editor-find-match-count" style={countStyle(theme)}>
           {countLabel}
         </span>
         <button
