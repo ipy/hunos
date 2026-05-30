@@ -12,6 +12,17 @@ describe("harmony rawfile freshness", () => {
 
   it("includes v21 tryHintBullets playground seed", () => {
     expect(rawfile).toContain("tryHintBullets");
+    expect(rawfile).toContain("~~strike~~");
+    expect(rawfile).toContain("==highlight==");
+    expect(rawfile).toContain("~~删除线~~");
+    expect(rawfile).toContain("==高亮==");
+  });
+
+  it("includes strike and highlight markdown input rules (iter 88/89)", () => {
+    expect(rawfile).toContain('strike:{open:"~~"');
+    expect(rawfile).toContain('highlight:{open:"=="');
+    expect(rawfile).toMatch(/~~\(\?!\\s\+~~\)/);
+    expect(rawfile).toMatch(/==\(\?!\\s\+==\)/);
   });
 
   it("includes bootstrapAppData startup sequence", () => {

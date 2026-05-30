@@ -215,6 +215,48 @@ describe("exportNote markdown tables", () => {
   });
 });
 
+describe("exportNote markdown inline marks", () => {
+  it("exports highlight as ==text==", () => {
+    const note = makeNote({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "HighlightIter89",
+              marks: [{ type: "highlight" }],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(exportNote(note, "markdown")).toBe("==HighlightIter89==");
+  });
+
+  it("exports strike as ~~text~~", () => {
+    const note = makeNote({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "StrikeIter88",
+              marks: [{ type: "strike" }],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(exportNote(note, "markdown")).toBe("~~StrikeIter88~~");
+  });
+});
+
 describe("exportNote markdown links", () => {
   it("exports external links as GFM markdown", () => {
     const note = makeNote({

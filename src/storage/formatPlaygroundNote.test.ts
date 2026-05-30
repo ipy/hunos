@@ -1028,7 +1028,9 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(zhTryHint).toContain("拖动手柄调整大小");
     expect(zhTryHint).toContain("[[ 和 ]] 括号");
     expect(enTryHint).toContain("~~strike~~");
+    expect(enTryHint).toContain("==highlight==");
     expect(zhTryHint).toContain("~~删除线~~");
+    expect(zhTryHint).toContain("==高亮==");
   });
 
   it("seeds tryHint as bullet list with at least four items", () => {
@@ -1067,6 +1069,7 @@ describe("migratePlaygroundContentIfStale", () => {
       PLAYGROUND_CONTENT_VERSION,
     );
     expect(findTryHintText(parsedEn)).toContain("~~strike~~");
+    expect(findTryHintText(parsedEn)).toContain("==highlight==");
 
     const staleZh = buildPlaygroundContent("zh") as {
       type: "doc";
@@ -1088,6 +1091,7 @@ describe("migratePlaygroundContentIfStale", () => {
     );
     expect(migratedZh).not.toBeNull();
     expect(findTryHintText(JSON.parse(migratedZh!))).toContain("~~删除线~~");
+    expect(findTryHintText(JSON.parse(migratedZh!))).toContain("==高亮==");
   });
 
   it("updates tryHint to v20 bullet list for stale v19 playground notes", () => {
