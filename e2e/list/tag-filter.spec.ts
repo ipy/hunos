@@ -16,7 +16,8 @@ test.describe("note list tag filter", () => {
     const tag = editorLocator(page).locator(
       '.editor-tag[data-tag-name="格式测试"]',
     );
-    await expect(tag.first()).toBeVisible();
+    await expect(tag.first()).toBeVisible({ timeout: 15_000 });
+    await tag.first().scrollIntoViewIfNeeded();
     await tag.first().click();
 
     const filterHeader = page.getByTestId("note-list-tag-filter");

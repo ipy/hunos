@@ -22,6 +22,9 @@ import { exportAndCopy, exportAndDownload } from "@/utils/export";
 import { resolveTextFontFamily } from "@/utils/fonts";
 import type { Editor } from "@tiptap/react";
 import type { LayoutMode } from "@/hooks/useAdaptiveLayout";
+import { registerHunosE2eEditor } from "@/testing/hunos-e2e-bridge";
+
+declare const __HUNOS_E2E__: boolean | undefined;
 import { shouldSuppressFocusModeEscape } from "@/utils/editorSuggestionMenu";
 import { editorHasNonEmptySelection } from "@/utils/editorSelection";
 import {
@@ -122,6 +125,14 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const handleEditorReady = useCallback((editor: Editor) => {
     editorInstanceRef.current = editor;
     setEditorInstance(editor);
+    if (typeof __HUNOS_E2E__ !== "undefined" && __HUNOS_E2E__) {
+      registerHunosE2eEditor(editor);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof __HUNOS_E2E__ === "undefined" || !__HUNOS_E2E__) return;
+    return () => registerHunosE2eEditor(null);
   }, []);
 
   useEffect(() => {
@@ -406,9 +417,8 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
   useEffect(() => {
     if (findInNoteSignal === 0) return;
-    if (layout !== "desktop") return;
     setFindOpen(true);
-  }, [findInNoteSignal, layout]);
+  }, [findInNoteSignal]);
 
   useEffect(() => {
     if (focusNewNoteTitleSignal === 0) return;
@@ -607,6 +617,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       >
         {showBackButton && (
           <button
+            data-testid="editor-back-button"
             onClick={goBack}
             style={{
               background: "none",
@@ -860,7 +871,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         )}
       </header>
 
-      {findOpen && editorInstance && layout === "desktop" && (
+      {findOpen && editorInstance && (
         <EditorFindBar
           key={findInNoteSignal}
           editor={editorInstance}

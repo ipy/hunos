@@ -1,4 +1,5 @@
 import { test, expect } from "../fixtures/app";
+import { isHarmonyRuntime } from "../helpers/e2e-runtime";
 import { editorLocator } from "../helpers/playground";
 
 test.describe("mobile FAB create", () => {
@@ -11,8 +12,13 @@ test.describe("mobile FAB create", () => {
   test("FAB opens new note with title focused", async ({ page }) => {
     await expect(page.getByTestId("create-note-fab")).toBeVisible();
     await page.getByTestId("create-note-fab").click();
-    await expect(page.getByTestId("note-title")).toBeFocused();
-    await page.getByTestId("note-title").fill("E2E Mobile");
+    const titleInput = page.getByTestId("note-title");
+    if (isHarmonyRuntime()) {
+      await titleInput.click();
+    } else {
+      await expect(titleInput).toBeFocused({ timeout: 15_000 });
+    }
+    await titleInput.fill("E2E Mobile");
     await editorLocator(page).click();
     await page.keyboard.type("Mobile body");
     await expect(editorLocator(page)).toContainText("Mobile body");

@@ -1,6 +1,6 @@
 import { test, expect } from "../fixtures/app";
 import {
-  appendEditorLine,
+  appendEditorHeading,
   editorLocator,
   openCleanFormatPlayground,
 } from "../helpers/playground";
@@ -17,10 +17,10 @@ test.describe("info panel TOC", () => {
   test("live heading appears in TOC without closing panel", async ({
     page,
   }) => {
-    await appendEditorLine(page, "## E2E Live Heading");
+    await appendEditorHeading(page, 2, "E2E Live Heading");
     await expect(
       page.getByTestId("info-panel-toc-list").getByText("E2E Live Heading"),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId("info-panel")).toBeVisible();
   });
 

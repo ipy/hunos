@@ -24,20 +24,24 @@ test.describe("wiki-link graph navigation", () => {
 
     await expect(page.getByTestId("note-title")).toHaveValue(
       WELCOME_NOTE_TITLE,
+      { timeout: 15_000 },
     );
 
-    const toggle = page.getByTestId("backlinks-panel-toggle");
-    if (await toggle.isVisible()) {
-      await toggle.click();
-    }
-    await expect(page.getByTestId("backlinks-panel")).toBeVisible();
+    await page.keyboard.press("Escape");
+    const panel = page.getByTestId("backlinks-panel");
+    await expect(panel).toBeVisible({ timeout: 15_000 });
+    await panel.scrollIntoViewIfNeeded();
 
+    const backlink = panel.getByText(FORMAT_PLAYGROUND_TITLE).first();
     const incoming = page
       .getByTestId("backlinks-incoming-section")
       .locator(`[data-note-title="${FORMAT_PLAYGROUND_TITLE}"]`)
       .first();
-    await expect(incoming).toBeVisible();
-    await incoming.click();
+    if (!(await incoming.isVisible())) {
+      await page.getByTestId("backlinks-panel-toggle").click();
+    }
+    await expect(backlink).toBeVisible({ timeout: 30_000 });
+    await backlink.click();
 
     await expect(page.getByTestId("note-title")).toHaveValue(
       FORMAT_PLAYGROUND_TITLE,

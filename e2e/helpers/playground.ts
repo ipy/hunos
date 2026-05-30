@@ -64,10 +64,55 @@ export async function appendEditorLine(
   await editor.click();
   await page.keyboard.press("End");
   await page.keyboard.press("Enter");
-  await page.keyboard.type(text);
+  const delay = isHarmonyRuntime() ? 30 : 0;
+  await page.keyboard.type(text, { delay });
+}
+
+/** Insert a heading at the end of the note (markdown shortcut on web; bridge on Harmony). */
+export async function appendEditorHeading(
+  page: Page,
+  level: 1 | 2 | 3,
+  text: string,
+): Promise<void> {
+  if (isHarmonyRuntime()) {
+    const ok = await page.evaluate(
+      ({ lvl, headingText }) => {
+        const bridge = (
+          window as Window & {
+            __hunosE2e?: {
+              insertHeadingAtEnd: (l: 1 | 2 | 3, t: string) => boolean;
+            };
+          }
+        ).__hunosE2e;
+        return bridge?.insertHeadingAtEnd(lvl as 1 | 2 | 3, headingText) ?? false;
+      },
+      { lvl: level, headingText: text },
+    );
+    if (!ok) {
+      throw new Error("appendEditorHeading: __hunosE2e.insertHeadingAtEnd failed");
+    }
+    await page.waitForTimeout(300);
+    return;
+  }
+  const prefix = `${"#".repeat(level)} `;
+  await appendEditorLine(page, `${prefix}${text}`);
+  await page.keyboard.press("Space");
+  await page.waitForTimeout(200);
 }
 
 export async function clearTagFilter(page: Page): Promise<void> {
-  await page.getByText("全部笔记", { exact: true }).click();
-  await expect(page.getByTestId("note-list-tag-filter")).toHaveCount(0);
+  const bridged = await page.evaluate(() => {
+    const bridge = (
+      window as Window & { __hunosE2e?: { clearTagFilter: () => void } }
+    ).__hunosE2e;
+    if (!bridge?.clearTagFilter) return false;
+    bridge.clearTagFilter();
+    return true;
+  });
+  if (!bridged) {
+    await page.getByText("全部笔记", { exact: true }).first().click();
+  }
+  await expect(page.getByTestId("note-list-tag-filter")).toHaveCount(0, {
+    timeout: 15_000,
+  });
 }

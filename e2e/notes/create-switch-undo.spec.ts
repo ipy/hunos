@@ -1,6 +1,7 @@
 import { test, expect } from "../fixtures/app";
 import {
   createNoteViaShortcut,
+  editorUndo,
   openNoteFromList,
 } from "../helpers/notes";
 import { editorLocator } from "../helpers/playground";
@@ -14,7 +15,7 @@ test.describe("note create, switch, undo isolation", () => {
     const editor = editorLocator(page);
     await expect(editor).toContainText("UndoScopeBeta");
 
-    await page.keyboard.press("Meta+z");
+    await editorUndo(page);
     await expect(editor).not.toContainText("UndoScopeBeta");
 
     await openNoteFromList(page, "E2E Alpha");

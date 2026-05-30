@@ -13,7 +13,7 @@ async function viaE2eBridge(
   arg?: boolean,
 ): Promise<boolean> {
   return page.evaluate(
-    ({ name, replace }) => {
+    async ({ name, replace }) => {
       const bridge = (
         window as Window & {
           __hunosE2e?: {
@@ -24,7 +24,7 @@ async function viaE2eBridge(
       ).__hunosE2e;
       if (!bridge) return false;
       if (name === "createNote") {
-        void bridge.createNote();
+        await bridge.createNote();
         return true;
       }
       bridge.requestFindInNote(replace);
@@ -44,7 +44,9 @@ export async function openFindInNote(
     options?.replace ?? false,
   );
   if (bridged) {
-    await expect(page.getByTestId("editor-find-bar")).toBeVisible();
+    await expect(page.getByTestId("editor-find-bar")).toBeVisible({
+      timeout: 15_000,
+    });
     return;
   }
   if (await isMobileAppLayout(page)) {
