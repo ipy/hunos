@@ -11,6 +11,7 @@ import {
   noteContentHasTaskList,
 } from "@/utils/noteContentHasTaskList";
 import { deriveNoteStats } from "@/utils/noteStats";
+import { deriveToc } from "@/utils/noteToc";
 
 type Tab = "stats" | "toc";
 
@@ -22,36 +23,7 @@ interface InfoPanelProps {
   onHideCompletedTasksChange: (hide: boolean) => void;
 }
 
-interface TocItem {
-  level: number;
-  text: string;
-}
-
 const DRAG_CLOSE_THRESHOLD = 80;
-
-function extractToc(content: string): TocItem[] {
-  try {
-    const doc = JSON.parse(content);
-    if (!doc?.content) return [];
-    return doc.content
-      .filter((node: { type: string }) => node.type === "heading")
-      .map(
-        (node: {
-          attrs?: { level?: number };
-          content?: { text?: string }[];
-        }) => ({
-          level: node.attrs?.level ?? 1,
-          text:
-            node.content
-              ?.map((c: { text?: string }) => c.text ?? "")
-              .join("") ?? "",
-        }),
-      )
-      .filter((item: TocItem) => item.text);
-  } catch {
-    return [];
-  }
-}
 
 function formatDateTime(ts: number): string {
   const d = new Date(ts);
@@ -110,12 +82,14 @@ export function InfoPanel({
     };
   }, [editor]);
 
-  const { charCount, wordCount, paragraphCount, readingTimeMinutes } =
-    useMemo(
-      () => deriveNoteStats(note, editor),
-      [note, editor, statsRevision],
-    );
-  const toc = extractToc(note.content);
+  const { charCount, wordCount, paragraphCount, readingTimeMinutes } = useMemo(
+    () => deriveNoteStats(note, editor),
+    [note, editor, statsRevision],
+  );
+  const toc = useMemo(
+    () => deriveToc(note, editor),
+    [note, editor, statsRevision],
+  );
 
   const tabs: { id: Tab; icon: string }[] = [
     { id: "stats", icon: "stats" },
