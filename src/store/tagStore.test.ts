@@ -114,7 +114,7 @@ describe("tagStore tree dedup", () => {
     expect(repairMissingParents).toHaveBeenCalledOnce();
   });
 
-  it("auto-expands parents on paths to noted leaf tags", async () => {
+  it("leaves two-level bootstrap parents collapsed on first load", async () => {
     const parent: Tag = {
       id: "format-test",
       name: "format-test",
@@ -140,7 +140,45 @@ describe("tagStore tree dedup", () => {
     const formatTest = useTagStore
       .getState()
       .tagTree.find((node) => node.id === "format-test");
-    expect(formatTest?.isExpanded).toBe(true);
+    expect(formatTest?.isExpanded).toBe(false);
     expect(formatTest?.children[0]?.displayName).toBe("welcome");
+  });
+
+  it("auto-expands only when noted leaves sit below immediate children", async () => {
+    const root: Tag = {
+      id: "format-test",
+      name: "format-test",
+      displayName: "format-test",
+      parentId: null,
+      noteCount: 0,
+      createdAt: 1,
+    };
+    const mid: Tag = {
+      id: "qa",
+      name: "format-test/qa",
+      displayName: "qa",
+      parentId: "format-test",
+      noteCount: 0,
+      createdAt: 2,
+    };
+    const leaf: Tag = {
+      id: "welcome",
+      name: "format-test/qa/welcome",
+      displayName: "welcome",
+      parentId: "qa",
+      noteCount: 1,
+      createdAt: 3,
+    };
+
+    listAll.mockResolvedValue([root, mid, leaf]);
+
+    const { useTagStore } = await import("./tagStore");
+    await useTagStore.getState().loadTags();
+
+    const formatTest = useTagStore
+      .getState()
+      .tagTree.find((node) => node.id === "format-test");
+    expect(formatTest?.isExpanded).toBe(true);
+    expect(formatTest?.children[0]?.isExpanded).toBe(false);
   });
 });

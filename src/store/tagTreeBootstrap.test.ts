@@ -72,13 +72,13 @@ describe("bootstrap tag tree", () => {
     expect(formatTest?.children.map((child) => child.displayName)).toEqual([
       "welcome",
     ]);
-    expect(formatTest?.isExpanded).toBe(true);
+    expect(formatTest?.isExpanded).toBe(false);
 
     const hunos = tree.find((node) => node.name === "hunos");
     expect(hunos?.children.map((child) => child.displayName)).toEqual([
       "getting-started",
     ]);
-    expect(hunos?.isExpanded).toBe(true);
+    expect(hunos?.isExpanded).toBe(false);
   });
 
   it("creates one 欢迎 path under 格式测试 for zh fresh boot seeds", async () => {
@@ -99,13 +99,27 @@ describe("bootstrap tag tree", () => {
     expect(formatTest?.children.map((child) => child.displayName)).toEqual([
       "欢迎",
     ]);
-    expect(formatTest?.isExpanded).toBe(true);
+    expect(formatTest?.isExpanded).toBe(false);
 
     const hunos = tree.find((node) => node.name === "hunos");
     expect(hunos?.children.map((child) => child.displayName)).toEqual([
       "入门指南",
     ]);
-    expect(hunos?.isExpanded).toBe(true);
+    expect(hunos?.isExpanded).toBe(false);
+  });
+
+  it("keeps bootstrap branches collapsed until the user expands once", async () => {
+    const tags = tagsFromBootstrap("zh");
+    const { buildTree } = await import("./tagStore");
+    const tree = buildTree(tags);
+
+    const formatTest = tree.find((node) => node.name === "格式测试");
+    expect(formatTest?.isExpanded).toBe(false);
+    expect(formatTest?.children[0]?.displayName).toBe("欢迎");
+
+    const hunos = tree.find((node) => node.name === "hunos");
+    expect(hunos?.isExpanded).toBe(false);
+    expect(hunos?.children[0]?.displayName).toBe("入门指南");
   });
 
   it("nests 入门指南 under hunos when parentId is missing", async () => {
@@ -185,17 +199,20 @@ describe("bootstrap tag tree", () => {
     const { buildTree } = await import("./tagStore");
     const tree = buildTree(tags);
 
-    expect(tree.map((node) => node.name).sort()).toEqual(["format-test", "hunos"]);
+    expect(tree.map((node) => node.name).sort()).toEqual([
+      "format-test",
+      "hunos",
+    ]);
     expect(
-      tree.find((node) => node.name === "hunos")?.children.map(
-        (child) => child.displayName,
-      ),
+      tree
+        .find((node) => node.name === "hunos")
+        ?.children.map((child) => child.displayName),
     ).toEqual(["getting-started"]);
     expect(countDisplayNameInTree(tree, "getting-started")).toBe(1);
     expect(
-      tree.find((node) => node.name === "format-test")?.children.map(
-        (child) => child.displayName,
-      ),
+      tree
+        .find((node) => node.name === "format-test")
+        ?.children.map((child) => child.displayName),
     ).toEqual(["welcome"]);
   });
 
@@ -232,9 +249,9 @@ describe("bootstrap tag tree", () => {
 
     expect(tree.map((node) => node.name).sort()).toEqual(["hunos", "格式测试"]);
     expect(
-      tree.find((node) => node.name === "hunos")?.children.map(
-        (child) => child.displayName,
-      ),
+      tree
+        .find((node) => node.name === "hunos")
+        ?.children.map((child) => child.displayName),
     ).toEqual(["入门指南"]);
     expect(countDisplayNameInTree(tree, "入门指南")).toBe(1);
   });

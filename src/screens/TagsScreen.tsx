@@ -60,13 +60,25 @@ function TagItem({
         }}
       >
         {hasChildren && (
-          <span
+          <button
+            type="button"
+            aria-expanded={node.isExpanded}
+            aria-label={node.displayName}
             onClick={(e) => {
               e.stopPropagation();
               toggleExpand(node.id);
             }}
             style={{
               display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              width: 24,
+              height: 24,
+              margin: -4,
+              padding: 0,
+              border: "none",
+              background: "transparent",
               cursor: "pointer",
               transition: "transform 0.2s ease",
               transform: node.isExpanded ? "rotate(0deg)" : "rotate(-90deg)",
@@ -77,9 +89,9 @@ function TagItem({
               size={12}
               color={theme.colors.textTertiary}
             />
-          </span>
+          </button>
         )}
-        {!hasChildren && <span style={{ width: 12 }} />}
+        {!hasChildren && <span style={{ width: 16 }} />}
         <Icon
           name="tag"
           size={15}

@@ -39,6 +39,19 @@ function subtreeHasNotes(node: TagTreeNode): boolean {
   return node.children.some(subtreeHasNotes);
 }
 
+/** Depth from `node` to the nearest noted descendant; -1 when none exist. */
+function nearestNotedDepth(node: TagTreeNode, depth = 0): number {
+  if (node.noteCount > 0) return depth;
+  let nearest = -1;
+  for (const child of node.children) {
+    const childDepth = nearestNotedDepth(child, depth + 1);
+    if (childDepth >= 0) {
+      nearest = nearest < 0 ? childDepth : Math.min(nearest, childDepth);
+    }
+  }
+  return nearest;
+}
+
 /** Materialize slash-path parents missing from storage so nested tags stay grouped. */
 function ensureIntermediateParents(nodeMap: Map<string, TagTreeNode>): void {
   const byName = new Map<string, TagTreeNode>();
@@ -72,12 +85,12 @@ function ensureIntermediateParents(nodeMap: Map<string, TagTreeNode>): void {
   }
 }
 
-/** Expand ancestors on paths to tags that carry notes so nested tags stay discoverable. */
+/** Expand only when noted leaves sit below immediate children (bootstrap stays collapsible). */
 export function applyAutoExpandPaths(nodes: TagTreeNode[]): void {
   for (const node of nodes) {
     if (node.children.length > 0) {
       applyAutoExpandPaths(node.children);
-      node.isExpanded = node.children.some(subtreeHasNotes);
+      node.isExpanded = nearestNotedDepth(node) >= 2;
     }
   }
 }
