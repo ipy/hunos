@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/theme/ThemeContext";
 import { useAdaptiveLayout } from "@/hooks/useAdaptiveLayout";
 import { Icon } from "@/components/common/Icon";
@@ -106,6 +107,7 @@ interface SketchState {
 }
 
 export function EditorToolbar({ editor }: EditorToolbarProps) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const layout = useAdaptiveLayout();
   const [activeTab, setActiveTab] = useState<"format" | "blocks" | "insert">(
@@ -370,7 +372,7 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
                 type="button"
                 data-testid="editor-undo"
                 disabled={!canUndo}
-                aria-label="Undo"
+                aria-label={t("common.actions.undo")}
                 onMouseDown={(e) => {
                   e.preventDefault();
                   if (touchHandledRef.current) {
@@ -417,7 +419,7 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
                 type="button"
                 data-testid="editor-redo"
                 disabled={!canRedo}
-                aria-label="Redo"
+                aria-label={t("common.actions.redo")}
                 onMouseDown={(e) => {
                   e.preventDefault();
                   if (touchHandledRef.current) {
