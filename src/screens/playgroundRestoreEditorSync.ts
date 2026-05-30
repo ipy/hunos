@@ -3,8 +3,10 @@ import { resetEditorHistory } from "@/components/editor/resetEditorHistory";
 
 export type PlaygroundRestoreSession = {
   isActive: () => boolean;
-  begin: () => void;
+  begin: (noteId: string) => void;
   end: () => void;
+  getNoteId: () => string | null;
+  cancelIfNoteChanged: (activeNoteId: string | null | undefined) => boolean;
   queueContent: (content: string) => void;
   hasQueuedContent: () => boolean;
   takeQueuedContent: () => string | null;
@@ -12,16 +14,29 @@ export type PlaygroundRestoreSession = {
 
 export function createPlaygroundRestoreSession(): PlaygroundRestoreSession {
   let active = false;
+  let noteId: string | null = null;
   let queuedContent: string | null = null;
   return {
     isActive: () => active,
-    begin: () => {
+    begin: (id: string) => {
       active = true;
+      noteId = id;
       queuedContent = null;
     },
     end: () => {
       active = false;
+      noteId = null;
       queuedContent = null;
+    },
+    getNoteId: () => noteId,
+    cancelIfNoteChanged: (activeNoteId) => {
+      if (!active || !noteId || !activeNoteId || noteId === activeNoteId) {
+        return false;
+      }
+      active = false;
+      noteId = null;
+      queuedContent = null;
+      return true;
     },
     queueContent: (content: string) => {
       queuedContent = content;
@@ -74,21 +89,34 @@ export function applyPlaygroundRestoreContentToEditor(
   return true;
 }
 
+export function handlePlaygroundRestoreApplyResult(options: {
+  applied: boolean;
+  content: string;
+  session: PlaygroundRestoreSession;
+}): boolean {
+  if (options.applied) {
+    options.session.end();
+    return true;
+  }
+  options.session.queueContent(options.content);
+  return false;
+}
+
 export function finalizePlaygroundRestoreInEditor(options: {
   session: PlaygroundRestoreSession;
   editor: Editor | null;
   restoredContent: string;
-}): void {
-  if (!options.session.isActive()) return;
+}): boolean {
+  if (!options.session.isActive()) return true;
 
   if (!options.restoredContent) {
     options.session.end();
-    return;
+    return true;
   }
 
   if (!options.editor) {
     options.session.queueContent(options.restoredContent);
-    return;
+    return false;
   }
 
   const applied = applyPlaygroundRestoreContentToEditor(
@@ -97,15 +125,19 @@ export function finalizePlaygroundRestoreInEditor(options: {
   );
   if (applied) {
     options.session.end();
+    return true;
   }
+  return false;
 }
 
 /** Apply content queued while the editor was still mounting. */
 export function applyQueuedPlaygroundRestoreWhenEditorReady(options: {
   session: PlaygroundRestoreSession;
   editor: Editor | null;
+  activeNoteId?: string | null;
 }): boolean {
   if (!options.editor || !options.session.isActive()) return false;
+  if (options.session.cancelIfNoteChanged(options.activeNoteId)) return false;
   if (!options.session.hasQueuedContent()) return false;
 
   const content = options.session.takeQueuedContent();
@@ -115,10 +147,11 @@ export function applyQueuedPlaygroundRestoreWhenEditorReady(options: {
     options.editor,
     content,
   );
-  if (applied) {
-    options.session.end();
-  }
-  return applied;
+  return handlePlaygroundRestoreApplyResult({
+    applied,
+    content,
+    session: options.session,
+  });
 }
 
 export function shouldEndPlaygroundRestoreSession(options: {

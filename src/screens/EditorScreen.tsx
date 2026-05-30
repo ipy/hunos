@@ -85,10 +85,12 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const [showStats, setShowStats] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
   const [editorInstance, setEditorInstance] = useState<Editor | null>(null);
+  const editorInstanceRef = useRef<Editor | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const pendingContentRef = useRef<string | null>(null);
   const lastPlaygroundMigrateKeyRef = useRef<string | null>(null);
   const playgroundRestoreSessionRef = useRef(createPlaygroundRestoreSession());
+  const pendingRestoreToastRef = useRef(false);
 
   const note = notes.find((n) => n.id === activeNoteId);
   const noteContentForEditor = useMemo(() => {
@@ -105,6 +107,11 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   );
   const [restoreEditorSyncTick, setRestoreEditorSyncTick] = useState(0);
   const titleTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const handleEditorReady = useCallback((editor: Editor) => {
+    editorInstanceRef.current = editor;
+    setEditorInstance(editor);
+  }, []);
 
   useEffect(() => {
     if (saveTimeoutRef.current) {
@@ -230,6 +237,14 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   ]);
 
   useEffect(() => {
+    const session = playgroundRestoreSessionRef.current;
+    if (session.cancelIfNoteChanged(note?.id)) {
+      pendingRestoreToastRef.current = false;
+      setEditorSeedContent(null);
+    }
+  }, [note?.id]);
+
+  useEffect(() => {
     if (!note?.id) return;
 
     if (playgroundRestoreSessionRef.current.isActive()) {
@@ -267,11 +282,19 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
   useEffect(() => {
     if (!editorInstance) return;
-    applyQueuedPlaygroundRestoreWhenEditorReady({
+    const applied = applyQueuedPlaygroundRestoreWhenEditorReady({
       session: playgroundRestoreSessionRef.current,
       editor: editorInstance,
+      activeNoteId: note?.id,
     });
-  }, [editorInstance]);
+    if (!applied && playgroundRestoreSessionRef.current.isActive()) {
+      const queued = playgroundRestoreSessionRef.current.hasQueuedContent();
+      if (queued && noteContentForEditor) {
+        setEditorSeedContent(noteContentForEditor);
+        setRestoreEditorSyncTick((tick) => tick + 1);
+      }
+    }
+  }, [editorInstance, note?.id, noteContentForEditor]);
 
   useEffect(() => {
     const session = playgroundRestoreSessionRef.current;
@@ -289,11 +312,17 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       return;
     }
     session.end();
+    if (pendingRestoreToastRef.current) {
+      showToast(t("notes.actions.restorePlaygroundDone"));
+      pendingRestoreToastRef.current = false;
+    }
   }, [
     note?.content,
     noteContentForEditor,
     editorInstance,
     restoreEditorSyncTick,
+    showToast,
+    t,
   ]);
 
   useEffect(() => {
@@ -406,7 +435,8 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const handleRestorePlayground = async () => {
     if (!note) return;
     const restoreSession = playgroundRestoreSessionRef.current;
-    restoreSession.begin();
+    restoreSession.begin(note.id);
+    pendingRestoreToastRef.current = true;
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = undefined;
@@ -427,15 +457,23 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       const restoredContent = restoredRaw
         ? sanitizeBlockImageNoteContent(restoredRaw).content
         : "";
-      finalizePlaygroundRestoreInEditor({
+      const applied = finalizePlaygroundRestoreInEditor({
         session: restoreSession,
-        editor: editorInstance,
+        editor: editorInstanceRef.current,
         restoredContent,
       });
+      if (!applied && restoredContent) {
+        setEditorSeedContent(restoredContent);
+        setRestoreEditorSyncTick((tick) => tick + 1);
+      }
       setTitleValue(getFormatPlaygroundTitle(settings.locale));
-      showToast(t("notes.actions.restorePlaygroundDone"));
+      if (!restoreSession.isActive()) {
+        showToast(t("notes.actions.restorePlaygroundDone"));
+        pendingRestoreToastRef.current = false;
+      }
       setShowActions(false);
     } catch {
+      pendingRestoreToastRef.current = false;
       restoreSession.end();
     }
   };
@@ -994,7 +1032,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           noteId={note.id}
           initialContent={editorSeedContent ?? noteContentForEditor}
           onChange={handleContentChange}
-          onEditorReady={setEditorInstance}
+          onEditorReady={handleEditorReady}
           fontFamily={settings.editorFont}
           headingsFont={settings.headingsFont}
           codeFont={settings.codeFont}
