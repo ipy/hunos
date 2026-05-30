@@ -61,7 +61,10 @@ export function unbindEditorLifecycleAutosaveFlush(): void {
   document.removeEventListener("visibilitychange", onVisibilityChange);
   window.removeEventListener("pagehide", onPageHide);
   window.removeEventListener("beforeunload", onBeforeUnload);
-  window.removeEventListener(HUNOS_LIFECYCLE_HIDE_EVENT, onHarmonyLifecycleHide);
+  window.removeEventListener(
+    HUNOS_LIFECYCLE_HIDE_EVENT,
+    onHarmonyLifecycleHide,
+  );
   lifecycleBound = false;
   harmonyLifecycleBound = false;
 }

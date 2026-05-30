@@ -72,7 +72,9 @@ export const sqliteAdapter = {
 
   /** Flush WAL to main db file after autosave (native bridge only). */
   checkpointWal: async (): Promise<void> => {
-    console.warn("[SQLite] WAL checkpoint not yet implemented - using Dexie.js fallback");
+    console.warn(
+      "[SQLite] WAL checkpoint not yet implemented - using Dexie.js fallback",
+    );
   },
 
   // Placeholder - actual implementation depends on RNOH TurboModule

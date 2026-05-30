@@ -62,8 +62,8 @@ export function mountHunosE2eBridge(): void {
       return e2eEditor.chain().focus().undo().run();
     },
     requestFindInNote: (replace?: boolean) =>
-      useUIStore.getState().requestFindInNote(
-        replace ? { replace: true } : undefined,
-      ),
+      useUIStore
+        .getState()
+        .requestFindInNote(replace ? { replace: true } : undefined),
   };
 }

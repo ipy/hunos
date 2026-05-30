@@ -102,11 +102,18 @@ describe("harmony rawfile freshness", () => {
     );
     expect(rawfile()).not.toContain('href="/assets/');
     expect(rawfile()).toContain("HarmonyOS Sans SC");
-    expect(rawfile()).not.toMatch(/font-family:-apple-system,BlinkMacSystemFont/);
+    expect(rawfile()).not.toMatch(
+      /font-family:-apple-system,BlinkMacSystemFont/,
+    );
   });
 
   it("includes Harmony lifecycle hide bridge (iter 111)", () => {
     expect(rawfile()).toContain("hunos:lifecycle-hide");
+  });
+
+  it("includes web pagehide and beforeunload lifecycle flush (iter 1)", () => {
+    expect(rawfile()).toContain("pagehide");
+    expect(rawfile()).toContain("beforeunload");
   });
 
   it("ships bundled woff/woff2 font files in rawfile assets (iter 90)", () => {
