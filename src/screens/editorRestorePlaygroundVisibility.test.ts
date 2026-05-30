@@ -113,6 +113,53 @@ describe("playground restore visibility", () => {
     ).toBe(false);
   });
 
+  it("hides restore after reload when stored seed is canonical and editor echoes round-trip", () => {
+    const parsed = JSON.parse(seedContent) as {
+      attrs?: Record<string, unknown>;
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    while (
+      parsed.content.at(-1)?.type === "paragraph" &&
+      !(parsed.content.at(-1)?.content?.length)
+    ) {
+      parsed.content.pop();
+    }
+    delete parsed.attrs?.playgroundContentLocale;
+    const editorEcho = JSON.stringify(parsed);
+
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seedContent,
+        pendingDraftContent: editorEcho,
+        editorContent: editorEcho,
+        fallbackLocale: "en",
+      }),
+    ).toBe(false);
+  });
+
+  it("hides restore after durable restore when only editor JSON differs from IDB row", () => {
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seedContent,
+        pendingDraftContent: null,
+        editorContent: JSON.stringify({
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "T5-MIXED-stale-editor" }],
+            },
+          ],
+        }),
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
+
   it("hides restore immediately when stored canonical after restore tap", () => {
     expect(
       shouldShowPlaygroundRestoreButton({

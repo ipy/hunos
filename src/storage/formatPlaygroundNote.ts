@@ -512,6 +512,31 @@ export function formatPlaygroundNeedsRestore(
   return !formatPlaygroundMatchesCanonicalSeed(title, body, fallbackLocale);
 }
 
+function playgroundLiveContentNeedsRestore(options: {
+  displayTitle: string;
+  storedContent: string;
+  liveContent: string;
+  fallbackLocale: Locale;
+}): boolean {
+  const { displayTitle, storedContent, liveContent, fallbackLocale } = options;
+  const storedFingerprint = normalizePlaygroundContentSnapshot(
+    storedContent,
+    fallbackLocale,
+  );
+  const liveFingerprint = normalizePlaygroundContentSnapshot(
+    liveContent,
+    fallbackLocale,
+  );
+  if (liveFingerprint === storedFingerprint) {
+    return false;
+  }
+  return formatPlaygroundNeedsRestore(
+    displayTitle,
+    liveContent,
+    fallbackLocale,
+  );
+}
+
 /** Header restore chip — persisted row settles UI; live editor draft still gates drift. */
 export function shouldShowPlaygroundRestoreButton(options: {
   displayTitle: string;
@@ -530,23 +555,32 @@ export function shouldShowPlaygroundRestoreButton(options: {
     fallbackLocale,
   } = options;
 
+  const storedIsCanonical =
+    displayTitle === storedTitle &&
+    formatPlaygroundMatchesCanonicalSeed(
+      storedTitle,
+      storedContent,
+      fallbackLocale,
+    );
+
+  if (storedIsCanonical) {
+    if (pendingDraftContent != null) {
+      return playgroundLiveContentNeedsRestore({
+        displayTitle,
+        storedContent,
+        liveContent: pendingDraftContent,
+        fallbackLocale,
+      });
+    }
+    return false;
+  }
+
   if (pendingDraftContent != null) {
     return formatPlaygroundNeedsRestore(
       displayTitle,
       pendingDraftContent,
       fallbackLocale,
     );
-  }
-
-  if (
-    displayTitle === storedTitle &&
-    formatPlaygroundMatchesCanonicalSeed(
-      storedTitle,
-      storedContent,
-      fallbackLocale,
-    )
-  ) {
-    return false;
   }
 
   const editorDrift =
