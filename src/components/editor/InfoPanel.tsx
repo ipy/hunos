@@ -5,7 +5,7 @@ import { Icon } from "@/components/common/Icon";
 import { SettingToggle } from "@/components/settings/SettingToggle";
 import type { Note } from "@/types/note";
 import type { Editor } from "@tiptap/react";
-import { scrollToTocIndex } from "@/utils/tocNavigation";
+import { handleInfoPanelTocTap } from "@/utils/tocNavigation";
 import {
   editorHasTaskList,
   noteContentHasTaskList,
@@ -143,6 +143,7 @@ export function InfoPanel({
       {/* Panel */}
       <div
         ref={panelRef}
+        data-testid="info-panel"
         style={{
           position: "absolute",
           bottom: 0,
@@ -235,6 +236,7 @@ export function InfoPanel({
           {tabs.map((tab) => (
             <button
               key={tab.id}
+              data-testid={`info-panel-tab-${tab.id}`}
               onClick={() => setActiveTab(tab.id)}
               style={{
                 flex: 1,
@@ -341,7 +343,7 @@ export function InfoPanel({
           )}
 
           {activeTab === "toc" && (
-            <div>
+            <div data-testid="info-panel-toc-list">
               {toc.length === 0 ? (
                 <p
                   style={{
@@ -358,8 +360,9 @@ export function InfoPanel({
                   <button
                     key={i}
                     type="button"
+                    data-testid={`info-panel-toc-entry-${i}`}
                     onClick={() => {
-                      if (editor) scrollToTocIndex(editor, i);
+                      handleInfoPanelTocTap(editor, i);
                     }}
                     style={{
                       display: "block",

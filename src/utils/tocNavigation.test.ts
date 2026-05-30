@@ -2,7 +2,7 @@ import { Schema } from "@tiptap/pm/model";
 import { EditorState } from "@tiptap/pm/state";
 import { describe, expect, it } from "vitest";
 import { extractTocFromDoc } from "./noteToc";
-import { scrollToTocIndex } from "./tocNavigation";
+import { scrollToTocIndex, handleInfoPanelTocTap } from "./tocNavigation";
 
 const schema = new Schema({
   nodes: {
@@ -88,5 +88,46 @@ describe("scrollToTocIndex", () => {
     };
 
     expect(scrollToTocIndex(editor as never, 5)).toBe(false);
+  });
+});
+
+describe("handleInfoPanelTocTap", () => {
+  it("returns false without scrolling when editor is null", () => {
+    expect(handleInfoPanelTocTap(null, 0)).toBe(false);
+  });
+
+  it("scrolls to the heading without invoking panel close", () => {
+    const json = {
+      type: "doc",
+      content: [
+        {
+          type: "heading",
+          attrs: { level: 2 },
+          content: [{ type: "text", text: "Iter92 Live Heading" }],
+        },
+      ],
+    };
+    const state = EditorState.create({ schema, doc: docFromJson(json) });
+    let selectionPos = -1;
+    let closeCalled = false;
+    const editor = {
+      state,
+      chain: () => {
+        const chain = {
+          focus: () => chain,
+          setTextSelection: (pos: number) => {
+            selectionPos = pos;
+            return chain;
+          },
+          scrollIntoView: () => chain,
+          run: () => true,
+        };
+        return chain;
+      },
+    };
+
+    expect(handleInfoPanelTocTap(editor as never, 0)).toBe(true);
+    expect(selectionPos).toBeGreaterThan(0);
+    expect(closeCalled).toBe(false);
   });
 });

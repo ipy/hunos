@@ -616,6 +616,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         {focusMode && isCompactChrome ? (
           <>
             <button
+              data-testid="info-panel-toggle"
               onClick={() => setShowStats(!showStats)}
               title={t("editor.stats.title")}
               aria-label={t("editor.stats.title")}
@@ -729,6 +730,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
             {!isCompactChrome && (
               <>
                 <button
+                  data-testid="info-panel-toggle"
                   onClick={() => setShowStats(!showStats)}
                   title={t("editor.stats.title")}
                   aria-label={t("editor.stats.title")}

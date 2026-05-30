@@ -34,7 +34,7 @@ const sampleDoc = {
     {
       type: "heading",
       attrs: { level: 2 },
-      content: [{ type: "text", text: "Iter80 Live Heading" }],
+      content: [{ type: "text", text: "Iter92 Live Heading" }],
     },
   ],
 };
@@ -43,7 +43,7 @@ describe("extractTocFromDoc", () => {
   it("returns headings in document order", () => {
     expect(extractTocFromDoc(sampleDoc)).toEqual([
       { level: 1, text: "Intro" },
-      { level: 2, text: "Iter80 Live Heading" },
+      { level: 2, text: "Iter92 Live Heading" },
     ]);
   });
 
@@ -91,7 +91,7 @@ describe("extractTocFromContent", () => {
     const content = JSON.stringify(sampleDoc);
     expect(extractTocFromContent(content)).toEqual([
       { level: 1, text: "Intro" },
-      { level: 2, text: "Iter80 Live Heading" },
+      { level: 2, text: "Iter92 Live Heading" },
     ]);
   });
 
@@ -109,7 +109,7 @@ describe("deriveToc", () => {
         {
           type: "heading",
           attrs: { level: 2 },
-          content: [{ type: "text", text: "Iter80 Renamed Heading" }],
+          content: [{ type: "text", text: "Iter92 Renamed Heading" }],
         },
       ],
     };
@@ -117,7 +117,7 @@ describe("deriveToc", () => {
     const note = baseNote({ content: staleContent });
 
     expect(deriveToc(note, editor)).toEqual([
-      { level: 2, text: "Iter80 Renamed Heading" },
+      { level: 2, text: "Iter92 Renamed Heading" },
     ]);
   });
 
@@ -125,7 +125,7 @@ describe("deriveToc", () => {
     const note = baseNote({ content: JSON.stringify(sampleDoc) });
     expect(deriveToc(note, null)).toEqual([
       { level: 1, text: "Intro" },
-      { level: 2, text: "Iter80 Live Heading" },
+      { level: 2, text: "Iter92 Live Heading" },
     ]);
   });
 });

@@ -1,4 +1,4 @@
-import type { Editor } from '@tiptap/react';
+import type { Editor } from "@tiptap/react";
 
 /** Scroll editor to the Nth heading (among headings with non-empty text), matching TOC order. */
 export function scrollToTocIndex(editor: Editor, tocIndex: number): boolean {
@@ -6,7 +6,7 @@ export function scrollToTocIndex(editor: Editor, tocIndex: number): boolean {
   let targetPos: number | null = null;
 
   editor.state.doc.descendants((node, pos) => {
-    if (node.type.name !== 'heading') return;
+    if (node.type.name !== "heading") return;
     const text = node.textContent;
     if (!text) return;
     if (headingIndex === tocIndex) {
@@ -26,4 +26,13 @@ export function scrollToTocIndex(editor: Editor, tocIndex: number): boolean {
     .run();
 
   return true;
+}
+
+/** Bear parity: scroll to a TOC entry without closing the info panel. */
+export function handleInfoPanelTocTap(
+  editor: Editor | null,
+  tocIndex: number,
+): boolean {
+  if (!editor) return false;
+  return scrollToTocIndex(editor, tocIndex);
 }
