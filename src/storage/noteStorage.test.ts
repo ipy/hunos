@@ -1,19 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MIN_BLOCK_IMAGE_HEIGHT } from "@/components/editor/imageResizeUtils";
+import type { Note } from "@/types/note";
 
 const dbUpdate = vi.fn();
-
-vi.mock("./database", () => ({
-  db: {
-    notes: {
-      update: (...args: unknown[]) => dbUpdate(...args),
-    },
-  },
-}));
-
-import { noteStorage } from "./noteStorage";
-
-const LEGACY_SRC = "data:image/png;base64,legacy";
+const notesById = new Map<string, Note>();
 
 function legacyImageContent(): string {
   return JSON.stringify({
@@ -21,14 +11,139 @@ function legacyImageContent(): string {
     content: [
       {
         type: "image",
-        attrs: { src: LEGACY_SRC, dataBlockImageFloor: true },
+        attrs: {
+          src: "data:image/png;base64,legacy",
+          dataBlockImageFloor: true,
+        },
       },
     ],
   });
 }
 
+function parseImageAttrs(content: string) {
+  const parsed = JSON.parse(content) as {
+    content?: Array<{ attrs?: Record<string, unknown> }>;
+  };
+  return parsed.content?.[0]?.attrs;
+}
+
+vi.mock("./database", () => ({
+  db: {
+    notes: {
+      add: async (note: Note) => {
+        notesById.set(note.id, { ...note });
+      },
+      get: async (id: string) => notesById.get(id),
+      update: async (id: string, updates: Partial<Note>) => {
+        dbUpdate(id, updates);
+        const existing = notesById.get(id);
+        if (existing) {
+          notesById.set(id, { ...existing, ...updates });
+        }
+      },
+      where: () => ({
+        equals: (status: string) => ({
+          toArray: async () =>
+            [...notesById.values()].filter((n) => n.status === status),
+          count: async () =>
+            [...notesById.values()].filter((n) => n.status === status).length,
+        }),
+      }),
+      filter: () => ({
+        toArray: async () => [] as Note[],
+      }),
+      bulkGet: async () => [] as (Note | undefined)[],
+      bulkDelete: async () => undefined,
+      delete: async () => undefined,
+    },
+  },
+}));
+
+import { noteStorage } from "./noteStorage";
+
+describe("noteStorage.create", () => {
+  beforeEach(() => {
+    notesById.clear();
+    dbUpdate.mockClear();
+  });
+
+  it("sanitizes legacy block-image floor attrs on create", async () => {
+    const created = await noteStorage.create({ content: legacyImageContent() });
+
+    expect(dbUpdate).not.toHaveBeenCalled();
+    const stored = notesById.get(created.id);
+    const attrs = parseImageAttrs(stored!.content);
+    expect(attrs?.height).toBe(MIN_BLOCK_IMAGE_HEIGHT);
+    expect(attrs).not.toHaveProperty("dataBlockImageFloor");
+
+    expect(parseImageAttrs(created.content)?.height).toBe(
+      MIN_BLOCK_IMAGE_HEIGHT,
+    );
+    expect(created.content).not.toContain("dataBlockImageFloor");
+  });
+});
+
+describe("noteStorage.get", () => {
+  beforeEach(() => {
+    notesById.clear();
+    dbUpdate.mockClear();
+  });
+
+  it("returns sanitized content and lazy-persists legacy rows", async () => {
+    const note = await noteStorage.create({ title: "Legacy" });
+    notesById.set(note.id, {
+      ...note,
+      content: legacyImageContent(),
+    });
+
+    const loaded = await noteStorage.get(note.id);
+
+    expect(loaded?.content).not.toContain("dataBlockImageFloor");
+    expect(parseImageAttrs(loaded!.content)?.height).toBe(
+      MIN_BLOCK_IMAGE_HEIGHT,
+    );
+    expect(dbUpdate).toHaveBeenCalledOnce();
+    expect(dbUpdate).toHaveBeenCalledWith(note.id, {
+      content: loaded!.content,
+    });
+    expect(notesById.get(note.id)?.content).toBe(loaded!.content);
+  });
+});
+
+describe("noteStorage.list", () => {
+  beforeEach(() => {
+    notesById.clear();
+    dbUpdate.mockClear();
+  });
+
+  it("returns sanitized notes and lazy-persists each legacy row", async () => {
+    const clean = await noteStorage.create({ title: "Clean" });
+    const legacy = await noteStorage.create({ title: "Legacy" });
+    notesById.set(legacy.id, {
+      ...legacy,
+      content: legacyImageContent(),
+    });
+
+    const listed = await noteStorage.list({ status: "active" });
+
+    const legacyListed = listed.find((n) => n.id === legacy.id);
+    expect(legacyListed?.content).not.toContain("dataBlockImageFloor");
+    expect(parseImageAttrs(legacyListed!.content)?.height).toBe(
+      MIN_BLOCK_IMAGE_HEIGHT,
+    );
+    expect(dbUpdate).toHaveBeenCalledOnce();
+    expect(dbUpdate).toHaveBeenCalledWith(legacy.id, {
+      content: legacyListed!.content,
+    });
+
+    const cleanListed = listed.find((n) => n.id === clean.id);
+    expect(cleanListed?.content).toBe("");
+  });
+});
+
 describe("noteStorage.update", () => {
   beforeEach(() => {
+    notesById.clear();
     dbUpdate.mockClear();
   });
 
@@ -41,11 +156,10 @@ describe("noteStorage.update", () => {
       string,
       { content: string; modifiedAt: number },
     ];
-    const parsed = JSON.parse(payload.content) as {
-      content?: Array<{ attrs?: Record<string, unknown> }>;
-    };
-    expect(parsed.content?.[0]?.attrs?.height).toBe(MIN_BLOCK_IMAGE_HEIGHT);
-    expect(parsed.content?.[0]?.attrs).not.toHaveProperty(
+    expect(parseImageAttrs(payload.content)?.height).toBe(
+      MIN_BLOCK_IMAGE_HEIGHT,
+    );
+    expect(parseImageAttrs(payload.content)).not.toHaveProperty(
       "dataBlockImageFloor",
     );
     expect(result?.content).toBe(payload.content);
@@ -54,7 +168,12 @@ describe("noteStorage.update", () => {
   it("does not rewrite content when attrs are already clean", async () => {
     const clean = JSON.stringify({
       type: "doc",
-      content: [{ type: "image", attrs: { src: LEGACY_SRC, height: 200 } }],
+      content: [
+        {
+          type: "image",
+          attrs: { src: "data:image/png;base64,legacy", height: 200 },
+        },
+      ],
     });
 
     await noteStorage.update("note-b", { content: clean });

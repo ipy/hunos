@@ -3,6 +3,19 @@ import type { Note, NoteFilter, NoteStatus } from "@/types/note";
 import { generateId } from "@/utils/uuid";
 import { sanitizeBlockImageNoteContent } from "@/utils/migrateBlockImageFloor";
 
+async function hydrateNoteFromDb(note: Note): Promise<Note> {
+  const { content, changed } = sanitizeBlockImageNoteContent(note.content);
+  if (!changed) {
+    return note;
+  }
+  await db.notes.update(note.id, { content });
+  return { ...note, content };
+}
+
+function sanitizeContentForWrite(content: string): string {
+  return sanitizeBlockImageNoteContent(content).content;
+}
+
 export const noteStorage = {
   async create(partial?: Partial<Note>): Promise<Note> {
     const now = Date.now();
@@ -19,12 +32,19 @@ export const noteStorage = {
       wordCount: 0,
       ...partial,
     };
+    if (partial?.content !== undefined) {
+      note.content = sanitizeContentForWrite(partial.content);
+    }
     await db.notes.add(note);
     return note;
   },
 
   async get(id: string): Promise<Note | undefined> {
-    return db.notes.get(id);
+    const note = await db.notes.get(id);
+    if (!note) {
+      return undefined;
+    }
+    return hydrateNoteFromDb(note);
   },
 
   async update(
@@ -79,7 +99,7 @@ export const noteStorage = {
     if (offset > 0) results = results.slice(offset);
     if (limit) results = results.slice(0, limit);
 
-    return results;
+    return Promise.all(results.map(hydrateNoteFromDb));
   },
 
   async listByTag(tagId: string, filter: NoteFilter = {}): Promise<Note[]> {
@@ -105,7 +125,7 @@ export const noteStorage = {
       return sortOrder === "desc" ? -cmp : cmp;
     });
 
-    return results;
+    return Promise.all(results.map(hydrateNoteFromDb));
   },
 
   async search(query: string): Promise<Note[]> {
@@ -118,7 +138,8 @@ export const noteStorage = {
           (note.title.toLowerCase().includes(lower) ||
             note.contentPlain.toLowerCase().includes(lower)),
       )
-      .toArray();
+      .toArray()
+      .then((notes) => Promise.all(notes.map(hydrateNoteFromDb)));
   },
 
   async count(status: NoteStatus = "active"): Promise<number> {

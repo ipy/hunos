@@ -6,9 +6,10 @@ type JsonNode = {
   content?: JsonNode[];
 };
 
-function sanitizeImageAttrs(
-  attrs: Record<string, unknown>,
-): { attrs: Record<string, unknown>; changed: boolean } {
+function sanitizeImageAttrs(attrs: Record<string, unknown>): {
+  attrs: Record<string, unknown>;
+  changed: boolean;
+} {
   if (!("dataBlockImageFloor" in attrs)) {
     return { attrs, changed: false };
   }
@@ -55,9 +56,10 @@ function sanitizeNode(node: JsonNode): { node: JsonNode; changed: boolean } {
 }
 
 /** Walk a TipTap JSON doc and migrate legacy `dataBlockImageFloor` image attrs. */
-export function sanitizeBlockImageFloorInDoc(
-  doc: JsonNode,
-): { doc: JsonNode; changed: boolean } {
+export function sanitizeBlockImageFloorInDoc(doc: JsonNode): {
+  doc: JsonNode;
+  changed: boolean;
+} {
   const { node, changed } = sanitizeNode(doc);
   return { doc: node, changed };
 }
@@ -87,4 +89,9 @@ export function migrateLegacyBlockImageFloor(content: string): string | null {
   const { content: sanitized, changed } =
     sanitizeBlockImageNoteContent(content);
   return changed ? sanitized : null;
+}
+
+/** Editor seed JSON after restoring a stashed autosave snapshot. */
+export function sanitizeEditorStashContent(content: string): string {
+  return sanitizeBlockImageNoteContent(content).content;
 }

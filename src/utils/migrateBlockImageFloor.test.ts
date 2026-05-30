@@ -4,6 +4,7 @@ import {
   migrateLegacyBlockImageFloor,
   sanitizeBlockImageFloorInDoc,
   sanitizeBlockImageNoteContent,
+  sanitizeEditorStashContent,
 } from "./migrateBlockImageFloor";
 
 const LEGACY_SRC = "data:image/png;base64,legacy";
@@ -81,12 +82,12 @@ describe("sanitizeBlockImageFloorInDoc", () => {
 
     const { doc: sanitized, changed } = sanitizeBlockImageFloorInDoc(doc);
     expect(changed).toBe(true);
-    expect(
-      sanitized.content?.[0]?.content?.[0]?.attrs?.height,
-    ).toBe(MIN_BLOCK_IMAGE_HEIGHT);
-    expect(
-      sanitized.content?.[0]?.content?.[0]?.attrs,
-    ).not.toHaveProperty("dataBlockImageFloor");
+    expect(sanitized.content?.[0]?.content?.[0]?.attrs?.height).toBe(
+      MIN_BLOCK_IMAGE_HEIGHT,
+    );
+    expect(sanitized.content?.[0]?.content?.[0]?.attrs).not.toHaveProperty(
+      "dataBlockImageFloor",
+    );
   });
 });
 
@@ -125,6 +126,21 @@ describe("sanitizeBlockImageNoteContent", () => {
       content: "",
       changed: false,
     });
+  });
+});
+
+describe("sanitizeEditorStashContent", () => {
+  it("migrates playground stash snapshots before editor seed", () => {
+    const stash = JSON.stringify(imageNode({ dataBlockImageFloor: true }));
+    const seeded = sanitizeEditorStashContent(stash);
+    const parsed = JSON.parse(seeded) as {
+      content?: Array<{ attrs?: Record<string, unknown> }>;
+    };
+
+    expect(parsed.content?.[0]?.attrs?.height).toBe(MIN_BLOCK_IMAGE_HEIGHT);
+    expect(parsed.content?.[0]?.attrs).not.toHaveProperty(
+      "dataBlockImageFloor",
+    );
   });
 });
 

@@ -37,7 +37,10 @@ import {
   takeStashedEditorAutosave,
   unregisterEditorAutosaveFlush,
 } from "@/store/editorAutosaveRegistry";
-import { sanitizeBlockImageNoteContent } from "@/utils/migrateBlockImageFloor";
+import {
+  sanitizeBlockImageNoteContent,
+  sanitizeEditorStashContent,
+} from "@/utils/migrateBlockImageFloor";
 
 interface EditorScreenProps {
   layout?: LayoutMode;
@@ -223,9 +226,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         setEditorSeedContent(null);
         return;
       }
-      const { content: sanitized } = sanitizeBlockImageNoteContent(
-        taken.content,
-      );
+      const sanitized = sanitizeEditorStashContent(taken.content);
       pendingContentRef.current = sanitized;
       setEditorSeedContent(sanitized);
       return;
