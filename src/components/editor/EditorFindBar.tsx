@@ -186,6 +186,7 @@ export function EditorFindBar({
         <Icon name="search" size={16} color={theme.colors.textTertiary} />
         <input
           ref={findInputRef}
+          data-testid="editor-find-input"
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -203,9 +204,12 @@ export function EditorFindBar({
           aria-label={t("editor.find.placeholder")}
           style={inputStyle(theme)}
         />
-        <span style={countStyle(theme)}>{countLabel}</span>
+        <span data-testid="editor-find-count" style={countStyle(theme)}>
+          {countLabel}
+        </span>
         <button
           type="button"
+          data-testid="editor-find-previous"
           onClick={() => editor.commands.findInNotePrevious()}
           aria-label={t("editor.find.previous")}
           title={t("editor.find.previous")}
@@ -220,6 +224,7 @@ export function EditorFindBar({
         </button>
         <button
           type="button"
+          data-testid="editor-find-next"
           onClick={() => editor.commands.findInNoteNext()}
           aria-label={t("editor.find.next")}
           title={t("editor.find.next")}
@@ -233,6 +238,7 @@ export function EditorFindBar({
         </button>
         <button
           type="button"
+          data-testid="editor-find-close"
           onClick={handleClose}
           aria-label={t("editor.find.close")}
           title={t("editor.find.close")}

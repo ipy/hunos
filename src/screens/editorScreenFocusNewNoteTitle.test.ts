@@ -4,7 +4,9 @@ import { useUIStore } from "@/store/uiStore";
 /**
  * Mirrors EditorScreen focus-new-note-title effect: consume signal before rAF focus.
  */
-function simulateEditorScreenFocusNewNoteTitleEffect(layout: "mobile" | "desktop") {
+function simulateEditorScreenFocusNewNoteTitleEffect(
+  layout: "mobile" | "desktop",
+) {
   const { focusNewNoteTitleSignal, clearFocusNewNoteTitle } =
     useUIStore.getState();
   if (focusNewNoteTitleSignal === 0) return { focused: false };
@@ -40,5 +42,49 @@ describe("EditorScreen focusNewNoteTitle one-shot", () => {
     const desktop = simulateEditorScreenFocusNewNoteTitleEffect("desktop");
     expect(desktop.focused).toBe(false);
     expect(useUIStore.getState().focusNewNoteTitleSignal).toBe(1);
+  });
+});
+
+/**
+ * Mirrors EditorScreen mobile note-switch editor focus effect.
+ */
+function shouldFocusEditorOnMobileNoteSwitch(
+  layout: "mobile" | "desktop",
+  noteId: string | undefined,
+  hasEditor: boolean,
+  focusNewNoteTitleSignal: number,
+): boolean {
+  if (layout !== "mobile" || !noteId || !hasEditor) return false;
+  if (focusNewNoteTitleSignal > 0) return false;
+  return true;
+}
+
+describe("EditorScreen mobile editor focus on note switch", () => {
+  beforeEach(() => {
+    useUIStore.setState({ focusNewNoteTitleSignal: 0 });
+  });
+
+  it("focuses editor when switching notes on mobile", () => {
+    expect(
+      shouldFocusEditorOnMobileNoteSwitch("mobile", "note-a", true, 0),
+    ).toBe(true);
+  });
+
+  it("skips editor focus while new-note title signal is pending", () => {
+    useUIStore.getState().requestFocusNewNoteTitle();
+    expect(
+      shouldFocusEditorOnMobileNoteSwitch(
+        "mobile",
+        "note-a",
+        true,
+        useUIStore.getState().focusNewNoteTitleSignal,
+      ),
+    ).toBe(false);
+  });
+
+  it("does not focus editor on desktop note switch", () => {
+    expect(
+      shouldFocusEditorOnMobileNoteSwitch("desktop", "note-a", true, 0),
+    ).toBe(false);
   });
 });

@@ -184,6 +184,7 @@
     "title": "Exportar Nota",
     "copyMarkdown": "Copiar Markdown",
     "copied": "Copiado al portapapeles",
+    "copyFailed": "No se pudo copiar al portapapeles",
     "markdown": "Markdown",
     "html": "HTML",
     "text": "Texto Plano",

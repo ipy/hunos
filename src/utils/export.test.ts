@@ -627,4 +627,24 @@ describe("exportAndCopy", () => {
     expect(copied).toBe("**BoldCopy100**");
     expect(writeText).toHaveBeenCalledWith("**BoldCopy100**");
   });
+
+  it("rejects when clipboard write fails", async () => {
+    const writeText = vi
+      .fn()
+      .mockRejectedValue(new DOMException("Denied", "NotAllowedError"));
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+
+    const note = makeNote({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "fail" }],
+        },
+      ],
+    });
+
+    await expect(exportAndCopy(note, "markdown")).rejects.toThrow();
+    expect(writeText).toHaveBeenCalledOnce();
+  });
 });

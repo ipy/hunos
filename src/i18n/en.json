@@ -184,6 +184,7 @@
     "title": "Export Note",
     "copyMarkdown": "Copy Markdown",
     "copied": "Copied to clipboard",
+    "copyFailed": "Could not copy to clipboard",
     "markdown": "Markdown",
     "html": "HTML",
     "text": "Plain Text",

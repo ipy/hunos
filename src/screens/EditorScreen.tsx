@@ -391,6 +391,16 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   }, [focusNewNoteTitleSignal, layout, clearFocusNewNoteTitle]);
 
   useEffect(() => {
+    if (layout !== "mobile" || !note?.id || !editorInstance) return;
+    if (focusNewNoteTitleSignal > 0) return;
+
+    const raf = requestAnimationFrame(() => {
+      editorInstance.commands.focus("end", { scrollIntoView: false });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [note?.id, layout, editorInstance, focusNewNoteTitleSignal]);
+
+  useEffect(() => {
     if (layout !== "mobile" || !focusMode) return;
     prevFocusModeRef.current = focusMode;
     suppressFocusToastRef.current = true;
@@ -925,9 +935,13 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
                     danger: false,
                     testId: "export-copy-markdown",
                     action: () => {
-                      void exportAndCopy(note, "markdown").then(() => {
-                        showToast(t("export.copied"));
-                      });
+                      void exportAndCopy(note, "markdown")
+                        .then(() => {
+                          showToast(t("export.copied"));
+                        })
+                        .catch(() => {
+                          showToast(t("export.copyFailed"), "error");
+                        });
                       setShowActions(false);
                     },
                   },
