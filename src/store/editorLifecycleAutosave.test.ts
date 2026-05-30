@@ -8,8 +8,13 @@ vi.mock("@/store/editorAutosaveRegistry", () => ({
 
 import {
   bindEditorLifecycleAutosaveFlush,
+  isHarmonyLifecycleListenerBound,
   resetEditorLifecycleAutosaveForTests,
 } from "./editorLifecycleAutosave";
+import {
+  dispatchHarmonyLifecycleHide,
+  HUNOS_LIFECYCLE_HIDE_EVENT,
+} from "./harmonyLifecycleBridge";
 
 type Listener = (event: Event) => void;
 
@@ -127,6 +132,39 @@ describe("editorLifecycleAutosave", () => {
     dom.window.dispatchEvent(new Event("pagehide"));
     dom.window.dispatchEvent(new Event("beforeunload"));
 
+    expect(flushEditorAutosave).not.toHaveBeenCalled();
+  });
+
+  it("registers Harmony native background listener", () => {
+    bindEditorLifecycleAutosaveFlush();
+
+    expect(isHarmonyLifecycleListenerBound()).toBe(true);
+    dom.window.dispatchEvent(new CustomEvent(HUNOS_LIFECYCLE_HIDE_EVENT));
+    expect(flushEditorAutosave).toHaveBeenCalledOnce();
+  });
+
+  it("flushes on Harmony lifecycle hide event", () => {
+    bindEditorLifecycleAutosaveFlush();
+
+    dom.window.dispatchEvent(new CustomEvent(HUNOS_LIFECYCLE_HIDE_EVENT));
+
+    expect(flushEditorAutosave).toHaveBeenCalledOnce();
+  });
+
+  it("dispatchHarmonyLifecycleHide triggers flush when bound", () => {
+    bindEditorLifecycleAutosaveFlush();
+
+    dispatchHarmonyLifecycleHide();
+
+    expect(flushEditorAutosave).toHaveBeenCalledOnce();
+  });
+
+  it("clears Harmony listener on unbind", () => {
+    const unbind = bindEditorLifecycleAutosaveFlush();
+    unbind();
+
+    expect(isHarmonyLifecycleListenerBound()).toBe(false);
+    dispatchHarmonyLifecycleHide();
     expect(flushEditorAutosave).not.toHaveBeenCalled();
   });
 });

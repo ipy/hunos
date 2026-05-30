@@ -1,4 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+const checkpointStorageAfterFlush = vi.fn(async () => undefined);
+
+vi.mock("@/storage/storageCheckpoint", () => ({
+  checkpointStorageAfterFlush: () => checkpointStorageAfterFlush(),
+}));
+
 import {
   clearStashedEditorAutosave,
   flushEditorAutosave,
@@ -11,13 +18,17 @@ import {
 
 describe("editorAutosaveRegistry", () => {
   it("returns null when no editor flush handler is registered", async () => {
+    checkpointStorageAfterFlush.mockClear();
     expect(await flushEditorAutosave()).toBeNull();
+    expect(checkpointStorageAfterFlush).toHaveBeenCalledOnce();
   });
 
   it("delegates flush to the registered handler", async () => {
+    checkpointStorageAfterFlush.mockClear();
     const handler = async () => '{"type":"doc"}';
     registerEditorAutosaveFlush(handler);
     expect(await flushEditorAutosave()).toBe('{"type":"doc"}');
+    expect(checkpointStorageAfterFlush).toHaveBeenCalledOnce();
     unregisterEditorAutosaveFlush(handler);
     expect(await flushEditorAutosave()).toBeNull();
   });

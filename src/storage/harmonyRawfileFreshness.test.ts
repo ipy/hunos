@@ -93,6 +93,10 @@ describe("harmony rawfile freshness", () => {
     expect(rawfile).not.toMatch(/font-family:-apple-system,BlinkMacSystemFont/);
   });
 
+  it("includes Harmony lifecycle hide bridge (iter 111)", () => {
+    expect(rawfile).toContain("hunos:lifecycle-hide");
+  });
+
   it("ships bundled woff/woff2 font files in rawfile assets (iter 90)", () => {
     const assetsDir = join(
       process.cwd(),

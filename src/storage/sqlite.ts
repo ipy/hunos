@@ -63,12 +63,20 @@
 export const sqliteAdapter = {
   isAvailable: () => {
     // Check if we're running on OpenHarmony
-    return typeof globalThis !== 'undefined' &&
-      'ohosEnvironment' in globalThis;
+    return typeof globalThis !== "undefined" && "ohosEnvironment" in globalThis;
+  },
+
+  supportsWalCheckpoint(): boolean {
+    return sqliteAdapter.isAvailable();
+  },
+
+  /** Flush WAL to main db file after autosave (native bridge only). */
+  checkpointWal: async (): Promise<void> => {
+    console.warn("[SQLite] WAL checkpoint not yet implemented - using Dexie.js fallback");
   },
 
   // Placeholder - actual implementation depends on RNOH TurboModule
   initialize: async () => {
-    console.warn('[SQLite] Not yet implemented - using Dexie.js fallback');
+    console.warn("[SQLite] Not yet implemented - using Dexie.js fallback");
   },
 };

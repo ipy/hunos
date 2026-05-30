@@ -1,3 +1,5 @@
+import { checkpointStorageAfterFlush } from "@/storage/storageCheckpoint";
+
 type EditorAutosaveFlush = () => Promise<string | null>;
 
 export type EditorAutosaveSnapshot = {
@@ -47,8 +49,12 @@ export function clearStashedEditorAutosave(): void {
 
 /** Collect pending editor JSON before locale migration (handler or unmount stash). */
 export async function flushEditorAutosave(): Promise<string | null> {
+  let result: string | null = null;
   if (flushHandler) {
-    return flushHandler();
+    result = await flushHandler();
+  } else {
+    result = takeStashedEditorAutosave()?.content ?? null;
   }
-  return takeStashedEditorAutosave()?.content ?? null;
+  await checkpointStorageAfterFlush();
+  return result;
 }

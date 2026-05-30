@@ -1,9 +1,15 @@
 import { webview } from '@kit.ArkWeb';
+import { WebLifecycleBridge } from '../common/WebLifecycleBridge';
 
 @Entry
 @Component
 struct Index {
   controller: webview.WebviewController = new webview.WebviewController();
+
+  aboutToAppear(): void {
+    // Debug: ArkWeb CDP for emulator (hdc fport → chrome://inspect). See harmony/scripts/e2e-cdp-forward.sh
+    webview.WebviewController.setWebDebuggingAccess(true);
+  }
 
   build() {
     Column() {
@@ -19,6 +25,7 @@ struct Index {
         })
         .onPageEnd(() => {
           console.info('[Hunos] Page loading completed');
+          WebLifecycleBridge.register(this.controller);
         })
         .onErrorReceive((event) => {
           if (event) {

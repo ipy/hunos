@@ -1,7 +1,13 @@
 import { flushEditorAutosave } from "@/store/editorAutosaveRegistry";
+import { HUNOS_LIFECYCLE_HIDE_EVENT } from "@/store/harmonyLifecycleBridge";
 
 let lifecycleBound = false;
+let harmonyLifecycleBound = false;
 let inFlightFlush: Promise<string | null> | null = null;
+
+function onHarmonyLifecycleHide(): void {
+  scheduleLifecycleFlush();
+}
 
 function scheduleLifecycleFlush(): void {
   if (inFlightFlush) return;
@@ -36,7 +42,9 @@ export function bindEditorLifecycleAutosaveFlush(): () => void {
   document.addEventListener("visibilitychange", onVisibilityChange);
   window.addEventListener("pagehide", onPageHide);
   window.addEventListener("beforeunload", onBeforeUnload);
+  window.addEventListener(HUNOS_LIFECYCLE_HIDE_EVENT, onHarmonyLifecycleHide);
   lifecycleBound = true;
+  harmonyLifecycleBound = true;
 
   return unbindEditorLifecycleAutosaveFlush;
 }
@@ -53,7 +61,14 @@ export function unbindEditorLifecycleAutosaveFlush(): void {
   document.removeEventListener("visibilitychange", onVisibilityChange);
   window.removeEventListener("pagehide", onPageHide);
   window.removeEventListener("beforeunload", onBeforeUnload);
+  window.removeEventListener(HUNOS_LIFECYCLE_HIDE_EVENT, onHarmonyLifecycleHide);
   lifecycleBound = false;
+  harmonyLifecycleBound = false;
+}
+
+/** @internal Dev/test hook — true when native background listener is registered. */
+export function isHarmonyLifecycleListenerBound(): boolean {
+  return harmonyLifecycleBound;
 }
 
 /** @internal Test-only reset for listener state between cases. */
