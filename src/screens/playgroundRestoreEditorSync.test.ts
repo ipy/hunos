@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Editor } from "@tiptap/react";
 import {
   applyPlaygroundRestoreContentToEditor,
+  applyQueuedPlaygroundRestoreWhenEditorReady,
   createPlaygroundRestoreSession,
   finalizePlaygroundRestoreInEditor,
   shouldEndPlaygroundRestoreSession,
@@ -124,6 +125,16 @@ describe("applyPlaygroundRestoreContentToEditor", () => {
     );
     expect(run).toHaveBeenCalled();
   });
+
+  it("returns false for invalid JSON without mutating the editor", () => {
+    const { editor, chain, run } = createMockEditor();
+    expect(applyPlaygroundRestoreContentToEditor(editor, "{bad json")).toBe(
+      false,
+    );
+    expect(chain.setContent).not.toHaveBeenCalled();
+    expect(chain.clearContent).not.toHaveBeenCalled();
+    expect(run).not.toHaveBeenCalled();
+  });
 });
 
 describe("finalizePlaygroundRestoreInEditor", () => {
@@ -150,7 +161,7 @@ describe("finalizePlaygroundRestoreInEditor", () => {
     ).toBe(false);
   });
 
-  it("keeps session active when editor is not ready so passive sync can finish", () => {
+  it("keeps session active when editor is not ready so queued apply can finish", () => {
     const session = createPlaygroundRestoreSession();
     session.begin();
 
@@ -158,6 +169,21 @@ describe("finalizePlaygroundRestoreInEditor", () => {
       session,
       editor: null,
       restoredContent,
+    });
+
+    expect(session.isActive()).toBe(true);
+    expect(session.hasQueuedContent()).toBe(true);
+  });
+
+  it("keeps session active when apply fails so pollution is not silently dropped", () => {
+    const session = createPlaygroundRestoreSession();
+    session.begin();
+    const { editor } = createMockEditor();
+
+    finalizePlaygroundRestoreInEditor({
+      session,
+      editor,
+      restoredContent: "{bad json",
     });
 
     expect(session.isActive()).toBe(true);
@@ -177,6 +203,34 @@ describe("finalizePlaygroundRestoreInEditor", () => {
   });
 });
 
+describe("applyQueuedPlaygroundRestoreWhenEditorReady", () => {
+  it("applies queued content and ends session once the editor mounts", () => {
+    const session = createPlaygroundRestoreSession();
+    session.begin();
+    finalizePlaygroundRestoreInEditor({
+      session,
+      editor: null,
+      restoredContent,
+    });
+    expect(session.isActive()).toBe(true);
+
+    const { editor } = createMockEditor();
+    expect(
+      applyQueuedPlaygroundRestoreWhenEditorReady({ session, editor }),
+    ).toBe(true);
+    expect(session.isActive()).toBe(false);
+    expect(session.hasQueuedContent()).toBe(false);
+  });
+
+  it("does nothing when no content is queued", () => {
+    const session = createPlaygroundRestoreSession();
+    const { editor } = createMockEditor();
+    expect(
+      applyQueuedPlaygroundRestoreWhenEditorReady({ session, editor }),
+    ).toBe(false);
+  });
+});
+
 describe("playground restore stash race", () => {
   it("blocks effect cleanup stash while restore session is active", () => {
     expect(shouldStashAutosaveOnEffectCleanup(true)).toBe(false);
@@ -185,9 +239,7 @@ describe("playground restore stash race", () => {
   it("re-enables cleanup stash only after session ends", () => {
     const session = createPlaygroundRestoreSession();
     session.begin();
-    expect(shouldStashAutosaveOnEffectCleanup(session.isActive())).toBe(
-      false,
-    );
+    expect(shouldStashAutosaveOnEffectCleanup(session.isActive())).toBe(false);
     session.end();
     expect(shouldStashAutosaveOnEffectCleanup(session.isActive())).toBe(true);
   });

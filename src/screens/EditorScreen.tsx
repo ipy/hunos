@@ -43,6 +43,7 @@ import {
   sanitizeEditorStashContent,
 } from "@/utils/migrateBlockImageFloor";
 import {
+  applyQueuedPlaygroundRestoreWhenEditorReady,
   createPlaygroundRestoreSession,
   finalizePlaygroundRestoreInEditor,
   shouldEndPlaygroundRestoreSession,
@@ -263,6 +264,14 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     setEditorSeedContent(null);
     void saveNoteContent(note.id, sanitized);
   }, [note?.id, note?.title, note?.content, saveNoteContent, settings.locale]);
+
+  useEffect(() => {
+    if (!editorInstance) return;
+    applyQueuedPlaygroundRestoreWhenEditorReady({
+      session: playgroundRestoreSessionRef.current,
+      editor: editorInstance,
+    });
+  }, [editorInstance]);
 
   useEffect(() => {
     const session = playgroundRestoreSessionRef.current;

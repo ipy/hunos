@@ -5,17 +5,32 @@ export type PlaygroundRestoreSession = {
   isActive: () => boolean;
   begin: () => void;
   end: () => void;
+  queueContent: (content: string) => void;
+  hasQueuedContent: () => boolean;
+  takeQueuedContent: () => string | null;
 };
 
 export function createPlaygroundRestoreSession(): PlaygroundRestoreSession {
   let active = false;
+  let queuedContent: string | null = null;
   return {
     isActive: () => active,
     begin: () => {
       active = true;
+      queuedContent = null;
     },
     end: () => {
       active = false;
+      queuedContent = null;
+    },
+    queueContent: (content: string) => {
+      queuedContent = content;
+    },
+    hasQueuedContent: () => queuedContent !== null,
+    takeQueuedContent: () => {
+      const content = queuedContent;
+      queuedContent = null;
+      return content;
     },
   };
 }
@@ -54,11 +69,7 @@ export function applyPlaygroundRestoreContentToEditor(
   const parsed = tryParseStoredContent(storedContent);
   if (!parsed) return false;
 
-  editor
-    .chain()
-    .setMeta("addToHistory", false)
-    .setContent(parsed, false)
-    .run();
+  editor.chain().setMeta("addToHistory", false).setContent(parsed, false).run();
   resetEditorHistory(editor);
   return true;
 }
@@ -75,10 +86,39 @@ export function finalizePlaygroundRestoreInEditor(options: {
     return;
   }
 
-  if (!options.editor) return;
+  if (!options.editor) {
+    options.session.queueContent(options.restoredContent);
+    return;
+  }
 
-  applyPlaygroundRestoreContentToEditor(options.editor, options.restoredContent);
-  options.session.end();
+  const applied = applyPlaygroundRestoreContentToEditor(
+    options.editor,
+    options.restoredContent,
+  );
+  if (applied) {
+    options.session.end();
+  }
+}
+
+/** Apply content queued while the editor was still mounting. */
+export function applyQueuedPlaygroundRestoreWhenEditorReady(options: {
+  session: PlaygroundRestoreSession;
+  editor: Editor | null;
+}): boolean {
+  if (!options.editor || !options.session.isActive()) return false;
+  if (!options.session.hasQueuedContent()) return false;
+
+  const content = options.session.takeQueuedContent();
+  if (!content) return false;
+
+  const applied = applyPlaygroundRestoreContentToEditor(
+    options.editor,
+    content,
+  );
+  if (applied) {
+    options.session.end();
+  }
+  return applied;
 }
 
 export function shouldEndPlaygroundRestoreSession(options: {
