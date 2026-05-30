@@ -23,6 +23,7 @@ import {
   flushForDocumentHide,
   flushForPageUnload,
   peekUnloadBackup,
+  persistUnloadDraftSync,
   registerUnloadDraftCollector,
   resetLifecycleUnloadForTests,
   takeUnloadBackup,
@@ -164,7 +165,7 @@ describe("lifecycleUnload", () => {
     expect(takeUnloadBackup()).toBeNull();
   });
 
-  it("keeps backup when playground flush stashes body without IDB persist", async () => {
+  it("keeps backup when playground flush reports save failure", async () => {
     registerUnloadDraftCollector(() => ({
       noteId: "pg-1",
       title: "格式试炼场",
@@ -182,7 +183,37 @@ describe("lifecycleUnload", () => {
     );
   });
 
+  it("clears backup when playground flush persists to storage", async () => {
+    registerUnloadDraftCollector(() => ({
+      noteId: "pg-1",
+      title: "格式试炼场",
+      content: '{"type":"doc","text":"UnloadPhrase3"}',
+      savedAt: 0,
+    }));
+    flushEditorAutosaveResult.mockResolvedValue({
+      content: '{"type":"doc","text":"UnloadPhrase3"}',
+      persisted: true,
+    });
+
+    await flushForPageUnload();
+    expect(peekUnloadBackup()).toBeNull();
+  });
+
   it("uses stable sessionStorage key", () => {
     expect(UNLOAD_BACKUP_KEY).toBe("hunos:unload-backup");
+  });
+
+  it("persistUnloadDraftSync writes collector draft without awaiting flush", () => {
+    registerUnloadDraftCollector(() => ({
+      noteId: "note-1",
+      title: "TitleUnload3",
+      content: '{"type":"doc","text":"phrase"}',
+      savedAt: 0,
+    }));
+
+    persistUnloadDraftSync();
+
+    expect(peekUnloadBackup()?.title).toBe("TitleUnload3");
+    expect(flushEditorAutosaveResult).not.toHaveBeenCalled();
   });
 });

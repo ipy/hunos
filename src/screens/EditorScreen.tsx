@@ -38,7 +38,6 @@ import {
   clearStashedEditorAutosave,
   peekStashedEditorAutosave,
   registerEditorAutosaveFlush,
-  stashEditorAutosaveSnapshot,
   takeStashedEditorAutosave,
   unregisterEditorAutosaveFlush,
 } from "@/store/editorAutosaveRegistry";
@@ -46,6 +45,7 @@ import { bindEditorLifecycleAutosaveFlush } from "@/store/editorLifecycleAutosav
 import {
   registerUnloadDraftCollector,
   unregisterUnloadDraftCollector,
+  persistUnloadDraftSync,
 } from "@/store/lifecycleUnload";
 import {
   sanitizeBlockImageNoteContent,
@@ -230,29 +230,34 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
     const json =
       pendingContentRef.current ??
-      (editorInstance ? JSON.stringify(editorInstance.getJSON()) : null);
+      (editorInstanceRef.current
+        ? JSON.stringify(editorInstanceRef.current.getJSON())
+        : null);
 
     if (!json) return null;
     return json;
-  }, [activeNoteId, editorInstance]);
+  }, [activeNoteId]);
 
   const collectUnloadDraft = useCallback(() => {
     const noteId = activeNoteId;
     if (!noteId) return null;
 
     const pendingTitle = pendingTitleRef.current;
-    const title = pendingTitle ?? titleValue;
+    const storedTitle = note?.title ?? "";
+    const draftTitle = pendingTitle ?? titleValue;
+    const hasTitleDraft =
+      pendingTitle != null || draftTitle.trim() !== storedTitle.trim();
     const content = collectPendingAutosave();
 
-    if (pendingTitle == null && !content) return null;
+    if (!hasTitleDraft && !content) return null;
 
     return {
       noteId,
-      title: pendingTitle != null ? title : null,
+      title: hasTitleDraft ? draftTitle : null,
       content,
       savedAt: Date.now(),
     };
-  }, [activeNoteId, collectPendingAutosave, titleValue]);
+  }, [activeNoteId, collectPendingAutosave, note?.title, titleValue]);
 
   const flushPendingTitle = useCallback(async (): Promise<boolean> => {
     const noteId = activeNoteId;
@@ -279,10 +284,9 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         isFormatPlaygroundNote(activeNote.title, activeNote.content);
 
       if (isPlayground) {
-        stashEditorAutosaveSnapshot(activeNoteId, json);
+        const contentOk = await persistEditorContent(activeNoteId, json);
         pendingContentRef.current = null;
-        // Body stays in memory stash, not IDB — keep sessionStorage unload backup.
-        return { content: json, persisted: false };
+        return { content: json, persisted: titleOk && contentOk };
       }
 
       const contentOk = await persistEditorContent(activeNoteId, json);
@@ -300,6 +304,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     registerUnloadDraftCollector(collectUnloadDraft);
     const unbindLifecycle = bindEditorLifecycleAutosaveFlush();
     return () => {
+      persistUnloadDraftSync();
       unbindLifecycle();
       if (
         shouldStashAutosaveOnEffectCleanup(
@@ -308,17 +313,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       ) {
         const json = collectPendingAutosave();
         if (json && activeNoteId) {
-          const activeNote = notes.find(
-            (candidate) => candidate.id === activeNoteId,
-          );
-          const isPlayground =
-            activeNote != null &&
-            isFormatPlaygroundNote(activeNote.title, activeNote.content);
-          if (isPlayground) {
-            stashEditorAutosaveSnapshot(activeNoteId, json);
-          } else {
-            void persistEditorContent(activeNoteId, json);
-          }
+          void persistEditorContent(activeNoteId, json);
         }
       }
       unregisterEditorAutosaveFlush(flushPendingAutosave);
@@ -645,6 +640,8 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   }
 
   const isPlaygroundNote = isFormatPlaygroundNote(note.title, note.content);
+  const showRestorePlayground =
+    isPlaygroundNote && FORMAT_PLAYGROUND_TITLES.includes(note.title);
   const restorePlaygroundLabel = t("notes.actions.restorePlayground");
   const restorePlaygroundVisibleText =
     layout === "mobile"
@@ -700,7 +697,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           </button>
         )}
         <div style={{ flex: 1 }} />
-        {isPlaygroundNote && (
+        {showRestorePlayground && (
           <button
             type="button"
             onClick={handleRestorePlayground}
@@ -1013,7 +1010,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
                     danger: false,
                     action: handleArchive,
                   },
-                  ...(isFormatPlaygroundNote(note.title, note.content)
+                  ...(showRestorePlayground
                     ? [
                         {
                           label: t("notes.actions.restorePlayground"),

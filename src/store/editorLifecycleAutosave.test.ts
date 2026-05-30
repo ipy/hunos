@@ -1,11 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const flushForDocumentHide = vi.fn().mockResolvedValue({ content: null, persisted: true });
-const flushForPageUnload = vi.fn().mockResolvedValue({ content: null, persisted: true });
+const flushForDocumentHide = vi
+  .fn()
+  .mockResolvedValue({ content: null, persisted: true });
+const flushForPageUnload = vi
+  .fn()
+  .mockResolvedValue({ content: null, persisted: true });
 
 vi.mock("@/store/lifecycleUnload", () => ({
   flushForDocumentHide: () => flushForDocumentHide(),
-  flushForPageUnload: (event?: PageTransitionEvent) => flushForPageUnload(event),
+  flushForPageUnload: (event?: PageTransitionEvent) =>
+    flushForPageUnload(event),
   resetLifecycleUnloadForTests: vi.fn(),
 }));
 

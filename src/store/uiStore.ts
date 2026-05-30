@@ -3,6 +3,7 @@ import type { Note } from "@/types/note";
 import { noteStorage } from "@/storage/noteStorage";
 import { isMobileViewport } from "@/hooks/useAdaptiveLayout";
 import { clearLinkEditorSelection } from "@/components/editor/linkEditorSelection";
+import { scheduleLifecycleFlush } from "@/store/lifecycleUnload";
 
 type Screen = "tags" | "noteList" | "editor" | "settings";
 
@@ -73,7 +74,10 @@ export const useUIStore = create<UIStore>((set, get) => ({
   },
 
   goBack: () => {
-    const { screenStack } = get();
+    const { screenStack, currentScreen } = get();
+    if (currentScreen === "editor") {
+      void scheduleLifecycleFlush({ syncBackup: true });
+    }
     if (screenStack.length <= 1) return;
     const newStack = screenStack.slice(0, -1);
     set({

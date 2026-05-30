@@ -73,6 +73,11 @@ function collectAndPersistSyncBackup(): void {
   writeUnloadBackupSync({ ...draft, savedAt: Date.now() });
 }
 
+/** Synchronous sessionStorage snapshot before SPA unmount or async flush (no await). */
+export function persistUnloadDraftSync(): void {
+  collectAndPersistSyncBackup();
+}
+
 /** Shared flush with dedupe — hide and unload paths reuse one in-flight write. */
 export function scheduleLifecycleFlush(options?: {
   syncBackup?: boolean;

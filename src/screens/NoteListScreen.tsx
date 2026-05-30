@@ -280,6 +280,7 @@ export function NoteListScreen({ layout = "mobile" }: NoteListScreenProps) {
     trashNote,
     restoreNote,
     permanentlyDelete,
+    isLoading,
   } = useNoteStore();
   const {
     currentScreen,
@@ -324,7 +325,7 @@ export function NoteListScreen({ layout = "mobile" }: NoteListScreenProps) {
   const emptyPreviewLabel = t("notes.list.emptyPreview");
 
   const previewForNote = (note: Note) =>
-    deriveNoteListPreview(note, playgroundListPreview);
+    deriveNoteListPreview(note, playgroundListPreview, locale);
 
   const showMenuButton = layout === "mobile" || layout === "tablet";
 
@@ -518,7 +519,21 @@ export function NoteListScreen({ layout = "mobile" }: NoteListScreenProps) {
       </div>
 
       <div data-testid="note-list" style={{ flex: 1, overflowY: "auto" }}>
-        {displayedNotes.length === 0 ? (
+        {isLoading ? (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              height: "40%",
+              padding: 32,
+              color: theme.colors.textTertiary,
+              fontSize: 13,
+            }}
+          >
+            {t("notes.loading", { defaultValue: "Loading notes…" })}
+          </div>
+        ) : displayedNotes.length === 0 ? (
           <div
             style={{
               display: "flex",

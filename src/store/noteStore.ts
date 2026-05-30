@@ -51,6 +51,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     await flushEditorAutosave();
     const note = await noteStorage.create(title ? { title } : undefined);
     const { notes } = get();
+    // Untitled drafts remain listed until the user deletes them (UX-UNTitled-01).
     set({ notes: [note, ...notes], activeNoteId: note.id });
     return note;
   },

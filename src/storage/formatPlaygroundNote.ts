@@ -793,15 +793,26 @@ export function pickFormatPlaygroundNote<T extends PlaygroundPickCandidate>(
   )[0];
 }
 
-/** Hide duplicate playground cards in note lists; keep only the locale-canonical note. */
+/** Plain-text excerpt of the locale seed — used for list preview seed detection. */
+export function getFormatPlaygroundSeedPlain(locale: Locale): string {
+  return extractPlainTextFromTiptap(buildPlaygroundContent(locale));
+}
+
+/** Hide duplicate canonical-title playground cards; renamed/custom-title copies stay visible. */
 export function filterNotesForPlaygroundList<T extends PlaygroundPickCandidate>(
   notes: T[],
   locale: Locale,
 ): T[] {
-  const canonical = pickFormatPlaygroundNote(notes, locale);
+  const canonicalCandidates = notes.filter(
+    (note) =>
+      FORMAT_PLAYGROUND_TITLES.includes(note.title) &&
+      isFormatPlaygroundNote(note.title, note.content),
+  );
+  const canonical = pickFormatPlaygroundNote(canonicalCandidates, locale);
   if (!canonical) return notes;
 
   return notes.filter((note) => {
+    if (!FORMAT_PLAYGROUND_TITLES.includes(note.title)) return true;
     if (!isFormatPlaygroundNote(note.title, note.content)) return true;
     return note.id === canonical.id;
   });

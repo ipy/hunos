@@ -8,13 +8,15 @@ const editorSource = readFileSync(
 );
 
 describe("EditorScreen playground lifecycle flush", () => {
-  it("reports persisted false when playground body is memory-stashed", () => {
-    const playgroundBranch = editorSource.slice(
-      editorSource.indexOf("if (isPlayground)"),
-      editorSource.indexOf("const contentOk = await persistEditorContent"),
+  it("persists playground body on lifecycle flush instead of memory-only stash", () => {
+    const flushStart = editorSource.indexOf("const flushPendingAutosave =");
+    const flushEnd = editorSource.indexOf("useEffect(() => {", flushStart);
+    const flushBlock = editorSource.slice(flushStart, flushEnd);
+    expect(flushBlock).toContain("if (isPlayground) {");
+    expect(flushBlock).toContain(
+      "await persistEditorContent(activeNoteId, json)",
     );
-    expect(playgroundBranch).toContain("stashEditorAutosaveSnapshot");
-    expect(playgroundBranch).toContain("persisted: false");
-    expect(playgroundBranch).not.toContain("persisted: titleOk");
+    expect(flushBlock).toContain("persisted: titleOk && contentOk");
+    expect(flushBlock).not.toContain("persisted: false");
   });
 });

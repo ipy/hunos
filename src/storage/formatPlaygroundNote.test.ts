@@ -1416,17 +1416,34 @@ describe("filterNotesForPlaygroundList", () => {
   it("shows only the zh-canonical playground when locale is zh", () => {
     const notes = [enPlayground, zhPlayground, attrMatchDuplicate, regularNote];
     const filtered = filterNotesForPlaygroundList(notes, "zh");
-    expect(filtered.map((n) => n.id)).toEqual(["pg-zh", "note-1"]);
+    expect(filtered.map((n) => n.id)).toEqual(["pg-zh", "pg-dup", "note-1"]);
     expect(filtered.find((n) => n.id === "pg-zh")?.title).toBe("格式试炼场");
   });
 
   it("shows only the en-canonical playground when locale is en", () => {
     const notes = [enPlayground, zhPlayground, attrMatchDuplicate, regularNote];
     const filtered = filterNotesForPlaygroundList(notes, "en");
-    expect(filtered.map((n) => n.id)).toEqual(["pg-en", "note-1"]);
+    expect(filtered.map((n) => n.id)).toEqual(["pg-en", "pg-dup", "note-1"]);
     expect(filtered.find((n) => n.id === "pg-en")?.title).toBe(
       "Format Playground",
     );
+  });
+
+  it("keeps renamed playground copies with custom titles visible", () => {
+    const renamedPlayground = {
+      id: "pg-renamed",
+      title: "TitleUnload3",
+      content: JSON.stringify(buildPlaygroundContent("zh")),
+      isPinned: true,
+      modifiedAt: 400,
+    };
+    const notes = [zhPlayground, renamedPlayground, regularNote];
+    const filtered = filterNotesForPlaygroundList(notes, "zh");
+    expect(filtered.map((n) => n.id)).toEqual([
+      "pg-zh",
+      "pg-renamed",
+      "note-1",
+    ]);
   });
 
   it("leaves non-playground notes untouched when no playground exists", () => {
