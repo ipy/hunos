@@ -4,6 +4,7 @@ import {
   formatPlaygroundMatchesCanonicalSeed,
   formatPlaygroundNeedsRestore,
   isFormatPlaygroundNote,
+  shouldShowPlaygroundRestoreButton,
 } from "@/storage/formatPlaygroundNote";
 
 describe("playground restore visibility", () => {
@@ -40,5 +41,50 @@ describe("playground restore visibility", () => {
     });
     const drifted = JSON.stringify(parsed);
     expect(formatPlaygroundNeedsRestore("格式试炼场", drifted, "zh")).toBe(true);
+  });
+
+  it("hides restore when persisted row is canonical even if editor JSON differs", () => {
+    const parsed = JSON.parse(seedContent) as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    while (
+      parsed.content.at(-1)?.type === "paragraph" &&
+      !(parsed.content.at(-1)?.content?.length)
+    ) {
+      parsed.content.pop();
+    }
+    const editorRoundTrip = JSON.stringify(parsed);
+
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seedContent,
+        pendingDraftContent: null,
+        editorContent: editorRoundTrip,
+        fallbackLocale: "en",
+      }),
+    ).toBe(false);
+  });
+
+  it("hides restore immediately when stored canonical after restore tap", () => {
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seedContent,
+        pendingDraftContent: null,
+        editorContent: JSON.stringify({
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "T4-MIXED-stale-editor" }],
+            },
+          ],
+        }),
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
   });
 });

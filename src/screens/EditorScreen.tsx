@@ -30,8 +30,8 @@ import { editorHasNonEmptySelection } from "@/utils/editorSelection";
 import {
   FORMAT_PLAYGROUND_TITLES,
   getFormatPlaygroundTitle,
-  formatPlaygroundNeedsRestore,
   isFormatPlaygroundNote,
+  shouldShowPlaygroundRestoreButton,
   migratePlaygroundContentIfStale,
   playgroundContentMatchesLocale,
 } from "@/storage/formatPlaygroundNote";
@@ -563,6 +563,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       titleTimeoutRef.current = undefined;
     }
     pendingContentRef.current = null;
+    pendingTitleRef.current = null;
     clearStashedEditorAutosave();
     setEditorSeedContent(null);
     try {
@@ -643,15 +644,16 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     );
   }
 
-  const playgroundDraftContent =
-    pendingContentRef.current ??
-    (editorInstance ? JSON.stringify(editorInstance.getJSON()) : null) ??
-    note.content;
-  const showRestorePlayground = formatPlaygroundNeedsRestore(
-    titleValue.trim() || note.title,
-    playgroundDraftContent ?? "",
-    settings.locale,
-  );
+  const showRestorePlayground = shouldShowPlaygroundRestoreButton({
+    displayTitle: titleValue.trim() || note.title,
+    storedTitle: note.title,
+    storedContent: noteContentForEditor,
+    pendingDraftContent: pendingContentRef.current,
+    editorContent: editorInstance
+      ? JSON.stringify(editorInstance.getJSON())
+      : null,
+    fallbackLocale: settings.locale,
+  });
   const restorePlaygroundLabel = t("notes.actions.restorePlayground");
   const restorePlaygroundVisibleText =
     layout === "mobile"

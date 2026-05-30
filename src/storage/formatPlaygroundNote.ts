@@ -410,38 +410,156 @@ export async function restoreFormatPlaygroundContent(
   await graphEngine.syncNoteLinks(noteId, contentStr);
 }
 
+function stripTrailingEmptyParagraphs(
+  nodes: PlaygroundDocNode[],
+): PlaygroundDocNode[] {
+  const result = [...nodes];
+  while (result.length > 0) {
+    const last = result[result.length - 1];
+    if (last.type !== "paragraph") break;
+    const text = (last.content ?? []).map((child) => child.text ?? "").join("");
+    if (text.length > 0) break;
+    result.pop();
+  }
+  return result;
+}
+
 function normalizePlaygroundContentSnapshot(
   content: string,
   locale: Locale,
 ): string {
-  return migratePlaygroundContentIfStale(content, locale) ?? content;
+  const migrated = migratePlaygroundContentIfStale(content, locale) ?? content;
+  try {
+    const parsed = JSON.parse(migrated) as PlaygroundDoc;
+    if (parsed.type !== "doc" || !Array.isArray(parsed.content)) {
+      return migrated;
+    }
+    return JSON.stringify({
+      ...parsed,
+      content: stripTrailingEmptyParagraphs(parsed.content),
+    });
+  } catch {
+    return migrated;
+  }
+}
+
+/** Locale implied by doc attrs / seed headings (falls back to app locale). */
+export function resolvePlaygroundSeedLocale(
+  content: string,
+  fallbackLocale: Locale,
+): PlaygroundLocale {
+  try {
+    const parsed = JSON.parse(content) as PlaygroundDoc;
+    const fromAttrs = readPlaygroundContentLocale(parsed);
+    if (fromAttrs) return fromAttrs;
+    return inferPlaygroundLocaleFromContent(parsed);
+  } catch {
+    return resolvePlaygroundLocale(fallbackLocale);
+  }
 }
 
 /** True when title and body match the locale seed (post-migration). */
 export function formatPlaygroundMatchesCanonicalSeed(
   title: string,
   content: string,
-  locale: Locale,
+  fallbackLocale: Locale,
 ): boolean {
   if (!content || !isFormatPlaygroundNote(title, content)) return false;
-  if (title !== getFormatPlaygroundTitle(locale)) return false;
 
-  const canonical = JSON.stringify(buildPlaygroundContent(locale));
-  return (
-    normalizePlaygroundContentSnapshot(content, locale) ===
-    normalizePlaygroundContentSnapshot(canonical, locale)
+  const seedLocale = resolvePlaygroundSeedLocale(content, fallbackLocale);
+  if (title !== getFormatPlaygroundTitle(seedLocale)) return false;
+
+  const canonical = JSON.stringify(buildPlaygroundContent(seedLocale));
+  const normalizedStored = normalizePlaygroundContentSnapshot(content, seedLocale);
+  const normalizedCanonical = normalizePlaygroundContentSnapshot(
+    canonical,
+    seedLocale,
   );
+  if (normalizedStored === normalizedCanonical) return true;
+
+  try {
+    const storedPlain = extractPlainTextFromTiptap(
+      JSON.parse(normalizedStored),
+    );
+    const canonicalPlain = extractPlainTextFromTiptap(
+      JSON.parse(normalizedCanonical),
+    );
+    if (storedPlain !== canonicalPlain) return false;
+
+    const storedDoc = JSON.parse(normalizedStored) as PlaygroundDoc;
+    const canonicalDoc = JSON.parse(normalizedCanonical) as PlaygroundDoc;
+    return (
+      (storedDoc.attrs?.playgroundContentVersion ?? 0) ===
+        (canonicalDoc.attrs?.playgroundContentVersion ?? 0) &&
+      (readPlaygroundContentLocale(storedDoc) ??
+        inferPlaygroundLocaleFromContent(storedDoc)) === seedLocale
+    );
+  } catch {
+    return false;
+  }
 }
 
 /** Show restore when playground attrs are present but title or body drifted from seed. */
 export function formatPlaygroundNeedsRestore(
   title: string,
   content: string | undefined,
-  locale: Locale,
+  fallbackLocale: Locale,
 ): boolean {
   const body = content ?? "";
   if (!isFormatPlaygroundNote(title, body)) return false;
-  return !formatPlaygroundMatchesCanonicalSeed(title, body, locale);
+  return !formatPlaygroundMatchesCanonicalSeed(title, body, fallbackLocale);
+}
+
+/** Header restore chip — persisted row settles UI; live editor draft still gates drift. */
+export function shouldShowPlaygroundRestoreButton(options: {
+  displayTitle: string;
+  storedTitle: string;
+  storedContent: string;
+  pendingDraftContent: string | null;
+  editorContent: string | null;
+  fallbackLocale: Locale;
+}): boolean {
+  const {
+    displayTitle,
+    storedTitle,
+    storedContent,
+    pendingDraftContent,
+    editorContent,
+    fallbackLocale,
+  } = options;
+
+  if (pendingDraftContent != null) {
+    return formatPlaygroundNeedsRestore(
+      displayTitle,
+      pendingDraftContent,
+      fallbackLocale,
+    );
+  }
+
+  if (
+    displayTitle === storedTitle &&
+    formatPlaygroundMatchesCanonicalSeed(
+      storedTitle,
+      storedContent,
+      fallbackLocale,
+    )
+  ) {
+    return false;
+  }
+
+  const editorDrift =
+    editorContent != null &&
+    formatPlaygroundNeedsRestore(displayTitle, editorContent, fallbackLocale);
+
+  if (editorDrift) {
+    return true;
+  }
+
+  return formatPlaygroundNeedsRestore(
+    displayTitle,
+    storedContent,
+    fallbackLocale,
+  );
 }
 
 export async function createFormatPlaygroundNote(

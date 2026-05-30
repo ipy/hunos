@@ -15,6 +15,8 @@ import {
   playgroundContentMatchesLocale,
   formatPlaygroundMatchesCanonicalSeed,
   formatPlaygroundNeedsRestore,
+  resolvePlaygroundSeedLocale,
+  shouldShowPlaygroundRestoreButton,
   restoreFormatPlaygroundContent,
 } from "./formatPlaygroundNote";
 
@@ -1362,6 +1364,24 @@ describe("formatPlayground restore gating", () => {
     });
     const drifted = JSON.stringify(parsed);
     expect(formatPlaygroundNeedsRestore("格式试炼场", drifted, "zh")).toBe(true);
+  });
+
+  it("matches canonical zh seed when app locale is en", () => {
+    const seed = JSON.stringify(buildPlaygroundContent("zh"));
+    expect(resolvePlaygroundSeedLocale(seed, "en")).toBe("zh");
+    expect(formatPlaygroundMatchesCanonicalSeed("格式试炼场", seed, "en")).toBe(
+      true,
+    );
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        pendingDraftContent: null,
+        editorContent: null,
+        fallbackLocale: "en",
+      }),
+    ).toBe(false);
   });
 });
 
