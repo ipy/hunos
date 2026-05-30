@@ -21,6 +21,10 @@ export function hasSavedEditorOverlaySelection(): boolean {
   return savedSelection !== null;
 }
 
+export function hasNonEmptySavedEditorOverlaySelection(): boolean {
+  return savedSelection !== null && savedSelection.from !== savedSelection.to;
+}
+
 export function clearEditorOverlaySelection(): void {
   savedSelection = null;
 }

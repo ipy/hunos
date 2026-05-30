@@ -159,4 +159,48 @@ describe("toggleMark with overlay selection", () => {
     expect(chain.toggleBold).toHaveBeenCalled();
     expect(chain.run).toHaveBeenCalledTimes(1);
   });
+
+  it("ignores stale collapsed editor selection when overlay saved range exists", () => {
+    clearEditorOverlaySelection();
+    const chain = {
+      focus: vi.fn().mockReturnThis(),
+      setTextSelection: vi.fn().mockReturnThis(),
+      toggleBold: vi.fn().mockReturnThis(),
+      run: vi.fn(() => true),
+    };
+    const editor = {
+      isActive: vi.fn(() => false),
+      isDestroyed: false,
+      state: {
+        selection: {
+          empty: true,
+          $from: { start: () => 200, end: () => 220 },
+        },
+        doc: { content: { size: 300 } },
+      },
+      chain: vi.fn(() => chain),
+      commands: {
+        focus: vi.fn(() => true),
+        setTextSelection: vi.fn(() => true),
+      },
+    };
+
+    captureEditorOverlaySelection({
+      state: {
+        selection: { from: 42, to: 58 },
+        doc: { content: { size: 300 } },
+      },
+    } as never);
+
+    runToolbarActionWithOverlaySelection(editor as never, true, (ed) =>
+      toggleMark(ed, "bold", (c) => c.toggleBold()),
+    );
+
+    expect(chain.setTextSelection).toHaveBeenCalledTimes(1);
+    expect(chain.setTextSelection).toHaveBeenCalledWith({
+      from: 42,
+      to: 58,
+    });
+    expect(chain.toggleBold).toHaveBeenCalled();
+  });
 });
