@@ -17,7 +17,7 @@ export async function bootstrapAppData(locale: Locale): Promise<void> {
   await createWelcomeNotesIfNeeded(locale);
   const flushedContent = await flushEditorAutosave();
   await useNoteStore.getState().loadNotes({ status: "active" });
-  await recoverPendingUnloadBackup();
+  await recoverPendingUnloadBackup(locale);
   await syncFormatPlaygroundOnLocaleChange(locale, flushedContent, {
     focusCanonical: true,
   });

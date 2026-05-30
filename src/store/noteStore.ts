@@ -5,6 +5,7 @@ import { noteStorage } from "@/storage/noteStorage";
 import { graphEngine } from "@/graph/graphEngine";
 import { restoreFormatPlaygroundContent } from "@/storage/formatPlaygroundNote";
 import { flushEditorAutosave } from "@/store/editorAutosaveRegistry";
+import { clearUnloadBackup } from "@/store/lifecycleUnload";
 import { enqueueActiveNoteSwitch } from "@/store/noteStoreActiveNoteSwitch";
 import { useTagStore } from "@/store/tagStore";
 function sortByModifiedDesc(notes: Note[]): Note[] {
@@ -154,6 +155,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
 
   restoreFormatPlayground: async (id, locale) => {
     await restoreFormatPlaygroundContent(id, locale);
+    clearUnloadBackup();
     await useTagStore.getState().loadTags();
     const updated = await noteStorage.get(id);
     if (updated) {

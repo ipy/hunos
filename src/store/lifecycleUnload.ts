@@ -2,7 +2,14 @@ import {
   flushEditorAutosaveResult,
   type EditorAutosaveFlushResult,
 } from "@/store/editorAutosaveRegistry";
+import {
+  formatPlaygroundMatchesCanonicalSeed,
+  isFormatPlaygroundNote,
+} from "@/storage/formatPlaygroundNote";
+import { noteStorage } from "@/storage/noteStorage";
 import { useNoteStore } from "@/store/noteStore";
+import type { Note } from "@/types/note";
+import type { Locale } from "@/types/settings";
 
 export const UNLOAD_BACKUP_KEY = "hunos:unload-backup";
 
@@ -71,10 +78,63 @@ export function clearUnloadBackup(): void {
   }
 }
 
+/** @internal Exported for unit tests — true when backup must not replace stored row. */
+export function unloadBackupWouldRegressStoredNote(
+  backup: UnloadBackup,
+  stored: Pick<Note, "title" | "content" | "modifiedAt">,
+  locale: Locale,
+): boolean {
+  if (backup.savedAt <= stored.modifiedAt) {
+    return true;
+  }
+
+  if (!backup.content) {
+    return false;
+  }
+
+  const backupTitle =
+    backup.title != null && backup.title !== "" ? backup.title : stored.title;
+
+  if (
+    isFormatPlaygroundNote(stored.title, stored.content) &&
+    formatPlaygroundMatchesCanonicalSeed(stored.title, stored.content, locale) &&
+    !formatPlaygroundMatchesCanonicalSeed(backupTitle, backup.content, locale)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 function collectAndPersistSyncBackup(): void {
   const draft = unloadDraftCollector?.();
   if (!draft?.noteId) return;
-  writeUnloadBackupSync({ ...draft, savedAt: Date.now() });
+
+  const snapshot: UnloadBackup = { ...draft, savedAt: Date.now() };
+  const inMemory = useNoteStore
+    .getState()
+    .notes.find((note) => note.id === draft.noteId);
+  if (
+    inMemory &&
+    unloadBackupWouldRegressStoredNote(snapshot, inMemory, resolveBackupLocale(inMemory))
+  ) {
+    return;
+  }
+
+  writeUnloadBackupSync(snapshot);
+}
+
+function resolveBackupLocale(stored: Pick<Note, "title" | "content">): Locale {
+  try {
+    const parsed = JSON.parse(stored.content) as {
+      attrs?: { playgroundContentLocale?: string };
+    };
+    if (parsed.attrs?.playgroundContentLocale === "zh") return "zh";
+    if (parsed.attrs?.playgroundContentLocale === "en") return "en";
+  } catch {
+    // fall through
+  }
+  return stored.title === "格式试炼场" ? "zh" : "en";
 }
 
 /** Synchronous sessionStorage snapshot before SPA unmount or async flush (no await). */
@@ -129,9 +189,19 @@ export async function flushForPageUnload(
 }
 
 /** Apply sessionStorage backup after reload when async flush did not finish. */
-export async function recoverPendingUnloadBackup(): Promise<void> {
+export async function recoverPendingUnloadBackup(
+  locale: Locale = "en",
+): Promise<void> {
   const backup = takeUnloadBackup();
   if (!backup?.noteId) return;
+
+  const stored = await noteStorage.get(backup.noteId);
+  if (
+    stored &&
+    unloadBackupWouldRegressStoredNote(backup, stored, locale)
+  ) {
+    return;
+  }
 
   const store = useNoteStore.getState();
   if (backup.title != null && backup.title !== "") {

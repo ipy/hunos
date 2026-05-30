@@ -16,7 +16,11 @@ vi.mock("@/storage/database", () => ({
         await dbUpdate(id, updates);
         const existing = notesById.get(id);
         if (existing) {
-          notesById.set(id, { ...existing, ...updates });
+          notesById.set(id, {
+            ...existing,
+            ...updates,
+            modifiedAt: updates.modifiedAt ?? Date.now(),
+          });
         }
       },
       where: () => ({
@@ -69,8 +73,12 @@ vi.mock("@/graph/graphEngine", () => ({
   },
 }));
 
-import { getFormatPlaygroundTitle } from "@/storage/formatPlaygroundNote";
+import { buildPlaygroundContent, getFormatPlaygroundTitle } from "@/storage/formatPlaygroundNote";
 import { noteStorage } from "@/storage/noteStorage";
+import {
+  recoverPendingUnloadBackup,
+  writeUnloadBackupSync,
+} from "./lifecycleUnload";
 import { useNoteStore } from "./noteStore";
 
 describe("noteStore lifecycle rapid saves", () => {
@@ -143,5 +151,46 @@ describe("noteStore lifecycle rapid saves", () => {
     expect(stored?.contentPlain).toContain("格式试炼场");
     const inMemory = useNoteStore.getState().notes.find((n) => n.id === note.id);
     expect(inMemory?.content).not.toContain("T4-MIXED-persist");
+  });
+
+  it("reload recover does not resurrect pollution after restoreFormatPlayground", async () => {
+    const seed = JSON.stringify(buildPlaygroundContent("zh"));
+    const note = await noteStorage.create({
+      title: "格式试炼场",
+      content: seed,
+      contentPlain: "格式试炼场",
+    });
+    const polluted = JSON.stringify({
+      type: "doc",
+      attrs: {
+        playgroundContentVersion: 22,
+        playgroundContentLocale: "zh",
+      },
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "T4-MIXED-reload" }],
+        },
+      ],
+    });
+    await useNoteStore.getState().saveNoteContent(note.id, polluted);
+    await useNoteStore.getState().restoreFormatPlayground(note.id, "zh");
+
+    const restored = notesById.get(note.id)!;
+    expect(restored.content).not.toContain("T4-MIXED-reload");
+    expect(restored.modifiedAt).toBeGreaterThan(0);
+
+    writeUnloadBackupSync({
+      noteId: note.id,
+      title: "格式试炼场",
+      content: polluted,
+      savedAt: restored.modifiedAt + 10_000,
+    });
+
+    await recoverPendingUnloadBackup("zh");
+
+    const afterRecover = notesById.get(note.id);
+    expect(afterRecover?.content).not.toContain("T4-MIXED-reload");
+    expect(afterRecover?.title).toBe(getFormatPlaygroundTitle("zh"));
   });
 });

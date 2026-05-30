@@ -8,26 +8,44 @@ vi.mock("@/store/editorAutosaveRegistry", () => ({
 
 const saveNoteTitle = vi.fn();
 const saveNoteContent = vi.fn();
+const noteStorageGet = vi.fn();
+
+vi.mock("@/storage/noteStorage", () => ({
+  noteStorage: {
+    get: (id: string) => noteStorageGet(id),
+  },
+}));
 
 vi.mock("@/store/noteStore", () => ({
   useNoteStore: {
     getState: () => ({
       saveNoteTitle,
       saveNoteContent,
+      notes: useNoteStoreNotes,
     }),
   },
 }));
 
+let useNoteStoreNotes: Array<{
+  id: string;
+  title: string;
+  content: string;
+  modifiedAt: number;
+}> = [];
+
+import { buildPlaygroundContent } from "@/storage/formatPlaygroundNote";
 import {
   clearUnloadBackup,
   flushForDocumentHide,
   flushForPageUnload,
   peekUnloadBackup,
   persistUnloadDraftSync,
+  recoverPendingUnloadBackup,
   registerUnloadDraftCollector,
   resetLifecycleUnloadForTests,
   takeUnloadBackup,
   UNLOAD_BACKUP_KEY,
+  unloadBackupWouldRegressStoredNote,
   writeUnloadBackupSync,
 } from "./lifecycleUnload";
 
@@ -42,6 +60,8 @@ describe("lifecycleUnload", () => {
     });
     saveNoteTitle.mockReset();
     saveNoteContent.mockReset();
+    noteStorageGet.mockReset();
+    useNoteStoreNotes = [];
     resetLifecycleUnloadForTests();
     session.clear();
 
@@ -162,6 +182,7 @@ describe("lifecycleUnload", () => {
   });
 
   it("recoverPendingUnloadBackup applies title and content then clears backup", async () => {
+    noteStorageGet.mockResolvedValue(undefined);
     writeUnloadBackupSync({
       noteId: "note-1",
       title: "TitleUnload2",
@@ -169,12 +190,112 @@ describe("lifecycleUnload", () => {
       savedAt: Date.now(),
     });
 
-    const { recoverPendingUnloadBackup } = await import("./lifecycleUnload");
-    await recoverPendingUnloadBackup();
+    await recoverPendingUnloadBackup("en");
 
     expect(saveNoteTitle).toHaveBeenCalledWith("note-1", "TitleUnload2");
     expect(saveNoteContent).toHaveBeenCalledWith("note-1", '{"type":"doc"}');
     expect(takeUnloadBackup()).toBeNull();
+  });
+
+  it("recoverPendingUnloadBackup skips backup older than stored modifiedAt", async () => {
+    noteStorageGet.mockResolvedValue({
+      id: "pg-1",
+      title: "格式试炼场",
+      content: JSON.stringify(buildPlaygroundContent("zh")),
+      modifiedAt: 5_000,
+    });
+    writeUnloadBackupSync({
+      noteId: "pg-1",
+      title: "格式试炼场",
+      content: '{"type":"doc","text":"T4-MIXED-stale"}',
+      savedAt: 1_000,
+    });
+
+    await recoverPendingUnloadBackup("zh");
+
+    expect(saveNoteContent).not.toHaveBeenCalled();
+    expect(takeUnloadBackup()).toBeNull();
+  });
+
+  it("recoverPendingUnloadBackup skips polluted backup over canonical playground", async () => {
+    const seed = JSON.stringify(buildPlaygroundContent("zh"));
+    noteStorageGet.mockResolvedValue({
+      id: "pg-1",
+      title: "格式试炼场",
+      content: seed,
+      modifiedAt: 2_000,
+    });
+    const polluted = JSON.stringify({
+      type: "doc",
+      attrs: {
+        playgroundContentVersion: 22,
+        playgroundContentLocale: "zh",
+      },
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "T4-MIXED-reload" }],
+        },
+      ],
+    });
+    writeUnloadBackupSync({
+      noteId: "pg-1",
+      title: "格式试炼场",
+      content: polluted,
+      savedAt: 9_000,
+    });
+
+    await recoverPendingUnloadBackup("zh");
+
+    expect(saveNoteContent).not.toHaveBeenCalled();
+    expect(unloadBackupWouldRegressStoredNote(
+      {
+        noteId: "pg-1",
+        title: "格式试炼场",
+        content: polluted,
+        savedAt: 9_000,
+      },
+      {
+        title: "格式试炼场",
+        content: seed,
+        modifiedAt: 2_000,
+      },
+      "zh",
+    )).toBe(true);
+  });
+
+  it("persistUnloadDraftSync skips backup that would regress canonical playground in memory", () => {
+    const seed = JSON.stringify(buildPlaygroundContent("zh"));
+    useNoteStoreNotes = [
+      {
+        id: "pg-1",
+        title: "格式试炼场",
+        content: seed,
+        modifiedAt: Date.now(),
+      },
+    ];
+    registerUnloadDraftCollector(() => ({
+      noteId: "pg-1",
+      title: "格式试炼场",
+      content: JSON.stringify({
+        type: "doc",
+        attrs: {
+          playgroundContentVersion: 22,
+          playgroundContentLocale: "zh",
+        },
+        content: [
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "T4-MIXED-unmount" }],
+          },
+        ],
+      }),
+      savedAt: 0,
+    }));
+
+    persistUnloadDraftSync();
+
+    expect(peekUnloadBackup()).toBeNull();
   });
 
   it("keeps backup when playground flush reports save failure", async () => {
