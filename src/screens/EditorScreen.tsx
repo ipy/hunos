@@ -730,10 +730,12 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     storedTitle: note.title,
     storedContent: noteContentForEditor,
     pendingDraftContent: pendingContentRef.current,
+    pendingTitleDraft: pendingTitleRef.current,
     editorContent: editorInstance
       ? JSON.stringify(editorInstance.getJSON())
       : null,
     fallbackLocale: settings.locale,
+    isRestoringPlayground: playgroundRestoreSessionRef.current.isActive(),
   });
   const restorePlaygroundLabel = t("notes.actions.restorePlayground");
   const restorePlaygroundVisibleText =

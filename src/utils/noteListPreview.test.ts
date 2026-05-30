@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { buildPlaygroundContent } from "@/storage/formatPlaygroundNote";
+import {
+  buildPlaygroundContent,
+  formatPlaygroundMatchesCanonicalSeed,
+} from "@/storage/formatPlaygroundNote";
 import { extractPlainTextFromTiptap } from "@/graph/linkExtractor";
 import { deriveNoteListPreview } from "@/utils/noteListPreview";
 import { isFormatPlaygroundNote } from "@/storage/formatPlaygroundNote";
@@ -21,12 +24,20 @@ describe("deriveNoteListPreview", () => {
   });
 
   it("shows plain-text excerpt after playground body edits", () => {
-    const seedPlain = extractPlainTextFromTiptap(buildPlaygroundContent("zh"));
+    const seed = buildPlaygroundContent("zh");
+    const seedPlain = extractPlainTextFromTiptap(seed);
     const marker = "T2-BODY-iter3-marker";
+    const parsed = JSON.parse(JSON.stringify(seed)) as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    parsed.content.push({
+      type: "paragraph",
+      content: [{ type: "text", text: marker }],
+    });
     const preview = deriveNoteListPreview(
       {
         title: "格式试炼场",
-        content: JSON.stringify(buildPlaygroundContent("zh")),
+        content: JSON.stringify(parsed),
         contentPlain: `${seedPlain}\n${marker}`,
       },
       "格式示例",
@@ -34,6 +45,41 @@ describe("deriveNoteListPreview", () => {
     );
     expect(preview).toContain(marker);
     expect(preview).not.toBe("格式示例");
+  });
+
+  it("uses compact label for English playground when app locale is zh", () => {
+    const enContent = JSON.stringify(buildPlaygroundContent("en"));
+    const preview = deriveNoteListPreview(
+      {
+        title: "Format Playground",
+        content: enContent,
+        contentPlain: extractPlainTextFromTiptap(buildPlaygroundContent("en")),
+      },
+      "Formatting samples",
+      "zh",
+    );
+    expect(preview).toBe("Formatting samples");
+    expect(
+      formatPlaygroundMatchesCanonicalSeed(
+        "Format Playground",
+        enContent,
+        "zh",
+      ),
+    ).toBe(true);
+  });
+
+  it("uses compact label after durable restore even when contentPlain is stale", () => {
+    const enContent = JSON.stringify(buildPlaygroundContent("en"));
+    const preview = deriveNoteListPreview(
+      {
+        title: "Format Playground",
+        content: enContent,
+        contentPlain: "T5-MIXED-stale-plain",
+      },
+      "Formatting samples",
+      "en",
+    );
+    expect(preview).toBe("Formatting samples");
   });
 
   it("truncates regular note plain text", () => {

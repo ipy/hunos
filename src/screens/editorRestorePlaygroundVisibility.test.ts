@@ -187,6 +187,48 @@ describe("playground restore visibility", () => {
     ).toBe(false);
   });
 
+  it("hides restore during active restore session when stored row is canonical", () => {
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "NonCanonicalTitleFinal5",
+        storedTitle: "格式试炼场",
+        storedContent: seedContent,
+        pendingDraftContent: null,
+        editorContent: null,
+        fallbackLocale: "zh",
+        isRestoringPlayground: true,
+      }),
+    ).toBe(false);
+  });
+
+  it("shows restore when pending title draft renames canonical playground", () => {
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "NonCanonicalTitleFinal5",
+        storedTitle: "格式试炼场",
+        storedContent: seedContent,
+        pendingDraftContent: null,
+        pendingTitleDraft: "NonCanonicalTitleFinal5",
+        editorContent: null,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(true);
+  });
+
+  it("hides restore for unmodified English playground when app locale is zh", () => {
+    const enSeed = JSON.stringify(buildPlaygroundContent("en"));
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "Format Playground",
+        storedTitle: "Format Playground",
+        storedContent: enSeed,
+        pendingDraftContent: null,
+        editorContent: null,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
+
   it("hides restore after post-restore editor echo pending draft", () => {
     const parsed = JSON.parse(seedContent) as {
       content: Array<{ type: string; content?: Array<{ text?: string }> }>;
