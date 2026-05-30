@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import type { Editor } from "@tiptap/react";
 import {
@@ -169,6 +171,19 @@ describe("finalizePlaygroundRestoreInEditor", () => {
     ).toBe(true);
 
     expect(session.isActive()).toBe(false);
+  });
+
+  it("EditorScreen restore handler always bumps restoreEditorSyncTick", () => {
+    const source = readFileSync(
+      resolve(process.cwd(), "src/screens/EditorScreen.tsx"),
+      "utf8",
+    );
+    expect(source).toMatch(
+      /finalizePlaygroundRestoreInEditor\([\s\S]*?\);\s*if \(!applied && restoredContent\)/,
+    );
+    expect(source).toMatch(
+      /setRestoreEditorSyncTick\(\(tick\) => tick \+ 1\);\s*setTitleValue/,
+    );
   });
 
   it("keeps session active when editor is not ready so queued apply can finish", () => {

@@ -4,11 +4,11 @@ import { tagStorage } from "@/storage/tagStorage";
 import { isValidTagName } from "@/utils/tagPattern";
 
 function appendUniqueChild(parent: TagTreeNode, child: TagTreeNode): void {
-  if (
-    parent.children.some(
-      (existing) => existing.displayName === child.displayName,
-    )
-  ) {
+  const existing = parent.children.find(
+    (candidate) => candidate.displayName === child.displayName,
+  );
+  if (existing) {
+    existing.noteCount += child.noteCount;
     return;
   }
   parent.children.push(child);
@@ -25,10 +25,15 @@ function buildTree(tags: Tag[]): TagTreeNode[] {
   nodeMap.forEach((node) => {
     if (node.parentId && nodeMap.has(node.parentId)) {
       appendUniqueChild(nodeMap.get(node.parentId)!, node);
-    } else if (
-      !roots.some((existing) => existing.displayName === node.displayName)
-    ) {
-      roots.push(node);
+    } else {
+      const existingRoot = roots.find(
+        (existing) => existing.displayName === node.displayName,
+      );
+      if (existingRoot) {
+        existingRoot.noteCount += node.noteCount;
+      } else {
+        roots.push(node);
+      }
     }
   });
 

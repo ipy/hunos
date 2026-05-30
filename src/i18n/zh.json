@@ -20,6 +20,7 @@
     "title": "标签",
     "sections": {
       "allNotes": "全部笔记",
+      "tags": "标签",
       "untagged": "未分类",
       "archive": "归档",
       "trash": "废纸篓"
@@ -51,11 +52,13 @@
       "export": "导出",
       "restorePlayground": "恢复格式试炼场",
       "restorePlaygroundShort": "恢复",
-      "restorePlaygroundDone": "格式试炼场已恢复"
+      "restorePlaygroundDone": "格式试炼场已恢复",
+      "createNote": "创建新笔记"
     },
     "list": {
       "emptyPreview": "空笔记",
-      "playgroundPreview": "格式示例"
+      "playgroundPreview": "格式示例",
+      "pinned": "置顶"
     },
     "sort": {
       "modifiedAt": "修改日期",

@@ -3,7 +3,6 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import TaskList from "@tiptap/extension-task-list";
-import Highlight from "@tiptap/extension-highlight";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
@@ -17,6 +16,9 @@ import { ImagePasteDrop } from "./ImagePasteDrop";
 import {
   MarkdownBold,
   MarkdownBulletList,
+  MarkdownCode,
+  MarkdownHighlight,
+  MarkdownItalic,
   MarkdownShortcuts,
   MarkdownStrike,
   MarkdownTaskItem,
@@ -54,7 +56,6 @@ import { syncNoteContentInEditor } from "./noteSwitchContentUtils";
 import ListItem from "@tiptap/extension-list-item";
 import { SelectionBubbleMenu } from "./SelectionBubbleMenu";
 import { LinkEditorBubble } from "./LinkEditorBubble";
-import Italic from "@tiptap/extension-italic";
 import History from "@tiptap/extension-history";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/theme/ThemeContext";
@@ -165,6 +166,7 @@ export function TiptapEditor({
         bulletList: false,
         strike: false,
         italic: false,
+        code: false,
         listItem: false,
         history: false,
         codeBlock: false,
@@ -184,11 +186,8 @@ export function TiptapEditor({
         },
       }),
       MarkdownStrike,
-      Italic.extend({
-        addKeyboardShortcuts() {
-          return {};
-        },
-      }),
+      MarkdownItalic,
+      MarkdownCode,
       MarkdownBold,
       MarkdownShortcuts,
       MarkdownTableInput,
@@ -199,7 +198,7 @@ export function TiptapEditor({
       }),
       TaskList,
       MarkdownTaskItem.configure({ nested: true }),
-      Highlight.configure({ multicolor: true }),
+      MarkdownHighlight.configure({ multicolor: true }),
       Underline,
       Link.configure({
         openOnClick: true,

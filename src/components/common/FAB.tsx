@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/theme/ThemeContext";
 import { Icon } from "./Icon";
 
@@ -7,13 +8,14 @@ interface FABProps {
 }
 
 export function FAB({ onPress }: FABProps) {
+  const { t } = useTranslation();
   const theme = useTheme();
 
   return (
     <button
       onClick={onPress}
       data-testid="create-note-fab"
-      aria-label="Create new note"
+      aria-label={t("notes.actions.createNote")}
       style={{
         position: "fixed",
         bottom: 24,

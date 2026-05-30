@@ -20,6 +20,7 @@
     "title": "Tags",
     "sections": {
       "allNotes": "All Notes",
+      "tags": "Tags",
       "untagged": "Untagged",
       "archive": "Archive",
       "trash": "Trash"
@@ -51,11 +52,13 @@
       "export": "Export",
       "restorePlayground": "Restore Format Playground",
       "restorePlaygroundShort": "Restore",
-      "restorePlaygroundDone": "Format Playground restored"
+      "restorePlaygroundDone": "Format Playground restored",
+      "createNote": "Create new note"
     },
     "list": {
       "emptyPreview": "Empty note",
-      "playgroundPreview": "Formatting samples"
+      "playgroundPreview": "Formatting samples",
+      "pinned": "Pinned"
     },
     "sort": {
       "modifiedAt": "Date Modified",

@@ -5,6 +5,11 @@ import {
   wrappingInputRule,
 } from "@tiptap/core";
 import Bold, { starInputRegex } from "@tiptap/extension-bold";
+import Italic, { underscoreInputRegex } from "@tiptap/extension-italic";
+import Code, { inputRegex as codeInputRegex } from "@tiptap/extension-code";
+import Highlight, {
+  inputRegex as highlightInputRegex,
+} from "@tiptap/extension-highlight";
 import Strike, {
   inputRegex as strikeInputRegex,
 } from "@tiptap/extension-strike";
@@ -189,6 +194,46 @@ export const MarkdownBold = Bold.extend({
     return [
       markInputRule({
         find: starInputRegex,
+        type: this.type,
+      }),
+    ];
+  },
+});
+
+/** Italic via `_` (Bear / GFM parity). */
+export const MarkdownItalic = Italic.extend({
+  addInputRules() {
+    return [
+      markInputRule({
+        find: underscoreInputRegex,
+        type: this.type,
+      }),
+    ];
+  },
+
+  addKeyboardShortcuts() {
+    return {};
+  },
+});
+
+/** Inline code via backticks. */
+export const MarkdownCode = Code.extend({
+  addInputRules() {
+    return [
+      markInputRule({
+        find: codeInputRegex,
+        type: this.type,
+      }),
+    ];
+  },
+});
+
+/** Highlight via `==` (Bear parity). */
+export const MarkdownHighlight = Highlight.extend({
+  addInputRules() {
+    return [
+      markInputRule({
+        find: highlightInputRegex,
         type: this.type,
       }),
     ];

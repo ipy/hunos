@@ -20,6 +20,7 @@
     "title": "Etiquetas",
     "sections": {
       "allNotes": "Todas las Notas",
+      "tags": "Etiquetas",
       "untagged": "Sin Etiqueta",
       "archive": "Archivo",
       "trash": "Papelera"
@@ -51,11 +52,13 @@
       "export": "Exportar",
       "restorePlayground": "Restaurar patio de formatos",
       "restorePlaygroundShort": "Restaurar",
-      "restorePlaygroundDone": "Patio de formatos restaurado"
+      "restorePlaygroundDone": "Patio de formatos restaurado",
+      "createNote": "Crear nueva nota"
     },
     "list": {
       "emptyPreview": "Nota vacía",
-      "playgroundPreview": "Muestras de formato"
+      "playgroundPreview": "Muestras de formato",
+      "pinned": "Fijadas"
     },
     "sort": {
       "modifiedAt": "Fecha de Modificación",

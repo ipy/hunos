@@ -697,10 +697,10 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       });
       if (!applied && restoredContent) {
         setEditorSeedContent(restoredContent);
-        setRestoreEditorSyncTick((tick) => tick + 1);
-      } else {
+      } else if (applied || !restoredContent) {
         restoreSession.end();
       }
+      setRestoreEditorSyncTick((tick) => tick + 1);
       setTitleValue(getFormatPlaygroundTitle(seedLocale));
       if (!restoreSession.isActive()) {
         showToast(t("notes.actions.restorePlaygroundDone"));

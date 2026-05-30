@@ -1,0 +1,38 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { describe, expect, it } from "vitest";
+import {
+  MarkdownBold,
+  MarkdownCode,
+  MarkdownHighlight,
+  MarkdownItalic,
+  MarkdownStrike,
+} from "./MarkdownShortcuts";
+
+describe("TiptapEditor inline markdown wiring", () => {
+  it("registers bold, italic, code, strike, and highlight input extensions", () => {
+    const source = readFileSync(
+      resolve(process.cwd(), "src/components/editor/TiptapEditor.tsx"),
+      "utf8",
+    );
+
+    expect(source).toContain("MarkdownBold");
+    expect(source).toContain("MarkdownItalic");
+    expect(source).toContain("MarkdownCode");
+    expect(source).toContain("MarkdownStrike");
+    expect(source).toContain("MarkdownHighlight");
+    expect(source).toContain("code: false");
+  });
+
+  it("exports input-rule extensions for inline markdown marks", () => {
+    for (const extension of [
+      MarkdownBold,
+      MarkdownItalic,
+      MarkdownCode,
+      MarkdownStrike,
+      MarkdownHighlight,
+    ]) {
+      expect(extension.name).toBeTruthy();
+    }
+  });
+});

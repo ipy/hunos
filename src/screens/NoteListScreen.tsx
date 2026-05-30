@@ -596,7 +596,7 @@ export function NoteListScreen({ layout = "mobile" }: NoteListScreenProps) {
                   letterSpacing: 0.5,
                 }}
               >
-                Pinned
+                {t("notes.list.pinned")}
               </div>
             )}
             {pinnedNotes.map((note, i) => (

@@ -261,7 +261,7 @@ export function TagsScreen({ layout = "mobile" }: TagsScreenProps) {
                 letterSpacing: 0.6,
               }}
             >
-              {t("tags.sections.tags", "Tags")}
+              {t("tags.sections.tags")}
             </div>
             {tagTree.map((node) => (
               <TagItem key={node.id} node={node} onNavigate={hideSidebar} />
