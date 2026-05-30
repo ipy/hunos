@@ -8,6 +8,8 @@ import {
   INLINE_FORMAT_ITEMS,
   type InlineFormatItem,
 } from "./inlineFormatActions";
+import type { Editor } from "@tiptap/react";
+import { insertImageFromToolbarPicker } from "./imageInsertUtils";
 import { runToolbarActionWithOverlaySelection } from "@/utils/editorOverlaySelection";
 
 const TOOLBAR_I18N_KEYS: Record<string, string> = {
