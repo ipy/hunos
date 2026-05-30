@@ -693,6 +693,25 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     }
   };
 
+  const showRestorePlayground = useMemo(() => {
+    if (!note) return false;
+    return shouldShowPlaygroundRestoreButton({
+      displayTitle: titleValue.trim() || note.title,
+      storedTitle: note.title,
+      storedContent: noteContentForEditor,
+      pendingDraftContent: pendingContentRef.current,
+      pendingTitleDraft: pendingTitleRef.current,
+      fallbackLocale: settings.locale,
+      isRestoringPlayground: playgroundRestoreSessionRef.current.isActive(),
+    });
+  }, [
+    note,
+    noteContentForEditor,
+    titleValue,
+    settings.locale,
+    restoreEditorSyncTick,
+  ]);
+
   if (!note) {
     const hasNotes = notes.length > 0;
     return (
@@ -740,26 +759,6 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     );
   }
 
-  const showRestorePlayground = useMemo(
-    () =>
-      shouldShowPlaygroundRestoreButton({
-        displayTitle: titleValue.trim() || note.title,
-        storedTitle: note.title,
-        storedContent: noteContentForEditor,
-        pendingDraftContent: pendingContentRef.current,
-        pendingTitleDraft: pendingTitleRef.current,
-        fallbackLocale: settings.locale,
-        isRestoringPlayground:
-          playgroundRestoreSessionRef.current.isActive(),
-      }),
-    [
-      note.title,
-      noteContentForEditor,
-      titleValue,
-      settings.locale,
-      restoreEditorSyncTick,
-    ],
-  );
   const restorePlaygroundLabel = t("notes.actions.restorePlayground");
   const restorePlaygroundVisibleText =
     layout === "mobile"
