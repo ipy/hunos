@@ -73,6 +73,34 @@ function findTryHintText(content: unknown): string {
   return extractTryHintText(findTryHintNode(content));
 }
 
+const WIKI_LINK_REGEX = /\[\[([^\]]+)\]\]/g;
+
+function findWikiLinkTitlesInText(text: string): string[] {
+  const titles: string[] = [];
+  WIKI_LINK_REGEX.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = WIKI_LINK_REGEX.exec(text)) !== null) {
+    titles.push(match[1].trim());
+  }
+  return titles;
+}
+
+function findTagsParagraphText(content: unknown, locale: "en" | "zh"): string {
+  const doc = content as {
+    content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+  };
+  const heading =
+    locale === "zh" ? "标签与链接" : "Tags & Links";
+  const tagsSectionIndex = doc.content.findIndex(
+    (node) =>
+      node.type === "heading" && node.content?.[0]?.text === heading,
+  );
+  const tagsParagraph = doc.content[tagsSectionIndex + 1];
+  return (tagsParagraph?.content ?? [])
+    .map((node) => node.text ?? "")
+    .join("");
+}
+
 describe("isFormatPlaygroundNote", () => {
   it("matches canonical playground titles", () => {
     expect(isFormatPlaygroundNote("Format Playground")).toBe(true);
@@ -137,6 +165,22 @@ describe("buildPlaygroundContent", () => {
       .join("");
     expect(joined).not.toContain(" and link to ");
     expect(joined).toContain("并链接");
+  });
+
+  it("does not seed spurious wiki links in try-hint prose", () => {
+    for (const locale of ["en", "zh"] as const) {
+      const content = buildPlaygroundContent(locale);
+      expect(findWikiLinkTitlesInText(findTryHintText(content))).toEqual([]);
+    }
+  });
+
+  it("keeps the seed wiki link in the tags section", () => {
+    expect(
+      findWikiLinkTitlesInText(findTagsParagraphText(buildPlaygroundContent("en"), "en")),
+    ).toEqual(["Welcome to Hunos"]);
+    expect(
+      findWikiLinkTitlesInText(findTagsParagraphText(buildPlaygroundContent("zh"), "zh")),
+    ).toEqual(["欢迎使用 Hunos"]);
   });
 });
 
@@ -656,7 +700,7 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(tryHintText).toContain("80px 最小高度");
     expect(tryHintText).toContain("点击或轻触内嵌图片");
     expect(tryHintText).toContain("拖动手柄调整大小");
-    expect(tryHintText).toContain("[[ 和 ]] 括号");
+    expect(tryHintText).toContain("括号角标");
   });
 
   it("updates intro, images section, and tryHint for stale v10 playground notes", () => {
@@ -980,7 +1024,7 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(enTryHint).toContain("minimum height of 80px");
     expect(enTryHint).toContain("click or tap embedded images");
     expect(enTryHint).toContain("resize handle");
-    expect(enTryHint).toContain("[[ and ]] brackets reveal at the caret");
+    expect(enTryHint).toContain("bracket delimiters reveal at the caret");
     expect(
       parsedEn.content[parsedEn.content.length - 1]?.content?.[0]?.text,
     ).toBe("user-added block after seed");
@@ -1013,20 +1057,20 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(zhTryHint).toContain("80px 最小高度");
     expect(zhTryHint).toContain("点击或轻触内嵌图片");
     expect(zhTryHint).toContain("拖动手柄调整大小");
-    expect(zhTryHint).toContain("[[ 和 ]] 括号");
+    expect(zhTryHint).toContain("括号角标");
   });
 
   it("seeds tryHint topics in fresh en and zh content", () => {
     const enTryHint = findTryHintText(buildPlaygroundContent("en"));
     expect(enTryHint).toContain("minimum height of 80px");
     expect(enTryHint).toContain("resize handle");
-    expect(enTryHint).toContain("[[ and ]] brackets reveal at the caret");
+    expect(enTryHint).toContain("bracket delimiters reveal at the caret");
 
     const zhTryHint = findTryHintText(buildPlaygroundContent("zh"));
     expect(zhTryHint).toContain("80px 最小高度");
     expect(zhTryHint).toContain("点击或轻触内嵌图片");
     expect(zhTryHint).toContain("拖动手柄调整大小");
-    expect(zhTryHint).toContain("[[ 和 ]] 括号");
+    expect(zhTryHint).toContain("括号角标");
     expect(enTryHint).toContain("~~strike~~");
     expect(enTryHint).toContain("==highlight==");
     expect(zhTryHint).toContain("~~删除线~~");
@@ -1039,6 +1083,70 @@ describe("migratePlaygroundContentIfStale", () => {
       expect(tryHintNode?.type).toBe("bulletList");
       expect((tryHintNode?.content ?? []).length).toBeGreaterThanOrEqual(4);
     }
+  });
+
+  it("updates tryHint to v22 for stale v21 playground notes", () => {
+    const staleEn = buildPlaygroundContent("en") as {
+      type: "doc";
+      attrs?: { playgroundContentVersion?: number };
+      content: Array<{ type: string; content?: unknown[] }>;
+    };
+    staleEn.attrs = { playgroundContentVersion: 21 };
+    const staleTryHint = findTryHintNode(staleEn) as {
+      content?: Array<{
+        content?: Array<{ content?: Array<{ text?: string }> }>;
+      }>;
+    };
+    const wikiBullet = staleTryHint.content?.[4];
+    const wikiTextNode = wikiBullet?.content?.[0]?.content?.[0];
+    if (wikiTextNode) {
+      wikiTextNode.text =
+        "Type # for tag autocomplete, or [[ to link notes with autocomplete ([[ and ]] brackets reveal at the caret when editing a wiki link).";
+    }
+
+    const migratedEn = migratePlaygroundContentIfStale(
+      JSON.stringify(staleEn),
+      "en",
+    );
+    expect(migratedEn).not.toBeNull();
+
+    const parsedEn = JSON.parse(migratedEn!) as {
+      attrs?: { playgroundContentVersion?: number };
+    };
+    expect(parsedEn.attrs?.playgroundContentVersion).toBe(
+      PLAYGROUND_CONTENT_VERSION,
+    );
+    expect(findTryHintText(parsedEn)).toContain(
+      "bracket delimiters reveal at the caret",
+    );
+    expect(findWikiLinkTitlesInText(findTryHintText(parsedEn))).toEqual([]);
+
+    const staleZh = buildPlaygroundContent("zh") as {
+      type: "doc";
+      attrs?: { playgroundContentVersion?: number };
+    };
+    staleZh.attrs = { playgroundContentVersion: 21 };
+    const staleZhTryHint = findTryHintNode(staleZh) as {
+      content?: Array<{
+        content?: Array<{ content?: Array<{ text?: string }> }>;
+      }>;
+    };
+    const zhWikiBullet = staleZhTryHint.content?.[4];
+    const zhWikiTextNode = zhWikiBullet?.content?.[0]?.content?.[0];
+    if (zhWikiTextNode) {
+      zhWikiTextNode.text =
+        "输入 # 可用标签自动完成，或输入 [[ 链接笔记（编辑已有链接时光标处会显示 [[ 和 ]] 括号）。";
+    }
+
+    const migratedZh = migratePlaygroundContentIfStale(
+      JSON.stringify(staleZh),
+      "zh",
+    );
+    expect(migratedZh).not.toBeNull();
+    expect(findTryHintText(JSON.parse(migratedZh!))).toContain("括号角标");
+    expect(
+      findWikiLinkTitlesInText(findTryHintText(JSON.parse(migratedZh!))),
+    ).toEqual([]);
   });
 
   it("updates tryHint to v21 for stale v20 playground notes", () => {

@@ -10,12 +10,15 @@ const RAWFILE_PATH = join(
 describe("harmony rawfile freshness", () => {
   const rawfile = readFileSync(RAWFILE_PATH, "utf-8");
 
-  it("includes v21 tryHintBullets playground seed", () => {
+  it("includes v22 tryHintBullets playground seed", () => {
     expect(rawfile).toContain("tryHintBullets");
     expect(rawfile).toContain("~~strike~~");
     expect(rawfile).toContain("==highlight==");
     expect(rawfile).toContain("~~删除线~~");
     expect(rawfile).toContain("==高亮==");
+    expect(rawfile).toContain("bracket delimiters reveal at the caret");
+    expect(rawfile).toContain("括号角标");
+    expect(rawfile).not.toContain("[[ 和 ]] 括号");
   });
 
   it("includes strike and highlight markdown input rules (iter 88/89)", () => {
