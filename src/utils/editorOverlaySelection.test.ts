@@ -6,12 +6,14 @@ import {
   getSavedEditorOverlaySelection,
   restoreEditorOverlaySelection,
   runToolbarActionWithOverlaySelection,
+  runToolbarChain,
 } from "./editorOverlaySelection";
 
 function mockEditor(selection: { from: number; to: number }, docSize = 100) {
   const chain = {
     focus: vi.fn().mockReturnThis(),
     setTextSelection: vi.fn().mockReturnThis(),
+    toggleBold: vi.fn().mockReturnThis(),
     run: vi.fn(() => true),
   };
 
@@ -60,7 +62,22 @@ describe("editorOverlaySelection", () => {
     expect(editor._chain.run).toHaveBeenCalled();
   });
 
-  it("runs toolbar actions after restoring overlay selection when panel is open", () => {
+  it("applies toolbar commands in the same chain as overlay selection restore", () => {
+    clearEditorOverlaySelection();
+    const editor = mockEditor({ from: 5, to: 15 });
+    captureEditorOverlaySelection(editor as never);
+
+    runToolbarChain(editor as never, true, (chain) => chain.toggleBold());
+
+    expect(editor._chain.setTextSelection).toHaveBeenCalledWith({
+      from: 5,
+      to: 15,
+    });
+    expect(editor._chain.toggleBold).toHaveBeenCalled();
+    expect(editor._chain.run).toHaveBeenCalledTimes(1);
+  });
+
+  it("runs toolbar actions with overlay context for nested chain helpers", () => {
     clearEditorOverlaySelection();
     const editor = mockEditor({ from: 5, to: 15 });
     captureEditorOverlaySelection(editor as never);
@@ -68,10 +85,6 @@ describe("editorOverlaySelection", () => {
 
     runToolbarActionWithOverlaySelection(editor as never, true, action);
 
-    expect(editor._chain.setTextSelection).toHaveBeenCalledWith({
-      from: 5,
-      to: 15,
-    });
     expect(action).toHaveBeenCalledWith(editor);
   });
 

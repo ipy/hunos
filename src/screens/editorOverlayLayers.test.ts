@@ -24,6 +24,7 @@ describe("editor overlay layers", () => {
     expect(infoPanel).toContain('data-testid="stats-panel-backdrop"');
     expect(infoPanel).toContain("zIndex: 48");
     expect(toolbar).toContain("runToolbarActionWithOverlaySelection");
+    expect(toolbar).toContain("runToolbarChain");
     expect(toolbar).toContain('import type { Editor } from "@tiptap/react"');
     expect(toolbar).toContain("insertImageFromToolbarPicker");
     expect(toolbar).toContain('data-testid="editor-toolbar"');

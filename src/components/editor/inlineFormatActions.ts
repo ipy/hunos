@@ -1,7 +1,10 @@
 import i18n from "@/i18n";
 import { useUIStore } from "@/store/uiStore";
-import { focusEditorWithOverlaySelection } from "@/utils/editorOverlaySelection";
-import type { Editor } from "@tiptap/react";
+import {
+  isToolbarFormatOverlayOpen,
+  runToolbarChain,
+} from "@/utils/editorOverlaySelection";
+import type { ChainedCommands, Editor } from "@tiptap/react";
 import {
   captureLinkEditorSelection,
   clearLinkEditorSelection,
@@ -18,22 +21,28 @@ export interface InlineFormatItem {
 export function toggleMark(
   editor: Editor,
   markName: string,
-  toggleCmd: () => boolean,
+  applyMark: (chain: ChainedCommands) => ChainedCommands,
 ) {
-  focusEditorWithOverlaySelection(editor);
+  const overlayOpen = isToolbarFormatOverlayOpen();
+
   if (editor.isActive(markName)) {
-    editor.chain().focus().extendMarkRange(markName).unsetMark(markName).run();
-  } else if (editor.state.selection.empty) {
-    const { $from } = editor.state.selection;
-    const start = $from.start();
-    const end = $from.end();
-    if (end > start) {
-      editor.chain().focus().setTextSelection({ from: start, to: end }).run();
-    }
-    toggleCmd();
-  } else {
-    toggleCmd();
+    runToolbarChain(editor, overlayOpen, (chain) =>
+      chain.extendMarkRange(markName).unsetMark(markName),
+    );
+    return;
   }
+
+  runToolbarChain(editor, overlayOpen, (chain) => {
+    if (editor.state.selection.empty) {
+      const { $from } = editor.state.selection;
+      const start = $from.start();
+      const end = $from.end();
+      if (end > start) {
+        chain = chain.setTextSelection({ from: start, to: end });
+      }
+    }
+    return applyMark(chain);
+  });
 }
 
 export function isValidLinkUrl(url: string): boolean {
@@ -133,40 +142,33 @@ export const INLINE_FORMAT_ITEMS: InlineFormatItem[] = [
   {
     icon: "bold",
     label: "Bold",
-    action: (e) =>
-      toggleMark(e, "bold", () => e.chain().focus().toggleBold().run()),
+    action: (e) => toggleMark(e, "bold", (chain) => chain.toggleBold()),
     isActive: (e) => e.isActive("bold"),
   },
   {
     icon: "italic",
     label: "Italic",
-    action: (e) =>
-      toggleMark(e, "italic", () => e.chain().focus().toggleItalic().run()),
+    action: (e) => toggleMark(e, "italic", (chain) => chain.toggleItalic()),
     isActive: (e) => e.isActive("italic"),
   },
   {
     icon: "underline",
     label: "Underline",
     action: (e) =>
-      toggleMark(e, "underline", () =>
-        e.chain().focus().toggleUnderline().run(),
-      ),
+      toggleMark(e, "underline", (chain) => chain.toggleUnderline()),
     isActive: (e) => e.isActive("underline"),
   },
   {
     icon: "strikethrough",
     label: "Strikethrough",
-    action: (e) =>
-      toggleMark(e, "strike", () => e.chain().focus().toggleStrike().run()),
+    action: (e) => toggleMark(e, "strike", (chain) => chain.toggleStrike()),
     isActive: (e) => e.isActive("strike"),
   },
   {
     icon: "highlight",
     label: "Highlight",
     action: (e) =>
-      toggleMark(e, "highlight", () =>
-        e.chain().focus().toggleHighlight().run(),
-      ),
+      toggleMark(e, "highlight", (chain) => chain.toggleHighlight()),
     isActive: (e) => e.isActive("highlight"),
   },
   {

@@ -10,6 +10,7 @@ import { clearLinkEditorSelection } from "./linkEditorSelection";
 import {
   captureEditorOverlaySelection,
   clearEditorOverlaySelection,
+  runToolbarActionWithOverlaySelection,
 } from "@/utils/editorOverlaySelection";
 
 const showToast = vi.fn();
@@ -118,7 +119,7 @@ describe("link editor helpers", () => {
 });
 
 describe("toggleMark with overlay selection", () => {
-  it("restores saved selection before applying a mark", () => {
+  it("restores saved selection before applying a mark in one chain", () => {
     clearEditorOverlaySelection();
     const chain = {
       focus: vi.fn().mockReturnThis(),
@@ -147,13 +148,15 @@ describe("toggleMark with overlay selection", () => {
       },
     } as never);
 
-    toggleMark(editor as never, "bold", () =>
-      editor.chain().focus().toggleBold().run(),
+    runToolbarActionWithOverlaySelection(editor as never, true, (ed) =>
+      toggleMark(ed, "bold", (c) => c.toggleBold()),
     );
 
     expect(chain.setTextSelection).toHaveBeenCalledWith({
       from: 42,
       to: 58,
     });
+    expect(chain.toggleBold).toHaveBeenCalled();
+    expect(chain.run).toHaveBeenCalledTimes(1);
   });
 });

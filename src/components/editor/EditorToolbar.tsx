@@ -10,7 +10,11 @@ import {
 } from "./inlineFormatActions";
 import type { Editor } from "@tiptap/react";
 import { insertImageFromToolbarPicker } from "./imageInsertUtils";
-import { runToolbarActionWithOverlaySelection } from "@/utils/editorOverlaySelection";
+import {
+  isToolbarFormatOverlayOpen,
+  runToolbarActionWithOverlaySelection,
+  runToolbarChain,
+} from "@/utils/editorOverlaySelection";
 
 const TOOLBAR_I18N_KEYS: Record<string, string> = {
   bold: "editor.toolbar.bold",
@@ -45,55 +49,82 @@ const BLOCK_ITEMS: ToolbarButton[] = [
   {
     icon: "heading1",
     label: "H1",
-    action: (e) => e.chain().focus().toggleHeading({ level: 1 }).run(),
+    action: (e) =>
+      runToolbarChain(e, isToolbarFormatOverlayOpen(), (chain) =>
+        chain.toggleHeading({ level: 1 }),
+      ),
     isActive: (e) => e.isActive("heading", { level: 1 }),
   },
   {
     icon: "heading2",
     label: "H2",
-    action: (e) => e.chain().focus().toggleHeading({ level: 2 }).run(),
+    action: (e) =>
+      runToolbarChain(e, isToolbarFormatOverlayOpen(), (chain) =>
+        chain.toggleHeading({ level: 2 }),
+      ),
     isActive: (e) => e.isActive("heading", { level: 2 }),
   },
   {
     icon: "heading3",
     label: "H3",
-    action: (e) => e.chain().focus().toggleHeading({ level: 3 }).run(),
+    action: (e) =>
+      runToolbarChain(e, isToolbarFormatOverlayOpen(), (chain) =>
+        chain.toggleHeading({ level: 3 }),
+      ),
     isActive: (e) => e.isActive("heading", { level: 3 }),
   },
   {
     icon: "list",
     label: "•",
-    action: (e) => e.chain().focus().toggleBulletList().run(),
+    action: (e) =>
+      runToolbarChain(e, isToolbarFormatOverlayOpen(), (chain) =>
+        chain.toggleBulletList(),
+      ),
     isActive: (e) => e.isActive("bulletList"),
   },
   {
     icon: "orderedList",
     label: "1.",
-    action: (e) => e.chain().focus().toggleOrderedList().run(),
+    action: (e) =>
+      runToolbarChain(e, isToolbarFormatOverlayOpen(), (chain) =>
+        chain.toggleOrderedList(),
+      ),
     isActive: (e) => e.isActive("orderedList"),
   },
   {
     icon: "taskList",
     label: "☑",
-    action: (e) => e.chain().focus().toggleTaskList().run(),
+    action: (e) =>
+      runToolbarChain(e, isToolbarFormatOverlayOpen(), (chain) =>
+        chain.toggleTaskList(),
+      ),
     isActive: (e) => e.isActive("taskList"),
   },
   {
     icon: "quote",
     label: "❝",
-    action: (e) => e.chain().focus().toggleBlockquote().run(),
+    action: (e) =>
+      runToolbarChain(e, isToolbarFormatOverlayOpen(), (chain) =>
+        chain.toggleBlockquote(),
+      ),
     isActive: (e) => e.isActive("blockquote"),
   },
   {
     icon: "code",
     label: "</>",
-    action: (e) => e.chain().focus().toggleCodeBlock().run(),
+    action: (e) =>
+      runToolbarChain(e, isToolbarFormatOverlayOpen(), (chain) =>
+        chain.toggleCodeBlock(),
+      ),
     isActive: (e) => e.isActive("codeBlock"),
   },
   {
     icon: "divider",
     label: "—",
-    action: (e) => e.chain().focus().setHorizontalRule().run(),
+    action: (e) =>
+      runToolbarChain(e, isToolbarFormatOverlayOpen(), (chain) =>
+        chain.setHorizontalRule(),
+      ),
   },
 ];
 
@@ -116,11 +147,9 @@ const INSERT_ITEMS_BASE: ToolbarButton[] = [
     icon: "table",
     label: "⊞",
     action: (e) =>
-      e
-        .chain()
-        .focus()
-        .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
-        .run(),
+      runToolbarChain(e, isToolbarFormatOverlayOpen(), (chain) =>
+        chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }),
+      ),
   },
 ];
 
@@ -161,11 +190,7 @@ export function EditorToolbar({
   const handleAction = useCallback(
     (action: (e: Editor) => void) => {
       if (!editor) return;
-      runToolbarActionWithOverlaySelection(
-        editor,
-        formatOverlayOpen,
-        action,
-      );
+      runToolbarActionWithOverlaySelection(editor, formatOverlayOpen, action);
       setTick((t) => t + 1);
     },
     [editor, formatOverlayOpen],

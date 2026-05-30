@@ -1,4 +1,4 @@
-import type { Editor } from "@tiptap/react";
+import type { ChainedCommands, Editor } from "@tiptap/react";
 
 export interface SavedEditorSelection {
   from: number;
@@ -6,6 +6,7 @@ export interface SavedEditorSelection {
 }
 
 let savedSelection: SavedEditorSelection | null = null;
+let toolbarFormatOverlayOpen = false;
 
 export function captureEditorOverlaySelection(editor: Editor): void {
   const { from, to } = editor.state.selection;
@@ -22,6 +23,10 @@ export function hasSavedEditorOverlaySelection(): boolean {
 
 export function clearEditorOverlaySelection(): void {
   savedSelection = null;
+}
+
+export function isToolbarFormatOverlayOpen(): boolean {
+  return toolbarFormatOverlayOpen;
 }
 
 function clampSavedSelection(editor: Editor): SavedEditorSelection | null {
@@ -49,7 +54,7 @@ export function focusEditorWithOverlaySelection(editor: Editor): boolean {
     .run();
 }
 
-/** @deprecated Prefer focusEditorWithOverlaySelection for toolbar commands. */
+/** @deprecated Prefer runToolbarChain for toolbar commands. */
 export function restoreEditorOverlaySelection(editor: Editor): boolean {
   if (editor.isDestroyed) return false;
 
@@ -59,13 +64,39 @@ export function restoreEditorOverlaySelection(editor: Editor): boolean {
   return editor.commands.setTextSelection(selection);
 }
 
+/** Run a toolbar command in one chain, restoring overlay selection before the command. */
+export function runToolbarChain(
+  editor: Editor,
+  formatOverlayOpen: boolean,
+  build: (chain: ChainedCommands) => ChainedCommands,
+): boolean {
+  if (editor.isDestroyed) return false;
+
+  let chain = editor.chain();
+  if (formatOverlayOpen && hasSavedEditorOverlaySelection()) {
+    const selection = clampSavedSelection(editor);
+    if (selection) {
+      return build(
+        chain.focus().setTextSelection({
+          from: selection.from,
+          to: selection.to,
+        }),
+      ).run();
+    }
+  }
+
+  return build(chain.focus()).run();
+}
+
 export function runToolbarActionWithOverlaySelection(
   editor: Editor,
   formatOverlayOpen: boolean,
   action: (editor: Editor) => void,
 ): void {
-  if (formatOverlayOpen && hasSavedEditorOverlaySelection()) {
-    focusEditorWithOverlaySelection(editor);
+  toolbarFormatOverlayOpen = formatOverlayOpen;
+  try {
+    action(editor);
+  } finally {
+    toolbarFormatOverlayOpen = false;
   }
-  action(editor);
 }
