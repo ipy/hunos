@@ -7,6 +7,7 @@ import {
   restoreEditorOverlaySelection,
   runToolbarActionWithOverlaySelection,
   runToolbarChain,
+  syncEditorOverlaySelectionBeforeToolbarCommand,
 } from "./editorOverlaySelection";
 
 function mockEditor(selection: { from: number; to: number }, docSize = 100) {
@@ -92,6 +93,41 @@ describe("editorOverlaySelection", () => {
     captureEditorOverlaySelection(mockEditor({ from: 1, to: 3 }) as never);
     clearEditorOverlaySelection();
     expect(getSavedEditorOverlaySelection()).toBeNull();
+  });
+
+  it("refreshes bookmark from a live non-empty range before toolbar commands", () => {
+    clearEditorOverlaySelection();
+    const editor = mockEditor({ from: 1, to: 2 });
+    captureEditorOverlaySelection(editor as never);
+
+    editor.state.selection = { from: 30, to: 45 };
+    syncEditorOverlaySelectionBeforeToolbarCommand(editor as never);
+
+    expect(getSavedEditorOverlaySelection()).toEqual({ from: 30, to: 45 });
+  });
+
+  it("keeps a non-empty bookmark when the editor selection collapsed on blur", () => {
+    clearEditorOverlaySelection();
+    const editor = mockEditor({ from: 10, to: 25 });
+    captureEditorOverlaySelection(editor as never);
+
+    editor.state.selection = { from: 0, to: 0 };
+    syncEditorOverlaySelectionBeforeToolbarCommand(editor as never);
+
+    expect(getSavedEditorOverlaySelection()).toEqual({ from: 10, to: 25 });
+  });
+
+  it("syncs before overlay toolbar actions run", () => {
+    clearEditorOverlaySelection();
+    const editor = mockEditor({ from: 1, to: 2 });
+    captureEditorOverlaySelection(editor as never);
+    editor.state.selection = { from: 40, to: 55 };
+    const action = vi.fn();
+
+    runToolbarActionWithOverlaySelection(editor as never, true, action);
+
+    expect(getSavedEditorOverlaySelection()).toEqual({ from: 40, to: 55 });
+    expect(action).toHaveBeenCalled();
   });
 
   it("clamps restored selection to the current document size", () => {

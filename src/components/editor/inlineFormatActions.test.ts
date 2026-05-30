@@ -203,4 +203,89 @@ describe("toggleMark with overlay selection", () => {
     });
     expect(chain.toggleBold).toHaveBeenCalled();
   });
+
+  it("does not use stale isActive at H1 when a saved overlay range exists", () => {
+    clearEditorOverlaySelection();
+    const chain = {
+      focus: vi.fn().mockReturnThis(),
+      setTextSelection: vi.fn().mockReturnThis(),
+      extendMarkRange: vi.fn().mockReturnThis(),
+      unsetMark: vi.fn().mockReturnThis(),
+      toggleBold: vi.fn().mockReturnThis(),
+      run: vi.fn(() => true),
+    };
+    const editor = {
+      isActive: vi.fn(() => true),
+      isDestroyed: false,
+      state: {
+        selection: {
+          empty: true,
+          $from: { start: () => 1, end: () => 5 },
+        },
+        doc: { content: { size: 300 } },
+      },
+      chain: vi.fn(() => chain),
+      commands: {
+        focus: vi.fn(() => true),
+        setTextSelection: vi.fn(() => true),
+      },
+    };
+
+    captureEditorOverlaySelection({
+      state: {
+        selection: { from: 80, to: 95 },
+        doc: { content: { size: 300 } },
+      },
+    } as never);
+
+    runToolbarActionWithOverlaySelection(editor as never, true, (ed) =>
+      toggleMark(ed, "bold", (c) => c.toggleBold()),
+    );
+
+    expect(chain.extendMarkRange).not.toHaveBeenCalled();
+    expect(chain.unsetMark).not.toHaveBeenCalled();
+    expect(chain.setTextSelection).toHaveBeenCalledWith({ from: 80, to: 95 });
+    expect(chain.toggleBold).toHaveBeenCalled();
+  });
+
+  it("applies bold via saved collapsed bookmark without stale word expansion", () => {
+    clearEditorOverlaySelection();
+    const chain = {
+      focus: vi.fn().mockReturnThis(),
+      setTextSelection: vi.fn().mockReturnThis(),
+      toggleBold: vi.fn().mockReturnThis(),
+      run: vi.fn(() => true),
+    };
+    const editor = {
+      isActive: vi.fn(() => false),
+      isDestroyed: false,
+      state: {
+        selection: {
+          empty: true,
+          $from: { start: () => 1, end: () => 5 },
+        },
+        doc: { content: { size: 300 } },
+      },
+      chain: vi.fn(() => chain),
+      commands: {
+        focus: vi.fn(() => true),
+        setTextSelection: vi.fn(() => true),
+      },
+    };
+
+    captureEditorOverlaySelection({
+      state: {
+        selection: { from: 50, to: 50 },
+        doc: { content: { size: 300 } },
+      },
+    } as never);
+
+    runToolbarActionWithOverlaySelection(editor as never, true, (ed) =>
+      toggleMark(ed, "bold", (c) => c.toggleBold()),
+    );
+
+    expect(chain.setTextSelection).toHaveBeenCalledTimes(1);
+    expect(chain.setTextSelection).toHaveBeenCalledWith({ from: 50, to: 50 });
+    expect(chain.toggleBold).toHaveBeenCalled();
+  });
 });

@@ -10,6 +10,7 @@ import {
 } from "./inlineFormatActions";
 import type { Editor } from "@tiptap/react";
 import { insertImageFromToolbarPicker } from "./imageInsertUtils";
+import { applyBulletListToolbarCommand } from "./listToolbarUtils";
 import {
   isToolbarFormatOverlayOpen,
   runToolbarActionWithOverlaySelection,
@@ -78,7 +79,7 @@ const BLOCK_ITEMS: ToolbarButton[] = [
     label: "•",
     action: (e) =>
       runToolbarChain(e, isToolbarFormatOverlayOpen(), (chain) =>
-        chain.toggleBulletList(),
+        applyBulletListToolbarCommand(e, chain),
       ),
     isActive: (e) => e.isActive("bulletList"),
   },

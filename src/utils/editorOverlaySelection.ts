@@ -13,6 +13,23 @@ export function captureEditorOverlaySelection(editor: Editor): void {
   savedSelection = { from, to };
 }
 
+/** Prefer a live non-empty range; keep the overlay bookmark when the editor blurred. */
+export function syncEditorOverlaySelectionBeforeToolbarCommand(
+  editor: Editor,
+): void {
+  if (editor.isDestroyed) return;
+
+  const { from, to } = editor.state.selection;
+  if (from !== to) {
+    savedSelection = { from, to };
+    return;
+  }
+
+  if (!hasSavedEditorOverlaySelection()) {
+    captureEditorOverlaySelection(editor);
+  }
+}
+
 export function getSavedEditorOverlaySelection(): SavedEditorSelection | null {
   return savedSelection;
 }
@@ -99,6 +116,9 @@ export function runToolbarActionWithOverlaySelection(
 ): void {
   toolbarFormatOverlayOpen = formatOverlayOpen;
   try {
+    if (formatOverlayOpen) {
+      syncEditorOverlaySelectionBeforeToolbarCommand(editor);
+    }
     action(editor);
   } finally {
     toolbarFormatOverlayOpen = false;

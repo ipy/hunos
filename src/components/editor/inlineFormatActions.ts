@@ -1,7 +1,7 @@
 import i18n from "@/i18n";
 import { useUIStore } from "@/store/uiStore";
 import {
-  hasNonEmptySavedEditorOverlaySelection,
+  hasSavedEditorOverlaySelection,
   isToolbarFormatOverlayOpen,
   runToolbarChain,
 } from "@/utils/editorOverlaySelection";
@@ -25,6 +25,13 @@ export function toggleMark(
   applyMark: (chain: ChainedCommands) => ChainedCommands,
 ) {
   const overlayOpen = isToolbarFormatOverlayOpen();
+  const useSavedOverlaySelection =
+    overlayOpen && hasSavedEditorOverlaySelection();
+
+  if (useSavedOverlaySelection) {
+    runToolbarChain(editor, true, (chain) => applyMark(chain));
+    return;
+  }
 
   if (editor.isActive(markName)) {
     runToolbarChain(editor, overlayOpen, (chain) =>
@@ -34,9 +41,7 @@ export function toggleMark(
   }
 
   runToolbarChain(editor, overlayOpen, (chain) => {
-    const skipEmptyWordSelect =
-      overlayOpen && hasNonEmptySavedEditorOverlaySelection();
-    if (!skipEmptyWordSelect && editor.state.selection.empty) {
+    if (editor.state.selection.empty) {
       const { $from } = editor.state.selection;
       const start = $from.start();
       const end = $from.end();

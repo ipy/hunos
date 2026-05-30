@@ -161,6 +161,13 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   useEffect(() => {
     if (!showActions && !showStats) {
       clearEditorOverlaySelection();
+      return;
+    }
+    const editor = editorInstanceRef.current;
+    if (!editor) return;
+    const { from, to } = editor.state.selection;
+    if (from !== to) {
+      captureEditorOverlaySelection(editor);
     }
   }, [showActions, showStats]);
 
