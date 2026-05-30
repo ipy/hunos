@@ -14,7 +14,7 @@ function appendUniqueChild(parent: TagTreeNode, child: TagTreeNode): void {
   parent.children.push(child);
 }
 
-function buildTree(tags: Tag[]): TagTreeNode[] {
+export function buildTree(tags: Tag[]): TagTreeNode[] {
   tags = tags.filter((t) => isValidTagName(t.name));
   const nodeMap = new Map<string, TagTreeNode>();
   tags.forEach((t) =>

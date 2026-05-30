@@ -42,6 +42,32 @@ vi.mock("./formatPlaygroundNote", () => ({
 }));
 
 describe("getWelcomeSeed", () => {
+  it("seeds a single nested welcome tag for en bootstrap locale", async () => {
+    const { getWelcomeSeed } = await import("./welcomeNotes");
+    const { extractFromPlainText, extractPlainTextFromTiptap } =
+      await import("@/graph/linkExtractor");
+
+    const seed = getWelcomeSeed("en");
+    const tagNames = extractFromPlainText(
+      extractPlainTextFromTiptap(seed.content),
+    ).tags.map((tag) => tag.name);
+
+    expect(tagNames).toEqual(["hunos/getting-started", "hunos/welcome"]);
+  });
+
+  it("seeds a single nested 欢迎 tag for zh bootstrap locale", async () => {
+    const { getWelcomeSeed } = await import("./welcomeNotes");
+    const { extractFromPlainText, extractPlainTextFromTiptap } =
+      await import("@/graph/linkExtractor");
+
+    const seed = getWelcomeSeed("zh");
+    const tagNames = extractFromPlainText(
+      extractPlainTextFromTiptap(seed.content),
+    ).tags.map((tag) => tag.name);
+
+    expect(tagNames).toEqual(["hunos/入门指南", "hunos/欢迎"]);
+  });
+
   it("returns English welcome copy for en bootstrap locale", async () => {
     const { getWelcomeSeed } = await import("./welcomeNotes");
     const seed = getWelcomeSeed("en");

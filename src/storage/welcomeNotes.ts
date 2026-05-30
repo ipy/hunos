@@ -76,7 +76,7 @@ const WELCOME_CONTENT_EN = {
       content: [
         {
           type: "text",
-          text: "Organize notes with tags like #welcome. Use nested tags with slashes: #hunos/getting-started. Tags appear in the sidebar for quick filtering.",
+          text: "Organize notes with tags like welcome. Use nested tags with slashes: #hunos/getting-started. Tags appear in the sidebar for quick filtering.",
         },
       ],
     },
@@ -170,7 +170,7 @@ const WELCOME_CONTENT_ZH = {
       content: [
         {
           type: "text",
-          text: "用标签组织笔记，如 #欢迎。使用斜杠创建嵌套标签：#hunos/入门指南。标签会显示在侧边栏中。",
+          text: "用标签组织笔记，如「欢迎」。使用斜杠创建嵌套标签：#hunos/入门指南。标签会显示在侧边栏中。",
         },
       ],
     },
