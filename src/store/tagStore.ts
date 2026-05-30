@@ -67,6 +67,7 @@ export const useTagStore = create<TagStore>((set, get) => ({
   loadTags: async () => {
     set({ isLoading: true });
     await tagStorage.deleteInvalid();
+    await tagStorage.cleanOrphaned();
     const tags = (await tagStorage.listAll()).filter((t) =>
       isValidTagName(t.name),
     );

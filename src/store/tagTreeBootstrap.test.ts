@@ -70,13 +70,13 @@ function siblingDuplicateDisplayNames(
 }
 
 describe("bootstrap tag tree", () => {
-  it("creates one welcome path for en fresh boot seeds", async () => {
+  it("creates one welcome path under format-test for en fresh boot seeds", async () => {
     const tags = tagsFromBootstrap("en");
     expect(tags.map((tag) => tag.name)).toEqual([
       "format-test",
+      "format-test/welcome",
       "hunos",
       "hunos/getting-started",
-      "hunos/welcome",
     ]);
 
     const { buildTree } = await import("./tagStore");
@@ -85,20 +85,24 @@ describe("bootstrap tag tree", () => {
     expect(countDisplayNameInTree(tree, "welcome")).toBe(1);
     expect(siblingDuplicateDisplayNames(tree)).toEqual([]);
 
+    const formatTest = tree.find((node) => node.name === "format-test");
+    expect(formatTest?.children.map((child) => child.displayName)).toEqual([
+      "welcome",
+    ]);
+
     const hunos = tree.find((node) => node.name === "hunos");
     expect(hunos?.children.map((child) => child.displayName)).toEqual([
       "getting-started",
-      "welcome",
     ]);
   });
 
-  it("creates one 欢迎 path for zh fresh boot seeds", async () => {
+  it("creates one 欢迎 path under 格式测试 for zh fresh boot seeds", async () => {
     const tags = tagsFromBootstrap("zh");
     expect(tags.map((tag) => tag.name)).toEqual([
       "hunos",
       "hunos/入门指南",
-      "hunos/欢迎",
       "格式测试",
+      "格式测试/欢迎",
     ]);
 
     const { buildTree } = await import("./tagStore");
@@ -106,10 +110,14 @@ describe("bootstrap tag tree", () => {
     expect(countDisplayNameInTree(tree, "欢迎")).toBe(1);
     expect(siblingDuplicateDisplayNames(tree)).toEqual([]);
 
+    const formatTest = tree.find((node) => node.name === "格式测试");
+    expect(formatTest?.children.map((child) => child.displayName)).toEqual([
+      "欢迎",
+    ]);
+
     const hunos = tree.find((node) => node.name === "hunos");
     expect(hunos?.children.map((child) => child.displayName)).toEqual([
       "入门指南",
-      "欢迎",
     ]);
   });
 });

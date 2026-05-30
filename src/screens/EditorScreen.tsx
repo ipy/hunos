@@ -125,7 +125,6 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const lastPlaygroundMigrateKeyRef = useRef<string | null>(null);
   const playgroundRestoreSessionRef = useRef(createPlaygroundRestoreSession());
   const pendingRestoreToastRef = useRef(false);
-  const suppressRestoreChipRef = useRef(false);
 
   const note = notes.find((n) => n.id === activeNoteId);
   const noteContentForEditor = useMemo(() => {
@@ -141,9 +140,11 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     null,
   );
   const [restoreEditorSyncTick, setRestoreEditorSyncTick] = useState(0);
+  const [restoreChipSuppressed, setRestoreChipSuppressed] = useState(false);
   const titleTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const pendingTitleRef = useRef<string | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const skipTitleSyncOnceRef = useRef(false);
 
   const handleEditorReady = useCallback((editor: Editor) => {
     editorInstanceRef.current = editor;
@@ -167,7 +168,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       clearPendingTitleTimer(titleTimeoutRef);
       pendingTitleRef.current = null;
     }
-    suppressRestoreChipRef.current = false;
+    setRestoreChipSuppressed(false);
     pendingContentRef.current = null;
     setTitleValue(note?.title ?? "");
     if (note?.id) {
@@ -182,6 +183,10 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
   useEffect(() => {
     if (!note?.title) return;
+    if (skipTitleSyncOnceRef.current) {
+      skipTitleSyncOnceRef.current = false;
+      return;
+    }
     const titleInput = document.querySelector(
       '[data-field="note-title"]',
     ) as HTMLInputElement | null;
@@ -232,7 +237,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   );
 
   const handleTitleChange = (newTitle: string) => {
-    suppressRestoreChipRef.current = false;
+    setRestoreChipSuppressed(false);
     setTitleValue(newTitle);
     const noteId = activeNoteId;
     if (!noteId) return;
@@ -298,7 +303,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       }
 
       const hadNoPending = pendingContentRef.current == null;
-      suppressRestoreChipRef.current = false;
+      setRestoreChipSuppressed(false);
       pendingContentRef.current = json;
       if (
         hadNoPending &&
@@ -723,9 +728,11 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       }
       const restoredTitle =
         restoredNote?.title ?? getFormatPlaygroundTitle(seedLocale);
-      suppressRestoreChipRef.current = true;
+      skipTitleSyncOnceRef.current = true;
+      setRestoreChipSuppressed(true);
       setRestoreEditorSyncTick((tick) => tick + 1);
       setTitleValue(restoredTitle);
+      titleInputRef.current?.blur();
       if (!restoreSession.isActive()) {
         showToast(t("notes.actions.restorePlaygroundDone"));
         pendingRestoreToastRef.current = false;
@@ -739,7 +746,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
   const showRestorePlayground = useMemo(() => {
     if (!note) return false;
-    if (suppressRestoreChipRef.current) {
+    if (restoreChipSuppressed) {
       return false;
     }
     return shouldShowPlaygroundRestoreButton({
@@ -757,6 +764,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     titleValue,
     settings.locale,
     restoreEditorSyncTick,
+    restoreChipSuppressed,
   ]);
 
   if (!note) {

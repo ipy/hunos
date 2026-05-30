@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { Locale } from "@/types/settings";
 
 const noteStorageCreate = vi.fn();
+const noteStorageUpdate = vi.fn();
 const notesToArray = vi.fn();
 const notesWhereEquals = vi.fn();
 const graphSync = vi.fn();
@@ -10,6 +11,7 @@ const createFormatPlaygroundNote = vi.fn();
 vi.mock("./noteStorage", () => ({
   noteStorage: {
     create: (...args: unknown[]) => noteStorageCreate(...args),
+    update: (...args: unknown[]) => noteStorageUpdate(...args),
   },
 }));
 
@@ -52,7 +54,9 @@ describe("getWelcomeSeed", () => {
       extractPlainTextFromTiptap(seed.content),
     ).tags.map((tag) => tag.name);
 
-    expect(tagNames).toEqual(["hunos/getting-started", "hunos/welcome"]);
+    expect(tagNames.sort()).toEqual(
+      ["format-test/welcome", "hunos/getting-started"].sort(),
+    );
   });
 
   it("seeds a single nested 欢迎 tag for zh bootstrap locale", async () => {
@@ -65,7 +69,7 @@ describe("getWelcomeSeed", () => {
       extractPlainTextFromTiptap(seed.content),
     ).tags.map((tag) => tag.name);
 
-    expect(tagNames).toEqual(["hunos/入门指南", "hunos/欢迎"]);
+    expect(tagNames).toEqual(["hunos/入门指南", "格式测试/欢迎"]);
   });
 
   it("returns English welcome copy for en bootstrap locale", async () => {
@@ -87,6 +91,7 @@ describe("getWelcomeSeed", () => {
 describe("createWelcomeNotesIfNeeded", () => {
   beforeEach(() => {
     noteStorageCreate.mockReset();
+    noteStorageUpdate.mockReset();
     notesToArray.mockReset();
     notesWhereEquals.mockReset();
     graphSync.mockReset();
@@ -102,6 +107,7 @@ describe("createWelcomeNotesIfNeeded", () => {
     );
     graphSync.mockResolvedValue(undefined);
     createFormatPlaygroundNote.mockResolvedValue(undefined);
+    noteStorageUpdate.mockResolvedValue(undefined);
   });
 
   it("creates exactly one welcome row for en locale on empty store", async () => {
@@ -135,14 +141,53 @@ describe("createWelcomeNotesIfNeeded", () => {
     expect(createFormatPlaygroundNote).toHaveBeenCalledTimes(1);
   });
 
-  it("skips welcome creation when a welcome title already exists", async () => {
+  it("migrates existing welcome note content to latest seed tags", async () => {
     notesWhereEquals.mockImplementation(async (title: string) =>
-      title === "Welcome to Hunos" ? { id: "w1", title } : undefined,
+      title === "Welcome to Hunos"
+        ? {
+            id: "welcome-en",
+            title,
+            content: JSON.stringify({
+              type: "doc",
+              content: [
+                {
+                  type: "paragraph",
+                  content: [{ type: "text", text: "#hunos/welcome" }],
+                },
+              ],
+            }),
+          }
+        : undefined,
     );
 
     const { createWelcomeNotesIfNeeded } = await import("./welcomeNotes");
     await createWelcomeNotesIfNeeded("en");
 
     expect(noteStorageCreate).not.toHaveBeenCalled();
+    expect(noteStorageUpdate).toHaveBeenCalledOnce();
+    expect(graphSync).toHaveBeenCalled();
+    const syncedContent = graphSync.mock.calls.at(-1)?.[1] as string;
+    expect(syncedContent).toContain("#format-test/welcome");
+    expect(syncedContent).not.toContain("#hunos/welcome");
+  });
+
+  it("skips welcome creation when a welcome title already exists", async () => {
+    const { getWelcomeSeed } = await import("./welcomeNotes");
+    const seed = getWelcomeSeed("en");
+    notesWhereEquals.mockImplementation(async (title: string) =>
+      title === "Welcome to Hunos"
+        ? {
+            id: "w1",
+            title,
+            content: JSON.stringify(seed.content),
+          }
+        : undefined,
+    );
+
+    const { createWelcomeNotesIfNeeded } = await import("./welcomeNotes");
+    await createWelcomeNotesIfNeeded("en");
+
+    expect(noteStorageCreate).not.toHaveBeenCalled();
+    expect(noteStorageUpdate).not.toHaveBeenCalled();
   });
 });

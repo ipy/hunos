@@ -3,11 +3,13 @@ import type { Tag } from "@/types/graph";
 
 const listAll = vi.fn();
 const deleteInvalid = vi.fn();
+const cleanOrphaned = vi.fn();
 
 vi.mock("@/storage/tagStorage", () => ({
   tagStorage: {
     listAll: () => listAll(),
     deleteInvalid: () => deleteInvalid(),
+    cleanOrphaned: () => cleanOrphaned(),
   },
 }));
 
@@ -15,7 +17,9 @@ describe("tagStore tree dedup", () => {
   beforeEach(() => {
     listAll.mockReset();
     deleteInvalid.mockReset();
+    cleanOrphaned.mockReset();
     deleteInvalid.mockResolvedValue(0);
+    cleanOrphaned.mockResolvedValue(0);
   });
 
   it("shows one 欢迎 child under 格式测试 when duplicate display names exist", async () => {
@@ -94,5 +98,14 @@ describe("tagStore tree dedup", () => {
     expect(parentNode?.children).toHaveLength(1);
     expect(parentNode?.children[0]?.displayName).toBe("welcome");
     expect(parentNode?.children[0]?.noteCount).toBe(2);
+  });
+
+  it("prunes orphaned tags while loading the sidebar tree", async () => {
+    listAll.mockResolvedValue([]);
+
+    const { useTagStore } = await import("./tagStore");
+    await useTagStore.getState().loadTags();
+
+    expect(cleanOrphaned).toHaveBeenCalledOnce();
   });
 });

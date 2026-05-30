@@ -108,7 +108,10 @@ const WELCOME_CONTENT_EN = {
         },
       ],
     },
-    { type: "paragraph", content: [{ type: "text", text: "#hunos/welcome" }] },
+    {
+      type: "paragraph",
+      content: [{ type: "text", text: "#format-test/welcome" }],
+    },
   ],
 };
 
@@ -188,7 +191,7 @@ const WELCOME_CONTENT_ZH = {
         },
       ],
     },
-    { type: "paragraph", content: [{ type: "text", text: "#hunos/欢迎" }] },
+    { type: "paragraph", content: [{ type: "text", text: "#格式测试/欢迎" }] },
   ],
 };
 
@@ -237,13 +240,27 @@ async function hasFormatPlaygroundNote(): Promise<boolean> {
 }
 
 async function ensureWelcomeNote(locale: Locale): Promise<void> {
+  const { title, content, contentPlain } = getWelcomeSeed(locale);
+  const contentStr = JSON.stringify(content);
+  const existing = await db.notes.where("title").equals(title).first();
+
+  if (existing) {
+    if (existing.content !== contentStr) {
+      await noteStorage.update(existing.id, {
+        content: contentStr,
+        contentPlain,
+      });
+      await graphEngine.syncNoteLinks(existing.id, contentStr);
+    }
+    return;
+  }
+
   if (await hasWelcomeNote()) {
     return;
   }
 
-  const { title, content, contentPlain } = getWelcomeSeed(locale);
   const note = await noteStorage.create({
-    content: JSON.stringify(content),
+    content: contentStr,
     title,
     contentPlain,
   });
