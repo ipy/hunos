@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/theme/ThemeContext";
 import { Icon } from "@/components/common/Icon";
@@ -10,6 +10,7 @@ import {
   editorHasTaskList,
   noteContentHasTaskList,
 } from "@/utils/noteContentHasTaskList";
+import { deriveNoteStats } from "@/utils/noteStats";
 
 type Tab = "stats" | "toc";
 
@@ -75,6 +76,7 @@ export function InfoPanel({
     () => editorHasTaskList(editor) || noteContentHasTaskList(note.content),
   );
   const [activeTab, setActiveTab] = useState<Tab>("stats");
+  const [statsRevision, setStatsRevision] = useState(0);
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartY = useRef<number | null>(null);
@@ -98,11 +100,21 @@ export function InfoPanel({
     };
   }, [editor, note.content]);
 
-  const plain = note.contentPlain ?? "";
-  const charCount = plain.length;
-  const wordCount = note.wordCount || plain.split(/\s+/).filter(Boolean).length;
-  const paragraphCount = plain.split(/\n\s*\n/).filter(Boolean).length || 1;
-  const readingTime = Math.max(1, Math.ceil(wordCount / 200));
+  useEffect(() => {
+    if (!editor) return;
+    const refreshStats = () => setStatsRevision((n) => n + 1);
+    refreshStats();
+    editor.on("transaction", refreshStats);
+    return () => {
+      editor.off("transaction", refreshStats);
+    };
+  }, [editor]);
+
+  const { charCount, wordCount, paragraphCount, readingTimeMinutes } =
+    useMemo(
+      () => deriveNoteStats(note, editor),
+      [note, editor, statsRevision],
+    );
   const toc = extractToc(note.content);
 
   const tabs: { id: Tab; icon: string }[] = [
@@ -306,7 +318,7 @@ export function InfoPanel({
                   icon="¶"
                 />
                 <StatBox
-                  value={`${readingTime}m`}
+                  value={`${readingTimeMinutes}m`}
                   label={t("editor.stats.readingTime")}
                   icon="⏱"
                 />
