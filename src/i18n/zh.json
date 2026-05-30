@@ -182,6 +182,8 @@
   },
   "export": {
     "title": "导出笔记",
+    "copyMarkdown": "复制 Markdown",
+    "copied": "已复制到剪贴板",
     "markdown": "Markdown",
     "html": "HTML",
     "text": "纯文本",

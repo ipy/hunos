@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { exportNote } from "./export";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { exportAndCopy, exportNote } from "./export";
 import type { Note } from "@/types/note";
 
 function makeNote(content: object): Note {
@@ -594,5 +594,37 @@ describe("exportNote images", () => {
     expect(html).toContain(`src="${sampleSrc}"`);
     expect(html).toContain('alt="Sample"');
     expect(html).toContain('class="editor-image"');
+  });
+});
+
+describe("exportAndCopy", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("writes exported markdown to the clipboard", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+
+    const note = makeNote({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "BoldCopy100",
+              marks: [{ type: "bold" }],
+            },
+          ],
+        },
+      ],
+    });
+
+    const copied = await exportAndCopy(note, "markdown");
+
+    expect(copied).toBe("**BoldCopy100**");
+    expect(writeText).toHaveBeenCalledWith("**BoldCopy100**");
   });
 });

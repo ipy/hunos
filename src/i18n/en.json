@@ -182,6 +182,8 @@
   },
   "export": {
     "title": "Export Note",
+    "copyMarkdown": "Copy Markdown",
+    "copied": "Copied to clipboard",
     "markdown": "Markdown",
     "html": "HTML",
     "text": "Plain Text",

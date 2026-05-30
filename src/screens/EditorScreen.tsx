@@ -18,7 +18,7 @@ import { EditorToolbar } from "@/components/editor/EditorToolbar";
 import { EditorFindBar } from "@/components/editor/EditorFindBar";
 import { BacklinksPanel } from "@/components/backlinks/BacklinksPanel";
 import { InfoPanel } from "@/components/editor/InfoPanel";
-import { exportAndDownload } from "@/utils/export";
+import { exportAndCopy, exportAndDownload } from "@/utils/export";
 import { resolveTextFontFamily } from "@/utils/fonts";
 import type { Editor } from "@tiptap/react";
 import type { LayoutMode } from "@/hooks/useAdaptiveLayout";
@@ -920,6 +920,18 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
                     action: handleTrash,
                   },
                   {
+                    label: t("export.copyMarkdown"),
+                    icon: "export",
+                    danger: false,
+                    testId: "export-copy-markdown",
+                    action: () => {
+                      void exportAndCopy(note, "markdown").then(() => {
+                        showToast(t("export.copied"));
+                      });
+                      setShowActions(false);
+                    },
+                  },
+                  {
                     label: t("export.markdown"),
                     icon: "export",
                     danger: false,
@@ -942,6 +954,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
               <React.Fragment key={item.label}>
                 <button
                   onClick={item.action}
+                  data-testid={"testId" in item ? item.testId : undefined}
                   style={{
                     display: "flex",
                     alignItems: "center",

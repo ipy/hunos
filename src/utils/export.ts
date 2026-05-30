@@ -276,3 +276,12 @@ export function exportAndDownload(
   const mime = format === "html" ? "text/html" : "text/plain";
   downloadFile(content, `${title}.${ext}`, mime);
 }
+
+export async function exportAndCopy(
+  note: Note,
+  format: "markdown" | "html" | "text",
+): Promise<string> {
+  const content = exportNote(note, format);
+  await navigator.clipboard.writeText(content);
+  return content;
+}
