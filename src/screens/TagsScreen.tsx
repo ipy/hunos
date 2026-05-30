@@ -62,6 +62,7 @@ function TagItem({
         {hasChildren && (
           <button
             type="button"
+            data-testid={`tag-tree-expand-${node.name.replace(/\//g, "-")}`}
             aria-expanded={node.isExpanded}
             aria-label={node.displayName}
             onClick={(e) => {

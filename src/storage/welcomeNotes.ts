@@ -110,7 +110,7 @@ const WELCOME_CONTENT_EN = {
     },
     {
       type: "paragraph",
-      content: [{ type: "text", text: "#format-test/welcome" }],
+      content: [{ type: "text", text: "#hunos/format-test/welcome" }],
     },
   ],
 };
@@ -191,7 +191,10 @@ const WELCOME_CONTENT_ZH = {
         },
       ],
     },
-    { type: "paragraph", content: [{ type: "text", text: "#格式测试/欢迎" }] },
+    {
+      type: "paragraph",
+      content: [{ type: "text", text: "#hunos/格式测试/欢迎" }],
+    },
   ],
 };
 

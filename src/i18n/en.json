@@ -9,7 +9,8 @@
       "undo": "Undo",
       "redo": "Redo",
       "share": "Share",
-      "export": "Export"
+      "export": "Export",
+      "more": "More actions"
     },
     "confirm": {
       "delete": "Are you sure you want to delete this?",

@@ -55,7 +55,7 @@ describe("getWelcomeSeed", () => {
     ).tags.map((tag) => tag.name);
 
     expect(tagNames.sort()).toEqual(
-      ["format-test/welcome", "hunos/getting-started"].sort(),
+      ["hunos/format-test/welcome", "hunos/getting-started"].sort(),
     );
   });
 
@@ -69,7 +69,7 @@ describe("getWelcomeSeed", () => {
       extractPlainTextFromTiptap(seed.content),
     ).tags.map((tag) => tag.name);
 
-    expect(tagNames).toEqual(["hunos/入门指南", "格式测试/欢迎"]);
+    expect(tagNames).toEqual(["hunos/入门指南", "hunos/格式测试/欢迎"]);
   });
 
   it("returns English welcome copy for en bootstrap locale", async () => {
@@ -170,7 +170,7 @@ describe("createWelcomeNotesIfNeeded", () => {
     const syncedContent = graphSync.mock.calls[
       graphSync.mock.calls.length - 1
     ]?.[1] as string;
-    expect(syncedContent).toContain("#格式测试/欢迎");
+    expect(syncedContent).toContain("#hunos/格式测试/欢迎");
     expect(syncedContent).not.toContain("#hunos/welcome");
   });
 
@@ -200,7 +200,7 @@ describe("createWelcomeNotesIfNeeded", () => {
     expect(noteStorageUpdate).toHaveBeenCalledOnce();
     expect(graphSync).toHaveBeenCalled();
     const syncedContent = graphSync.mock.calls.at(-1)?.[1] as string;
-    expect(syncedContent).toContain("#format-test/welcome");
+    expect(syncedContent).toContain("#hunos/format-test/welcome");
     expect(syncedContent).not.toContain("#hunos/welcome");
   });
 

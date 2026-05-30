@@ -8,9 +8,9 @@ import {
 describe("bootstrapTagSeeds", () => {
   it("lists en bootstrap tag names from locale seeds", () => {
     expect(getBootstrapSeedTagNames("en")).toEqual([
-      "format-test",
-      "format-test/welcome",
       "hunos",
+      "hunos/format-test",
+      "hunos/format-test/welcome",
       "hunos/getting-started",
     ]);
   });
@@ -19,20 +19,20 @@ describe("bootstrapTagSeeds", () => {
     expect(getBootstrapSeedTagNames("zh")).toEqual([
       "hunos",
       "hunos/入门指南",
-      "格式测试",
-      "格式测试/欢迎",
+      "hunos/格式测试",
+      "hunos/格式测试/欢迎",
     ]);
   });
 
   it("returns stable welcome and playground seed JSON per locale", () => {
     const enWelcome = getBootstrapWelcomeSeedContent("en");
     const enPlayground = getBootstrapPlaygroundSeedContent("en");
-    expect(enWelcome).toContain("#format-test/welcome");
-    expect(enPlayground).toContain("#format-test");
+    expect(enWelcome).toContain("#hunos/format-test/welcome");
+    expect(enPlayground).toContain("#hunos/format-test");
 
     const zhWelcome = getBootstrapWelcomeSeedContent("zh");
     const zhPlayground = getBootstrapPlaygroundSeedContent("zh");
-    expect(zhWelcome).toContain("#格式测试/欢迎");
-    expect(zhPlayground).toContain("#格式测试");
+    expect(zhWelcome).toContain("#hunos/格式测试/欢迎");
+    expect(zhPlayground).toContain("#hunos/格式测试");
   });
 });

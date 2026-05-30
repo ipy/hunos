@@ -25,6 +25,7 @@ import type { LayoutMode } from "@/hooks/useAdaptiveLayout";
 import { registerHunosE2eEditor } from "@/testing/hunos-e2e-bridge";
 
 declare const __HUNOS_E2E__: boolean | undefined;
+import { dismissEditorOverlayOnEscape } from "@/utils/editorOverlayEscape";
 import { shouldSuppressFocusModeEscape } from "@/utils/editorSuggestionMenu";
 import { editorHasNonEmptySelection } from "@/utils/editorSelection";
 import {
@@ -673,6 +674,19 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      if (
+        dismissEditorOverlayOnEscape(
+          e.key,
+          { showActions, showStats },
+          {
+            closeActions: () => setShowActions(false),
+            closeStats: () => setShowStats(false),
+          },
+        )
+      ) {
+        e.preventDefault();
+        return;
+      }
       if (e.key !== "Escape") return;
       if (!focusMode) return;
       if (shouldSuppressFocusModeEscape()) return;
@@ -682,7 +696,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [focusMode, setFocusMode, editorInstance]);
+  }, [focusMode, setFocusMode, editorInstance, showActions, showStats]);
 
   const handlePin = () => {
     if (!note) return;
@@ -1089,9 +1103,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
                 </button>
                 <button
                   onClick={() => setShowActions(!showActions)}
-                  aria-label={t("common.actions.more", {
-                    defaultValue: "More actions",
-                  })}
+                  aria-label={t("common.actions.more")}
                   style={{
                     background: "none",
                     border: "none",
@@ -1141,11 +1153,13 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       {showActions && (
         <>
           <div
+            data-testid="editor-more-actions-backdrop"
             onClick={() => setShowActions(false)}
             style={{
               position: "fixed",
               inset: 0,
               zIndex: 49,
+              pointerEvents: "auto",
             }}
           />
           <div
@@ -1389,7 +1403,14 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           lineWidth={settings.lineWidth}
         />
       )}
-      {!focusMode && <EditorToolbar editor={editorInstance} />}
+      {!focusMode && (
+        <div
+          data-testid="editor-toolbar-layer"
+          style={{ position: "relative", zIndex: 55, flexShrink: 0 }}
+        >
+          <EditorToolbar editor={editorInstance} />
+        </div>
+      )}
     </div>
   );
 }

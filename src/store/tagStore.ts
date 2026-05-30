@@ -85,6 +85,20 @@ function ensureIntermediateParents(nodeMap: Map<string, TagTreeNode>): void {
   }
 }
 
+/** Nest legacy format-test / 格式测试 roots under hunos so the sidebar shows one root. */
+function reparentBootstrapFormatRoots(roots: TagTreeNode[]): void {
+  const hunos = roots.find((node) => node.name === "hunos");
+  if (!hunos) return;
+
+  const formatRoot = roots.find(
+    (node) => node.name === "format-test" || node.name === "格式测试",
+  );
+  if (!formatRoot || formatRoot === hunos) return;
+
+  roots.splice(roots.indexOf(formatRoot), 1);
+  appendUniqueChild(hunos, formatRoot);
+}
+
 /** Expand only when noted leaves sit below immediate children (bootstrap stays collapsible). */
 export function applyAutoExpandPaths(nodes: TagTreeNode[]): void {
   for (const node of nodes) {
@@ -120,6 +134,7 @@ export function buildTree(tags: Tag[]): TagTreeNode[] {
     }
   });
 
+  reparentBootstrapFormatRoots(roots);
   roots.sort((a, b) => a.name.localeCompare(b.name));
   const sortChildren = (nodes: TagTreeNode[]) => {
     nodes.sort((a, b) => a.name.localeCompare(b.name));

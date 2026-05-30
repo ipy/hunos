@@ -14,7 +14,7 @@ test.describe("note list tag filter", () => {
     page,
   }) => {
     const tag = editorLocator(page).locator(
-      '.editor-tag[data-tag-name="格式测试"]',
+      '.editor-tag[data-tag-name="hunos/格式测试"]',
     );
     await expect(tag.first()).toBeVisible({ timeout: 15_000 });
     await tag.first().scrollIntoViewIfNeeded();

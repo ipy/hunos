@@ -261,6 +261,7 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
         />
       )}
       <div
+        data-testid="editor-toolbar"
         style={{
           borderTop: `1px solid ${theme.colors.borderLight}`,
           flexShrink: 0,

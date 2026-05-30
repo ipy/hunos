@@ -9,7 +9,8 @@
       "undo": "撤销",
       "redo": "重做",
       "share": "分享",
-      "export": "导出"
+      "export": "导出",
+      "more": "更多操作"
     },
     "confirm": {
       "delete": "确定要删除吗？",

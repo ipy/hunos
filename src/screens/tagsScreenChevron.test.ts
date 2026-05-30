@@ -14,4 +14,15 @@ describe("TagsScreen chevron hit target", () => {
     expect(source).toContain("height: 24");
     expect(source).toContain("stopPropagation");
   });
+
+  it("exposes stable data-testid hooks for hunos expand automation", () => {
+    const source = readFileSync(
+      resolve(process.cwd(), "src/screens/TagsScreen.tsx"),
+      "utf8",
+    );
+
+    expect(source).toContain(
+      'data-testid={`tag-tree-expand-${node.name.replace(/\\//g, "-")}`}',
+    );
+  });
 });

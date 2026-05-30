@@ -9,7 +9,8 @@
       "undo": "Deshacer",
       "redo": "Rehacer",
       "share": "Compartir",
-      "export": "Exportar"
+      "export": "Exportar",
+      "more": "Más acciones"
     },
     "confirm": {
       "delete": "¿Estás seguro de que quieres eliminarlo?",
