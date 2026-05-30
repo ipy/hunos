@@ -11,6 +11,8 @@ import { FAB } from "@/components/common/FAB";
 import type { LayoutMode } from "@/hooks/useAdaptiveLayout";
 import type { Note } from "@/types/note";
 
+export const NOTE_LIST_TAG_FILTER_TESTID = "note-list-tag-filter";
+
 interface NoteListScreenProps {
   layout?: LayoutMode;
 }
@@ -394,6 +396,12 @@ export function NoteListScreen({ layout = "mobile" }: NoteListScreenProps) {
           </button>
         )}
         <h2
+          {...(activeTag
+            ? {
+                "data-testid": NOTE_LIST_TAG_FILTER_TESTID,
+                "data-tag-name": activeTag.displayName,
+              }
+            : {})}
           style={{
             margin: 0,
             flex: 1,
