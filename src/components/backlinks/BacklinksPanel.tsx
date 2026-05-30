@@ -1,10 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useTheme } from '@/theme/ThemeContext';
-import { graphEngine } from '@/graph/graphEngine';
-import { useNoteStore } from '@/store/noteStore';
-import { Icon } from '@/components/common/Icon';
-import type { BacklinkResult } from '@/types/graph';
+import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useTheme } from "@/theme/ThemeContext";
+import { graphEngine } from "@/graph/graphEngine";
+import { useNoteStore } from "@/store/noteStore";
+import { Icon } from "@/components/common/Icon";
+import type { BacklinkResult } from "@/types/graph";
+
+export const BACKLINKS_PANEL_TESTID = "backlinks-panel";
+export const BACKLINKS_PANEL_TOGGLE_TESTID = "backlinks-panel-toggle";
+export const BACKLINKS_OUTGOING_SECTION_TESTID = "backlinks-outgoing-section";
+export const BACKLINKS_INCOMING_SECTION_TESTID = "backlinks-incoming-section";
+
+export function backlinksItemTestId(noteId: string): string {
+  return `backlinks-item-${noteId}`;
+}
 
 interface BacklinksPanelProps {
   noteId: string;
@@ -28,32 +37,42 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
   const renderLink = (bl: BacklinkResult) => (
     <div
       key={bl.noteId}
+      data-testid={backlinksItemTestId(bl.noteId)}
+      data-note-title={bl.noteTitle}
       onClick={() => setActiveNote(bl.noteId)}
       style={{
-        padding: '10px 12px',
+        padding: "10px 12px",
         borderRadius: theme.radius.md,
-        cursor: 'pointer',
+        cursor: "pointer",
         marginBottom: 4,
         backgroundColor: theme.colors.surface,
-        transition: 'background-color 0.15s ease',
+        transition: "background-color 0.15s ease",
       }}
-      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.surfaceHover}
-      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = theme.colors.surface}
+      onMouseEnter={(e) =>
+        (e.currentTarget.style.backgroundColor = theme.colors.surfaceHover)
+      }
+      onMouseLeave={(e) =>
+        (e.currentTarget.style.backgroundColor = theme.colors.surface)
+      }
     >
-      <div style={{
-        fontSize: theme.fontSize.sm,
-        fontWeight: theme.fontWeight.medium,
-        color: theme.colors.text,
-        marginBottom: bl.context ? 4 : 0,
-      }}>
-        {bl.noteTitle || t('notes.untitled', { defaultValue: 'Untitled' })}
+      <div
+        style={{
+          fontSize: theme.fontSize.sm,
+          fontWeight: theme.fontWeight.medium,
+          color: theme.colors.text,
+          marginBottom: bl.context ? 4 : 0,
+        }}
+      >
+        {bl.noteTitle || t("notes.untitled", { defaultValue: "Untitled" })}
       </div>
       {bl.context && (
-        <div style={{
-          fontSize: theme.fontSize.xs,
-          color: theme.colors.textTertiary,
-          lineHeight: 1.4,
-        }}>
+        <div
+          style={{
+            fontSize: theme.fontSize.xs,
+            color: theme.colors.textTertiary,
+            lineHeight: 1.4,
+          }}
+        >
           {bl.context}
         </div>
       )}
@@ -61,57 +80,94 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
   );
 
   return (
-    <div style={{
-      margin: '16px 20px',
-      borderTop: `1px solid ${theme.colors.borderLight}`,
-      paddingTop: 16,
-    }}>
+    <div
+      data-testid={BACKLINKS_PANEL_TESTID}
+      style={{
+        margin: "16px 20px",
+        borderTop: `1px solid ${theme.colors.borderLight}`,
+        paddingTop: 16,
+      }}
+    >
       <button
+        data-testid={BACKLINKS_PANEL_TOGGLE_TESTID}
         onClick={() => setIsExpanded(!isExpanded)}
         style={{
-          display: 'flex', alignItems: 'center', gap: 6,
-          background: 'none', border: 'none', cursor: 'pointer',
-          padding: 0, marginBottom: 12,
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: 0,
+          marginBottom: 12,
         }}
       >
-        <span style={{
-          display: 'flex',
-          transition: 'transform 0.2s ease',
-          transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
-        }}>
-          <Icon name="chevronDown" size={12} color={theme.colors.textTertiary} />
+        <span
+          style={{
+            display: "flex",
+            transition: "transform 0.2s ease",
+            transform: isExpanded ? "rotate(0deg)" : "rotate(-90deg)",
+          }}
+        >
+          <Icon
+            name="chevronDown"
+            size={12}
+            color={theme.colors.textTertiary}
+          />
         </span>
-        <span style={{
-          fontSize: theme.fontSize.sm,
-          fontWeight: theme.fontWeight.semibold,
-          color: theme.colors.textSecondary,
-          textTransform: 'uppercase',
-          letterSpacing: 0.5,
-        }}>
-          {t('editor.backlinks.title', { defaultValue: 'Links' })} ({backlinks.length + outgoing.length})
+        <span
+          style={{
+            fontSize: theme.fontSize.sm,
+            fontWeight: theme.fontWeight.semibold,
+            color: theme.colors.textSecondary,
+            textTransform: "uppercase",
+            letterSpacing: 0.5,
+          }}
+        >
+          {t("editor.backlinks.title", { defaultValue: "Links" })} (
+          {backlinks.length + outgoing.length})
         </span>
       </button>
 
       {isExpanded && (
         <>
           {outgoing.length > 0 && (
-            <div style={{ marginBottom: 12 }}>
-              <div style={{
-                fontSize: 11, fontWeight: '600', color: theme.colors.textTertiary,
-                textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6,
-              }}>
-                {t('editor.backlinks.outgoing', { defaultValue: 'Links to' })} ({outgoing.length})
+            <div
+              data-testid={BACKLINKS_OUTGOING_SECTION_TESTID}
+              style={{ marginBottom: 12 }}
+            >
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: "600",
+                  color: theme.colors.textTertiary,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.4,
+                  marginBottom: 6,
+                }}
+              >
+                {t("editor.backlinks.outgoing", { defaultValue: "Links to" })} (
+                {outgoing.length})
               </div>
               {outgoing.map(renderLink)}
             </div>
           )}
           {backlinks.length > 0 && (
-            <div>
-              <div style={{
-                fontSize: 11, fontWeight: '600', color: theme.colors.textTertiary,
-                textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6,
-              }}>
-                {t('editor.backlinks.incoming', { defaultValue: 'Linked from' })} ({backlinks.length})
+            <div data-testid={BACKLINKS_INCOMING_SECTION_TESTID}>
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: "600",
+                  color: theme.colors.textTertiary,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.4,
+                  marginBottom: 6,
+                }}
+              >
+                {t("editor.backlinks.incoming", {
+                  defaultValue: "Linked from",
+                })}{" "}
+                ({backlinks.length})
               </div>
               {backlinks.map(renderLink)}
             </div>
