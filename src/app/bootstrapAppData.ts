@@ -15,9 +15,9 @@ const TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 /** Seed notes, hydrate stores, reconcile playground locale, then load tags before first paint. */
 export async function bootstrapAppData(locale: Locale): Promise<void> {
   await createWelcomeNotesIfNeeded(locale);
-  const flushedContent = await flushEditorAutosave();
   await useNoteStore.getState().loadNotes({ status: "active" });
   await recoverPendingUnloadBackup(locale);
+  const flushedContent = await flushEditorAutosave();
   await syncFormatPlaygroundOnLocaleChange(locale, flushedContent, {
     focusCanonical: true,
   });

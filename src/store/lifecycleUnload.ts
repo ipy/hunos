@@ -5,6 +5,7 @@ import {
 import {
   formatPlaygroundMatchesCanonicalSeed,
   isFormatPlaygroundNote,
+  normalizePlaygroundContentSnapshot,
 } from "@/storage/formatPlaygroundNote";
 import { noteStorage } from "@/storage/noteStorage";
 import { useNoteStore } from "@/store/noteStore";
@@ -97,10 +98,24 @@ export function unloadBackupWouldRegressStoredNote(
 
   if (
     isFormatPlaygroundNote(stored.title, stored.content) &&
-    formatPlaygroundMatchesCanonicalSeed(stored.title, stored.content, locale) &&
-    !formatPlaygroundMatchesCanonicalSeed(backupTitle, backup.content, locale)
+    formatPlaygroundMatchesCanonicalSeed(stored.title, stored.content, locale)
   ) {
-    return true;
+    if (
+      !formatPlaygroundMatchesCanonicalSeed(backupTitle, backup.content, locale)
+    ) {
+      return true;
+    }
+    const storedFingerprint = normalizePlaygroundContentSnapshot(
+      stored.content,
+      locale,
+    );
+    const backupFingerprint = normalizePlaygroundContentSnapshot(
+      backup.content,
+      locale,
+    );
+    if (backupFingerprint !== storedFingerprint) {
+      return true;
+    }
   }
 
   return false;

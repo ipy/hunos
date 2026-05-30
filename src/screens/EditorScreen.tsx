@@ -29,8 +29,11 @@ import { shouldSuppressFocusModeEscape } from "@/utils/editorSuggestionMenu";
 import { editorHasNonEmptySelection } from "@/utils/editorSelection";
 import {
   FORMAT_PLAYGROUND_TITLES,
+  formatPlaygroundMatchesCanonicalSeed,
   getFormatPlaygroundTitle,
   isFormatPlaygroundNote,
+  normalizePlaygroundContentSnapshot,
+  playgroundEditorContentMatchesStored,
   resolvePlaygroundSeedLocale,
   shouldShowPlaygroundRestoreButton,
   migratePlaygroundContentIfStale,
@@ -206,10 +209,45 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       if (!activeNoteId) return;
       if (playgroundRestoreSessionRef.current.isActive()) {
         setRestoreEditorSyncTick((tick) => tick + 1);
-        if (editorContentMatchesStoredJson(json, noteContentForEditor)) {
+        if (
+          playgroundEditorContentMatchesStored(
+            json,
+            noteContentForEditor,
+            settings.locale,
+          )
+        ) {
           playgroundRestoreSessionRef.current.end();
         }
+        return;
       }
+
+      if (
+        note &&
+        isFormatPlaygroundNote(note.title, note.content) &&
+        formatPlaygroundMatchesCanonicalSeed(
+          note.title,
+          noteContentForEditor,
+          settings.locale,
+        )
+      ) {
+        const storedFingerprint = normalizePlaygroundContentSnapshot(
+          noteContentForEditor,
+          settings.locale,
+        );
+        const liveFingerprint = normalizePlaygroundContentSnapshot(
+          json,
+          settings.locale,
+        );
+        if (liveFingerprint === storedFingerprint) {
+          pendingContentRef.current = null;
+          if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+            saveTimeoutRef.current = undefined;
+          }
+          return;
+        }
+      }
+
       pendingContentRef.current = json;
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       if (flushSave) {
@@ -220,7 +258,13 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         void persistEditorContent(activeNoteId, json);
       }, 400);
     },
-    [activeNoteId, noteContentForEditor, persistEditorContent],
+    [
+      activeNoteId,
+      note,
+      noteContentForEditor,
+      persistEditorContent,
+      settings.locale,
+    ],
   );
 
   const collectPendingAutosave = useCallback((): string | null => {
@@ -242,6 +286,8 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   }, [activeNoteId]);
 
   const collectUnloadDraft = useCallback(() => {
+    if (playgroundRestoreSessionRef.current.isActive()) return null;
+
     const noteId = activeNoteId;
     if (!noteId) return null;
 
@@ -272,6 +318,10 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
   const flushPendingAutosave =
     useCallback(async (): Promise<EditorAutosaveFlushResult> => {
+      if (playgroundRestoreSessionRef.current.isActive()) {
+        return { content: null, persisted: true };
+      }
+
       const titleOk = await flushPendingTitle();
 
       const json = collectPendingAutosave();
@@ -406,7 +456,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           ? JSON.stringify(editorInstance.getJSON())
           : null,
         restoredContent: noteContentForEditor,
-        editorContentMatchesStoredJson,
+        fallbackLocale: settings.locale,
       })
     ) {
       return;
@@ -421,6 +471,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     noteContentForEditor,
     editorInstance,
     restoreEditorSyncTick,
+    settings.locale,
     showToast,
     t,
   ]);

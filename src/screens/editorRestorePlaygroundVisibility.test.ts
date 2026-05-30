@@ -172,10 +172,34 @@ describe("playground restore visibility", () => {
           content: [
             {
               type: "paragraph",
-              content: [{ type: "text", text: "T4-MIXED-stale-editor" }],
+              content: [{ type: "text", text: "T5-MIXED-stale-editor" }],
             },
           ],
         }),
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
+
+  it("hides restore after post-restore editor echo pending draft", () => {
+    const parsed = JSON.parse(seedContent) as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    while (
+      parsed.content.at(-1)?.type === "paragraph" &&
+      !(parsed.content.at(-1)?.content?.length)
+    ) {
+      parsed.content.pop();
+    }
+    const restoredEcho = JSON.stringify(parsed);
+
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seedContent,
+        pendingDraftContent: restoredEcho,
+        editorContent: restoredEcho,
         fallbackLocale: "zh",
       }),
     ).toBe(false);

@@ -446,6 +446,20 @@ function normalizePlaygroundDocForFingerprint(
   };
 }
 
+/** True when live editor JSON matches persisted playground content (round-trip tolerant). */
+export function playgroundEditorContentMatchesStored(
+  editorContentJson: string,
+  storedContent: string,
+  fallbackLocale: Locale,
+): boolean {
+  if (!storedContent) return false;
+  if (editorContentJson === storedContent) return true;
+  return (
+    normalizePlaygroundContentSnapshot(editorContentJson, fallbackLocale) ===
+    normalizePlaygroundContentSnapshot(storedContent, fallbackLocale)
+  );
+}
+
 /** Stable JSON fingerprint for canonical seed comparison (editor round-trip tolerant). */
 export function normalizePlaygroundContentSnapshot(
   content: string,

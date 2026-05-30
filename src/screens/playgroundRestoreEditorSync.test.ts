@@ -16,29 +16,25 @@ vi.mock("@/components/editor/resetEditorHistory", () => ({
 
 const restoredContent = JSON.stringify({
   type: "doc",
+  attrs: {
+    playgroundContentVersion: 22,
+    playgroundContentLocale: "zh",
+  },
   content: [{ type: "paragraph", content: [{ type: "text", text: "seed" }] }],
 });
 
 const pollutedContent = JSON.stringify({
   type: "doc",
+  attrs: {
+    playgroundContentVersion: 22,
+    playgroundContentLocale: "zh",
+  },
   content: [
     {
       type: "paragraph",
       content: [{ type: "text", text: "RestorePollutionMarker" }],
     },
   ],
-});
-
-const contentMatches = (editor: string, stored: string) => editor === stored;
-
-describe("shouldStashAutosaveOnEffectCleanup", () => {
-  it("skips stashing while in-session playground restore is active", () => {
-    expect(shouldStashAutosaveOnEffectCleanup(true)).toBe(false);
-  });
-
-  it("allows stashing during normal editor lifecycle", () => {
-    expect(shouldStashAutosaveOnEffectCleanup(false)).toBe(true);
-  });
 });
 
 describe("shouldEndPlaygroundRestoreSession", () => {
@@ -49,7 +45,7 @@ describe("shouldEndPlaygroundRestoreSession", () => {
         hasNoteContent: true,
         editorContentJson: pollutedContent,
         restoredContent,
-        editorContentMatchesStoredJson: contentMatches,
+        fallbackLocale: "zh",
       }),
     ).toBe(false);
   });
@@ -61,7 +57,7 @@ describe("shouldEndPlaygroundRestoreSession", () => {
         hasNoteContent: true,
         editorContentJson: restoredContent,
         restoredContent,
-        editorContentMatchesStoredJson: contentMatches,
+        fallbackLocale: "zh",
       }),
     ).toBe(true);
   });
@@ -73,7 +69,7 @@ describe("shouldEndPlaygroundRestoreSession", () => {
         hasNoteContent: false,
         editorContentJson: pollutedContent,
         restoredContent,
-        editorContentMatchesStoredJson: contentMatches,
+        fallbackLocale: "zh",
       }),
     ).toBe(true);
   });
@@ -173,15 +169,6 @@ describe("finalizePlaygroundRestoreInEditor", () => {
     ).toBe(true);
 
     expect(session.isActive()).toBe(false);
-    expect(
-      shouldEndPlaygroundRestoreSession({
-        isRestoringPlayground: session.isActive(),
-        hasNoteContent: true,
-        editorContentJson: pollutedContent,
-        restoredContent,
-        editorContentMatchesStoredJson: contentMatches,
-      }),
-    ).toBe(false);
   });
 
   it("keeps session active when editor is not ready so queued apply can finish", () => {

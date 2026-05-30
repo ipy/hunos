@@ -1,5 +1,7 @@
 import type { Editor } from "@tiptap/react";
 import { resetEditorHistory } from "@/components/editor/resetEditorHistory";
+import { playgroundEditorContentMatchesStored } from "@/storage/formatPlaygroundNote";
+import type { Locale } from "@/types/settings";
 
 export type PlaygroundRestoreSession = {
   isActive: () => boolean;
@@ -159,16 +161,14 @@ export function shouldEndPlaygroundRestoreSession(options: {
   hasNoteContent: boolean;
   editorContentJson: string | null;
   restoredContent: string;
-  editorContentMatchesStoredJson: (
-    editorContentJson: string,
-    storedContent: string,
-  ) => boolean;
+  fallbackLocale: Locale;
 }): boolean {
   if (!options.isRestoringPlayground) return false;
   if (!options.hasNoteContent) return true;
   if (!options.editorContentJson) return false;
-  return options.editorContentMatchesStoredJson(
+  return playgroundEditorContentMatchesStored(
     options.editorContentJson,
     options.restoredContent,
+    options.fallbackLocale,
   );
 }

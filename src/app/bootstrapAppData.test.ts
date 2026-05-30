@@ -13,6 +13,13 @@ vi.mock("@/storage/welcomeNotes", () => ({
     createWelcomeNotesIfNeeded(...args),
 }));
 
+const recoverPendingUnloadBackup = vi.fn().mockResolvedValue(undefined);
+
+vi.mock("@/store/lifecycleUnload", () => ({
+  recoverPendingUnloadBackup: (...args: unknown[]) =>
+    recoverPendingUnloadBackup(...args),
+}));
+
 vi.mock("@/store/editorAutosaveRegistry", () => ({
   flushEditorAutosave: () => flushEditorAutosave(),
   clearStashedEditorAutosave: () => clearStashedEditorAutosave(),
@@ -46,6 +53,7 @@ describe("bootstrapAppData", () => {
     createWelcomeNotesIfNeeded.mockClear();
     flushEditorAutosave.mockClear();
     clearStashedEditorAutosave.mockClear();
+    recoverPendingUnloadBackup.mockClear();
     syncFormatPlaygroundOnLocaleChange.mockClear();
     loadNotes.mockClear();
     loadTags.mockClear();
@@ -59,6 +67,12 @@ describe("bootstrapAppData", () => {
     createWelcomeNotesIfNeeded.mockImplementation(async () => {
       order.push("seed");
     });
+    loadNotes.mockImplementation(async () => {
+      order.push("loadNotes");
+    });
+    recoverPendingUnloadBackup.mockImplementation(async () => {
+      order.push("recoverBackup");
+    });
     flushEditorAutosave.mockImplementation(async () => {
       order.push("flush");
       return null;
@@ -69,9 +83,6 @@ describe("bootstrapAppData", () => {
     clearStashedEditorAutosave.mockImplementation(() => {
       order.push("clearStash");
     });
-    loadNotes.mockImplementation(async () => {
-      order.push("loadNotes");
-    });
     loadTags.mockImplementation(() => {
       order.push("loadTags");
     });
@@ -80,6 +91,7 @@ describe("bootstrapAppData", () => {
 
     expect(createWelcomeNotesIfNeeded).toHaveBeenCalledWith("zh");
     expect(flushEditorAutosave).toHaveBeenCalled();
+    expect(recoverPendingUnloadBackup).toHaveBeenCalledWith("zh");
     expect(loadNotes).toHaveBeenCalledWith({ status: "active" });
     expect(syncFormatPlaygroundOnLocaleChange).toHaveBeenCalledWith(
       "zh",
@@ -92,8 +104,9 @@ describe("bootstrapAppData", () => {
     expect(loadTags).toHaveBeenCalled();
     expect(order).toEqual([
       "seed",
-      "flush",
       "loadNotes",
+      "recoverBackup",
+      "flush",
       "sync",
       "clearStash",
       "loadTags",

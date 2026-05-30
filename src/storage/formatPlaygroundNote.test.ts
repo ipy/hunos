@@ -15,6 +15,7 @@ import {
   playgroundContentMatchesLocale,
   formatPlaygroundMatchesCanonicalSeed,
   formatPlaygroundNeedsRestore,
+  playgroundEditorContentMatchesStored,
   resolvePlaygroundSeedLocale,
   shouldShowPlaygroundRestoreButton,
   restoreFormatPlaygroundContent,
@@ -1411,6 +1412,33 @@ describe("formatPlayground restore gating", () => {
         pendingDraftContent: null,
         editorContent: null,
         fallbackLocale: "en",
+      }),
+    ).toBe(false);
+  });
+
+  it("treats editor round-trip as matching stored canonical seed", () => {
+    const seed = JSON.stringify(buildPlaygroundContent("zh"));
+    const parsed = JSON.parse(seed) as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    while (
+      parsed.content.at(-1)?.type === "paragraph" &&
+      !(parsed.content.at(-1)?.content?.length)
+    ) {
+      parsed.content.pop();
+    }
+    const editorEcho = JSON.stringify(parsed);
+    expect(
+      playgroundEditorContentMatchesStored(editorEcho, seed, "zh"),
+    ).toBe(true);
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        pendingDraftContent: editorEcho,
+        editorContent: editorEcho,
+        fallbackLocale: "zh",
       }),
     ).toBe(false);
   });
