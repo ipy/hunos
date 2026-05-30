@@ -482,7 +482,7 @@ function findPlaygroundSeedEndIndex(nodes: PlaygroundDocNode[]): number {
   if (tryIndex === -1) {
     return nodes.length;
   }
-  return Math.min(tryIndex + 4, nodes.length);
+  return Math.min(tryIndex + 2, nodes.length);
 }
 
 function findPlaygroundSampleImageIndex(nodes: PlaygroundDocNode[]): number {
@@ -841,7 +841,10 @@ export async function syncFormatPlaygroundOnLocaleChange(
   const flushDropped =
     Boolean(flushedContent) && activeIsPlayground && !flushApplied;
 
-  const sourceContent = flushApplied ? flushedContent! : note.content;
+  const sourceContent =
+    flushedContent && (flushApplied || flushDropped)
+      ? flushedContent
+      : note.content;
   const migrated = migratePlaygroundContentIfStale(sourceContent, locale);
   const expectedTitle = getFormatPlaygroundTitle(locale);
   const titleNeedsUpdate =
@@ -850,6 +853,8 @@ export async function syncFormatPlaygroundOnLocaleChange(
 
   if (migrated) {
     await saveNoteContent(note.id, migrated);
+  } else if (flushDropped) {
+    await saveNoteContent(note.id, sourceContent);
   }
   if (titleNeedsUpdate) {
     await saveNoteTitle(note.id, expectedTitle);

@@ -275,7 +275,7 @@ describe("syncFormatPlaygroundOnLocaleChange", () => {
       content: Array<{ attrs?: { height?: number } }>;
     };
     const savedImage = saved.content.find((n) => n.attrs?.height != null);
-    expect(savedImage?.attrs?.height).not.toBe(180);
+    expect(savedImage?.attrs?.height).toBe(180);
   });
 
   it("prefers en-titled playground when syncing en locale with duplicate canonical notes", async () => {
@@ -407,6 +407,33 @@ describe("syncFormatPlaygroundOnLocaleChange", () => {
 
     expect(result.flushDropped).toBe(true);
     expect(setActiveNote).toHaveBeenCalledWith("pg-zh");
+  });
+
+  it("applies dropped flush to canonical playground without touching wrong duplicate", async () => {
+    const enDoc = buildPlaygroundContent("en") as {
+      content: Array<{
+        type: string;
+        content?: Array<{ type?: string; text?: string }>;
+      }>;
+    };
+    enDoc.content.push({
+      type: "paragraph",
+      content: [{ type: "text", text: "locale-switch-pending-marker" }],
+    });
+    const flushed = JSON.stringify(enDoc);
+
+    mockNoteStoreState.activeNoteId = "pg-en";
+    mockNoteStoreState.notes = duplicatePlaygroundPair();
+
+    await syncFormatPlaygroundOnLocaleChange("zh", flushed, {
+      focusCanonical: true,
+    });
+
+    expect(saveNoteContent).toHaveBeenCalledTimes(1);
+    expect(saveNoteContent).toHaveBeenCalledWith("pg-zh", expect.any(String));
+    expect(saveNoteContent).not.toHaveBeenCalledWith("pg-en", expect.anything());
+    const saved = saveNoteContent.mock.calls[0][1] as string;
+    expect(saved).toContain("locale-switch-pending-marker");
   });
 
   it("does not switch focus when active note is not a playground", async () => {

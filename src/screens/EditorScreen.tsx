@@ -23,7 +23,10 @@ import {
   migratePlaygroundContentIfStale,
 } from "@/storage/formatPlaygroundNote";
 import {
+  peekStashedEditorAutosave,
   registerEditorAutosaveFlush,
+  stashEditorAutosaveSnapshot,
+  takeStashedEditorAutosave,
   unregisterEditorAutosaveFlush,
 } from "@/store/editorAutosaveRegistry";
 
@@ -122,7 +125,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     [activeNoteId, saveNoteContent],
   );
 
-  const flushPendingAutosave = useCallback(async (): Promise<string | null> => {
+  const collectPendingAutosave = useCallback((): string | null => {
     if (!activeNoteId) return null;
 
     if (saveTimeoutRef.current) {
@@ -135,25 +138,65 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       (editorInstance ? JSON.stringify(editorInstance.getJSON()) : null);
 
     if (!json) return null;
-
-    await saveNoteContent(activeNoteId, json);
     pendingContentRef.current = null;
     return json;
-  }, [activeNoteId, editorInstance, saveNoteContent]);
+  }, [activeNoteId, editorInstance]);
+
+  const flushPendingAutosave = useCallback(async (): Promise<string | null> => {
+    const json = collectPendingAutosave();
+    if (!json || !activeNoteId) return null;
+
+    const activeNote = notes.find((candidate) => candidate.id === activeNoteId);
+    const isPlayground =
+      activeNote != null &&
+      isFormatPlaygroundNote(activeNote.title, activeNote.content);
+
+    if (isPlayground) {
+      stashEditorAutosaveSnapshot(activeNoteId, json);
+      return json;
+    }
+
+    await saveNoteContent(activeNoteId, json);
+    return json;
+  }, [activeNoteId, collectPendingAutosave, notes, saveNoteContent]);
 
   useEffect(() => {
     registerEditorAutosaveFlush(flushPendingAutosave);
     return () => {
-      void (async () => {
-        try {
-          await flushPendingAutosave();
-        } finally {
-          unregisterEditorAutosaveFlush(flushPendingAutosave);
+      const json = collectPendingAutosave();
+      if (json && activeNoteId) {
+        const activeNote = notes.find(
+          (candidate) => candidate.id === activeNoteId,
+        );
+        const isPlayground =
+          activeNote != null &&
+          isFormatPlaygroundNote(activeNote.title, activeNote.content);
+        if (isPlayground) {
+          stashEditorAutosaveSnapshot(activeNoteId, json);
+        } else {
+          void saveNoteContent(activeNoteId, json);
         }
-      })();
+      }
+      unregisterEditorAutosaveFlush(flushPendingAutosave);
       if (titleTimeoutRef.current) clearTimeout(titleTimeoutRef.current);
     };
-  }, [flushPendingAutosave]);
+  }, [
+    activeNoteId,
+    collectPendingAutosave,
+    flushPendingAutosave,
+    notes,
+    saveNoteContent,
+  ]);
+
+  useEffect(() => {
+    if (!activeNoteId) return;
+    const snapshot = peekStashedEditorAutosave();
+    if (snapshot?.noteId !== activeNoteId) return;
+
+    const taken = takeStashedEditorAutosave();
+    if (!taken) return;
+    void saveNoteContent(activeNoteId, taken.content);
+  }, [activeNoteId, saveNoteContent]);
 
   useEffect(() => {
     if (!note?.id || !isFormatPlaygroundNote(note.title, note.content)) return;
