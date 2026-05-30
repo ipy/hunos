@@ -15,8 +15,11 @@ describe("harmony rawfile freshness", () => {
   });
 
   it("includes bootstrapAppData startup sequence", () => {
-    // bootstrapAppData is minified in the bundle; its call chain remains stable.
+    // bootstrapAppData is minified in the bundle; loadNotes runs before locale sync.
     expect(rawfile).toContain('loadNotes({status:"active"})');
+    expect(rawfile).toMatch(
+      /loadNotes\(\{status:"active"\}\).*focusCanonical/s,
+    );
     expect(rawfile).toContain("loadTags()");
     expect(rawfile).toContain("purgeTrash");
   });

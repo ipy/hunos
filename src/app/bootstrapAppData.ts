@@ -11,13 +11,15 @@ import { noteStorage } from "@/storage/noteStorage";
 
 const TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 
-/** Seed notes, reconcile playground locale, then hydrate stores before first paint. */
+/** Seed notes, hydrate stores, reconcile playground locale, then load tags before first paint. */
 export async function bootstrapAppData(locale: Locale): Promise<void> {
   await createWelcomeNotesIfNeeded(locale);
   const flushedContent = await flushEditorAutosave();
-  await syncFormatPlaygroundOnLocaleChange(locale, flushedContent);
-  clearStashedEditorAutosave();
   await useNoteStore.getState().loadNotes({ status: "active" });
+  await syncFormatPlaygroundOnLocaleChange(locale, flushedContent, {
+    focusCanonical: true,
+  });
+  clearStashedEditorAutosave();
   useTagStore.getState().loadTags();
   void noteStorage.purgeTrash(TRASH_RETENTION_MS);
 }

@@ -52,7 +52,7 @@ describe("bootstrapAppData", () => {
     purgeTrash.mockClear();
   });
 
-  it("seeds notes, syncs playground, then loads stores before UI", async () => {
+  it("seeds notes, loads stores, syncs playground, then loads tags before UI", async () => {
     const { bootstrapAppData } = await import("./bootstrapAppData");
     const order: string[] = [];
 
@@ -80,16 +80,18 @@ describe("bootstrapAppData", () => {
 
     expect(createWelcomeNotesIfNeeded).toHaveBeenCalledWith("zh");
     expect(flushEditorAutosave).toHaveBeenCalled();
-    expect(syncFormatPlaygroundOnLocaleChange).toHaveBeenCalledWith("zh", null);
     expect(loadNotes).toHaveBeenCalledWith({ status: "active" });
-    expect(loadTags).toHaveBeenCalled();
+    expect(syncFormatPlaygroundOnLocaleChange).toHaveBeenCalledWith("zh", null, {
+      focusCanonical: true,
+    });
     expect(clearStashedEditorAutosave).toHaveBeenCalled();
+    expect(loadTags).toHaveBeenCalled();
     expect(order).toEqual([
       "seed",
       "flush",
+      "loadNotes",
       "sync",
       "clearStash",
-      "loadNotes",
       "loadTags",
     ]);
   });

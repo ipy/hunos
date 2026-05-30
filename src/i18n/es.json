@@ -46,7 +46,10 @@
       "trash": "Mover a Papelera",
       "restore": "Restaurar",
       "deletePermanently": "Eliminar Permanentemente",
-      "export": "Exportar"
+      "export": "Exportar",
+      "restorePlayground": "Restaurar patio de formatos",
+      "restorePlaygroundShort": "Restaurar",
+      "restorePlaygroundDone": "Patio de formatos restaurado"
     },
     "sort": {
       "modifiedAt": "Fecha de Modificación",

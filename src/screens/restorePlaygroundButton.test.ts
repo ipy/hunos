@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import en from "@/i18n/en.json";
+import es from "@/i18n/es.json";
 import zh from "@/i18n/zh.json";
 
 describe("restore playground button labels", () => {
@@ -18,6 +19,19 @@ describe("restore playground button labels", () => {
     );
     expect(en.notes.actions.restorePlaygroundShort).not.toBe(
       en.notes.actions.restorePlayground,
+    );
+  });
+
+  it("uses compact es visible text with full accessibility label", () => {
+    expect(es.notes.actions.restorePlaygroundShort).toBe("Restaurar");
+    expect(es.notes.actions.restorePlayground).toBe(
+      "Restaurar patio de formatos",
+    );
+    expect(es.notes.actions.restorePlaygroundDone).toBe(
+      "Patio de formatos restaurado",
+    );
+    expect(es.notes.actions.restorePlaygroundShort).not.toBe(
+      es.notes.actions.restorePlayground,
     );
   });
 });
