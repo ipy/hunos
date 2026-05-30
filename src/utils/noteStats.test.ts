@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import type { Editor } from "@tiptap/react";
 import {
+  deriveNoteStatsFromEditor,
   deriveNoteStatsFromNote,
   deriveNoteStatsFromPlain,
 } from "./noteStats";
@@ -28,6 +30,24 @@ describe("deriveNoteStatsFromPlain", () => {
 
   it("counts words from plain text", () => {
     expect(deriveNoteStatsFromPlain("one two three").wordCount).toBe(3);
+  });
+});
+
+describe("deriveNoteStatsFromEditor", () => {
+  it("derives word and character counts from editor JSON", () => {
+    const doc = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "StatusBarLive98" }],
+        },
+      ],
+    };
+    const editor = { getJSON: () => doc } as unknown as Editor;
+    const stats = deriveNoteStatsFromEditor(editor);
+    expect(stats.wordCount).toBe(1);
+    expect(stats.charCount).toBeGreaterThanOrEqual("StatusBarLive98".length);
   });
 });
 

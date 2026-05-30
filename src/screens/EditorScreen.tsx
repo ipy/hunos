@@ -13,6 +13,7 @@ import { useSettingsStore } from "@/store/settingsStore";
 import { Icon } from "@/components/common/Icon";
 import { TiptapEditor } from "@/components/editor/TiptapEditor";
 import { editorContentMatchesStoredJson } from "@/components/editor/noteSwitchContentUtils";
+import { EditorStatusBar } from "@/components/editor/EditorStatusBar";
 import { EditorToolbar } from "@/components/editor/EditorToolbar";
 import { EditorFindBar } from "@/components/editor/EditorFindBar";
 import { BacklinksPanel } from "@/components/backlinks/BacklinksPanel";
@@ -1061,6 +1062,12 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         {!focusMode && <BacklinksPanel noteId={note.id} />}
       </div>
 
+      {editorInstance && (
+        <EditorStatusBar
+          editor={editorInstance}
+          lineWidth={settings.lineWidth}
+        />
+      )}
       {!focusMode && <EditorToolbar editor={editorInstance} />}
     </div>
   );
