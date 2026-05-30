@@ -186,6 +186,23 @@ describe("noteStorage.get", () => {
     expect(loaded?.contentPlain).toBe("");
     expect(dbUpdate).toHaveBeenCalledWith(note.id, { contentPlain: "" });
   });
+
+  it("refreshes stale contentPlain when legacy content is sanitized on read", async () => {
+    const note = await noteStorage.create({ title: "Legacy stale plain" });
+    notesById.set(note.id, {
+      ...note,
+      content: legacyImageContent(),
+      contentPlain: "Old text",
+    });
+
+    const loaded = await noteStorage.get(note.id);
+
+    expect(loaded?.contentPlain).toBe("");
+    expect(dbUpdate).toHaveBeenCalledWith(note.id, {
+      content: loaded!.content,
+      contentPlain: "",
+    });
+  });
 });
 
 describe("noteStorage.list", () => {
@@ -290,6 +307,64 @@ describe("noteStorage.update", () => {
 
     expect(dbUpdate).toHaveBeenCalledWith("note-a", {
       title: "New Title",
+      modifiedAt: expect.any(Number),
+    });
+  });
+
+  it("derives contentPlain from content when contentPlain is omitted", async () => {
+    const oldContent = JSON.stringify({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "Old text" }],
+        },
+      ],
+    });
+    const note = await noteStorage.create({ content: oldContent });
+    dbUpdate.mockClear();
+
+    const newContent = JSON.stringify({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "New paragraph" }],
+        },
+      ],
+    });
+    await noteStorage.update(note.id, { content: newContent });
+
+    expect(notesById.get(note.id)?.contentPlain).toBe("New paragraph\n");
+    expect(dbUpdate).toHaveBeenCalledWith(note.id, {
+      content: newContent,
+      contentPlain: "New paragraph\n",
+      modifiedAt: expect.any(Number),
+    });
+  });
+
+  it("preserves explicit contentPlain when provided with content", async () => {
+    const content = JSON.stringify({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "Body text" }],
+        },
+      ],
+    });
+    const note = await noteStorage.create({ content });
+    dbUpdate.mockClear();
+
+    await noteStorage.update(note.id, {
+      content,
+      contentPlain: "Custom plain",
+    });
+
+    expect(notesById.get(note.id)?.contentPlain).toBe("Custom plain");
+    expect(dbUpdate).toHaveBeenCalledWith(note.id, {
+      content,
+      contentPlain: "Custom plain",
       modifiedAt: expect.any(Number),
     });
   });

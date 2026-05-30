@@ -19,12 +19,16 @@ async function hydrateNoteFromDb(note: Note): Promise<Note> {
   const { content, changed: contentChanged } = sanitizeBlockImageNoteContent(
     note.content,
   );
+  const derivedPlain = deriveContentPlain(content);
   const needsPlainBackfill = note.contentPlain == null;
-  const contentPlain = needsPlainBackfill
-    ? deriveContentPlain(content)
-    : note.contentPlain;
+  const plainIsStale =
+    !needsPlainBackfill &&
+    contentChanged &&
+    note.contentPlain !== derivedPlain;
+  const contentPlain =
+    needsPlainBackfill || plainIsStale ? derivedPlain : note.contentPlain;
 
-  if (!contentChanged && !needsPlainBackfill) {
+  if (!contentChanged && !needsPlainBackfill && !plainIsStale) {
     return note;
   }
 
@@ -32,7 +36,7 @@ async function hydrateNoteFromDb(note: Note): Promise<Note> {
   if (contentChanged) {
     updates.content = content;
   }
-  if (needsPlainBackfill) {
+  if (needsPlainBackfill || plainIsStale) {
     updates.contentPlain = contentPlain;
   }
   await db.notes.update(note.id, updates);
@@ -87,6 +91,9 @@ export const noteStorage = {
     };
     if (updates.content !== undefined) {
       payload.content = sanitizeBlockImageNoteContent(updates.content).content;
+      if (updates.contentPlain == null) {
+        payload.contentPlain = deriveContentPlain(payload.content);
+      }
     }
     await db.notes.update(id, payload);
     return updates.content !== undefined
