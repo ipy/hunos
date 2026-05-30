@@ -10,7 +10,7 @@ const RAWFILE_PATH = join(
 describe("harmony rawfile freshness", () => {
   const rawfile = readFileSync(RAWFILE_PATH, "utf-8");
 
-  it("includes v20 tryHintBullets playground seed", () => {
+  it("includes v21 tryHintBullets playground seed", () => {
     expect(rawfile).toContain("tryHintBullets");
   });
 

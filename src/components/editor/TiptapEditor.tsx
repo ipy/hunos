@@ -18,6 +18,7 @@ import {
   MarkdownBold,
   MarkdownBulletList,
   MarkdownShortcuts,
+  MarkdownStrike,
   MarkdownTaskItem,
 } from "./MarkdownShortcuts";
 import { TASK_LIST_TOGGLE_REORDER_META } from "./taskSinkUtils";
@@ -52,7 +53,6 @@ import { syncNoteContentInEditor } from "./noteSwitchContentUtils";
 import ListItem from "@tiptap/extension-list-item";
 import { SelectionBubbleMenu } from "./SelectionBubbleMenu";
 import { LinkEditorBubble } from "./LinkEditorBubble";
-import Strike from "@tiptap/extension-strike";
 import Italic from "@tiptap/extension-italic";
 import History from "@tiptap/extension-history";
 import { useTranslation } from "react-i18next";
@@ -171,11 +171,7 @@ export function TiptapEditor({
           };
         },
       }),
-      Strike.extend({
-        addKeyboardShortcuts() {
-          return {};
-        },
-      }),
+      MarkdownStrike,
       Italic.extend({
         addKeyboardShortcuts() {
           return {};

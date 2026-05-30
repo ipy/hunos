@@ -1027,6 +1027,8 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(zhTryHint).toContain("点击或轻触内嵌图片");
     expect(zhTryHint).toContain("拖动手柄调整大小");
     expect(zhTryHint).toContain("[[ 和 ]] 括号");
+    expect(enTryHint).toContain("~~strike~~");
+    expect(zhTryHint).toContain("~~删除线~~");
   });
 
   it("seeds tryHint as bullet list with at least four items", () => {
@@ -1035,6 +1037,57 @@ describe("migratePlaygroundContentIfStale", () => {
       expect(tryHintNode?.type).toBe("bulletList");
       expect((tryHintNode?.content ?? []).length).toBeGreaterThanOrEqual(4);
     }
+  });
+
+  it("updates tryHint to v21 for stale v20 playground notes", () => {
+    const staleEn = buildPlaygroundContent("en") as {
+      type: "doc";
+      attrs?: { playgroundContentVersion?: number };
+      content: Array<{ type: string; content?: unknown[] }>;
+    };
+    staleEn.attrs = { playgroundContentVersion: 20 };
+    const enTryIndex = staleEn.content.findIndex(
+      (node) =>
+        node.type === "heading" &&
+        (node.content as Array<{ text?: string }> | undefined)?.[0]?.text ===
+          "Try Your Own",
+    );
+    staleEn.content.splice(enTryIndex + 1, 1);
+
+    const migratedEn = migratePlaygroundContentIfStale(
+      JSON.stringify(staleEn),
+      "en",
+    );
+    expect(migratedEn).not.toBeNull();
+
+    const parsedEn = JSON.parse(migratedEn!) as {
+      attrs?: { playgroundContentVersion?: number };
+    };
+    expect(parsedEn.attrs?.playgroundContentVersion).toBe(
+      PLAYGROUND_CONTENT_VERSION,
+    );
+    expect(findTryHintText(parsedEn)).toContain("~~strike~~");
+
+    const staleZh = buildPlaygroundContent("zh") as {
+      type: "doc";
+      attrs?: { playgroundContentVersion?: number };
+      content: Array<{ type: string; content?: unknown[] }>;
+    };
+    staleZh.attrs = { playgroundContentVersion: 20 };
+    const zhTryIndex = staleZh.content.findIndex(
+      (node) =>
+        node.type === "heading" &&
+        (node.content as Array<{ text?: string }> | undefined)?.[0]?.text ===
+          "自由试炼",
+    );
+    staleZh.content.splice(zhTryIndex + 1, 1);
+
+    const migratedZh = migratePlaygroundContentIfStale(
+      JSON.stringify(staleZh),
+      "zh",
+    );
+    expect(migratedZh).not.toBeNull();
+    expect(findTryHintText(JSON.parse(migratedZh!))).toContain("~~删除线~~");
   });
 
   it("updates tryHint to v20 bullet list for stale v19 playground notes", () => {

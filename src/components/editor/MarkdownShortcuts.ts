@@ -5,6 +5,9 @@ import {
   wrappingInputRule,
 } from "@tiptap/core";
 import Bold, { starInputRegex } from "@tiptap/extension-bold";
+import Strike, {
+  inputRegex as strikeInputRegex,
+} from "@tiptap/extension-strike";
 import BulletList from "@tiptap/extension-bullet-list";
 import TaskItem from "@tiptap/extension-task-item";
 import {
@@ -188,6 +191,22 @@ export const MarkdownBold = Bold.extend({
         type: this.type,
       }),
     ];
+  },
+});
+
+/** Strikethrough via `~~` (Bear / GFM parity). */
+export const MarkdownStrike = Strike.extend({
+  addInputRules() {
+    return [
+      markInputRule({
+        find: strikeInputRegex,
+        type: this.type,
+      }),
+    ];
+  },
+
+  addKeyboardShortcuts() {
+    return {};
   },
 });
 

@@ -12,7 +12,7 @@ import type { Locale } from "@/types/settings";
 
 type PlaygroundLocale = "en" | "zh";
 
-export const PLAYGROUND_CONTENT_VERSION = 20;
+export const PLAYGROUND_CONTENT_VERSION = 21;
 
 export const FORMAT_PLAYGROUND_TITLES: readonly string[] = [
   "Format Playground",
@@ -119,6 +119,7 @@ const STRINGS: Record<PlaygroundLocale, PlaygroundStrings> = {
     tagsExternalLabel: "project docs",
     tagsExternalSuffix: " for more.",
     tryHintBullets: [
+      "Type **bold**, _italic_, __underline__, ~~strike~~, `code`, or ==highlight== for inline marks.",
       "Add new blocks below — type # / ## / ### , - , 1. , - [ ] , > , ``` , --- for headings, lists, quotes, code, and dividers.",
       "Type or paste | Name | Type | for tables (multi-line GFM pipe tables paste as native tables), type [text](url) for external links (invalid URLs show an error toast; bare URLs linkify on space).",
       "Paste or drag-and-drop images (PNG/JPG, max 5 MB; very small images display at a minimum height of 80px), click or tap embedded images to select them and drag the resize handle to adjust size.",
@@ -176,6 +177,7 @@ const STRINGS: Record<PlaygroundLocale, PlaygroundStrings> = {
     tagsExternalLabel: "项目文档",
     tagsExternalSuffix: "。",
     tryHintBullets: [
+      "输入 **粗体**、_斜体_、__下划线__、~~删除线~~、`代码` 或 ==高亮== 等行内样式。",
       "在下方空行试输入 # / ## / ### 、- 、1. 、- [ ] 、> 、``` 、--- 创建标题、列表、引用、代码块与分隔线。",
       "输入 | 名称 | 类型 | 创建表格，或直接粘贴多行 GFM 管道表格为原生表格，输入 [文字](url) 创建外部链接（无效 URL 会显示错误提示；裸 URL 输入空格后自动链接）。",
       "粘贴或拖放图片（PNG/JPG，最大 5 MB；极小的图片会以 80px 最小高度显示），点击或轻触内嵌图片可选中并拖动手柄调整大小。",
