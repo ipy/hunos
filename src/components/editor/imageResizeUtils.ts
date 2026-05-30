@@ -1,18 +1,35 @@
 import type { Node } from "@tiptap/pm/model";
 import { NodeSelection, type EditorState } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
+import { TINY_PASTE_FILE_BYTES } from "./imageEmbedUtils";
 
 /** Minimum display height for block images (matches sketch resize). */
 export const MIN_BLOCK_IMAGE_HEIGHT = 80;
 
-/** Block images without an explicit inline height (CSS visual floor only). */
-export const BLOCK_IMAGE_WITHOUT_INLINE_HEIGHT_SELECTOR =
-  '.editor-image:not([style*="height"])';
+/** Block images flagged as likely tiny pastes (CSS visual floor only). */
+export const BLOCK_IMAGE_TINY_FLOOR_SELECTOR =
+  '.editor-image[data-block-image-floor="true"]';
 
 export type BlockImageInsertAttrs = {
   src: string;
   height?: number;
+  dataBlockImageFloor?: boolean;
 };
+
+export function isLikelyTinyPasteFile(fileSize: number): boolean {
+  return fileSize > 0 && fileSize <= TINY_PASTE_FILE_BYTES;
+}
+
+/** Insert attrs for a pasted file before intrinsic dimensions are known. */
+export function buildInitialBlockImageInsertAttrs(
+  src: string,
+  fileSize: number,
+): BlockImageInsertAttrs {
+  if (isLikelyTinyPasteFile(fileSize)) {
+    return { src, dataBlockImageFloor: true };
+  }
+  return { src };
+}
 
 /** Apply {@link MIN_BLOCK_IMAGE_HEIGHT} when intrinsic height is below the floor. */
 export function buildBlockImageInsertAttrs(

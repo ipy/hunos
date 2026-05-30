@@ -1,5 +1,8 @@
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
+/** Pasted files at or below this size get an immediate 80px visual floor (2×2 PNG ≪; 800×600 ≫). */
+export const TINY_PASTE_FILE_BYTES = 1024;
+
 /** Previous 1×1 PNG seed (migrated to {@link PLAYGROUND_SAMPLE_IMAGE_SRC}). */
 export const LEGACY_PLAYGROUND_SAMPLE_IMAGE_SRC =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";

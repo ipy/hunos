@@ -28,7 +28,7 @@ import { TagSuggestion } from "./TagSuggestion";
 import { TagDecoration } from "./TagDecoration";
 import { SketchResize } from "./SketchNodeView";
 import {
-  BLOCK_IMAGE_WITHOUT_INLINE_HEIGHT_SELECTOR,
+  BLOCK_IMAGE_TINY_FLOOR_SELECTOR,
   MIN_BLOCK_IMAGE_HEIGHT,
 } from "./imageResizeUtils";
 import { FocusModeShortcuts } from "./FocusModeShortcuts";
@@ -243,6 +243,15 @@ export function TiptapEditor({
                 return { "data-testid": testId };
               },
               parseHTML: (el) => el.getAttribute("data-testid"),
+            },
+            dataBlockImageFloor: {
+              default: null,
+              renderHTML: (attrs) => {
+                if (!attrs.dataBlockImageFloor) return {};
+                return { "data-block-image-floor": "true" };
+              },
+              parseHTML: (el) =>
+                el.getAttribute("data-block-image-floor") === "true" || null,
             },
           };
         },
@@ -462,8 +471,9 @@ export function TiptapEditor({
           margin: 0.6em 0;
           display: block;
         }
-        .hunos-editor ${BLOCK_IMAGE_WITHOUT_INLINE_HEIGHT_SELECTOR} {
+        .hunos-editor ${BLOCK_IMAGE_TINY_FLOOR_SELECTOR} {
           min-height: ${MIN_BLOCK_IMAGE_HEIGHT}px;
+          object-fit: contain;
         }
         .hunos-editor img[data-sketch="true"] {
           cursor: pointer;

@@ -2,19 +2,22 @@ import { describe, expect, it, vi } from "vitest";
 import { Schema } from "@tiptap/pm/model";
 import { EditorState, NodeSelection, TextSelection } from "@tiptap/pm/state";
 import {
-  BLOCK_IMAGE_WITHOUT_INLINE_HEIGHT_SELECTOR,
+  BLOCK_IMAGE_TINY_FLOOR_SELECTOR,
   buildBlockImageInsertAttrs,
+  buildInitialBlockImageInsertAttrs,
   computeImageResizeHeight,
   getSelectedBlockImagePos,
   handleBlockImageClick,
   handleBlockImageMousedown,
   imageResizeHandleAttributes,
   isImageResizeHandleActive,
+  isLikelyTinyPasteFile,
   isResizableBlockImage,
   MIN_BLOCK_IMAGE_HEIGHT,
   selectBlockImageNode,
   syncImageResizeHandleAttributes,
 } from "./imageResizeUtils";
+import { TINY_PASTE_FILE_BYTES } from "./imageEmbedUtils";
 
 const schema = new Schema({
   nodes: {
@@ -269,11 +272,40 @@ describe("handleBlockImageClick", () => {
   });
 });
 
-describe("BLOCK_IMAGE_WITHOUT_INLINE_HEIGHT_SELECTOR", () => {
-  it("excludes images with an explicit inline height", () => {
-    expect(BLOCK_IMAGE_WITHOUT_INLINE_HEIGHT_SELECTOR).toBe(
-      '.editor-image:not([style*="height"])',
+describe("BLOCK_IMAGE_TINY_FLOOR_SELECTOR", () => {
+  it("targets only images flagged as likely tiny pastes", () => {
+    expect(BLOCK_IMAGE_TINY_FLOOR_SELECTOR).toBe(
+      '.editor-image[data-block-image-floor="true"]',
     );
+  });
+});
+
+describe("isLikelyTinyPasteFile", () => {
+  it("treats small pasted files as likely tiny", () => {
+    expect(isLikelyTinyPasteFile(32)).toBe(true);
+    expect(isLikelyTinyPasteFile(TINY_PASTE_FILE_BYTES)).toBe(true);
+  });
+
+  it("excludes large pasted files", () => {
+    expect(isLikelyTinyPasteFile(TINY_PASTE_FILE_BYTES + 1)).toBe(false);
+    expect(isLikelyTinyPasteFile(0)).toBe(false);
+  });
+});
+
+describe("buildInitialBlockImageInsertAttrs", () => {
+  it("sets floor attr for likely tiny files", () => {
+    expect(
+      buildInitialBlockImageInsertAttrs("data:image/png;base64,tiny", 32),
+    ).toEqual({
+      src: "data:image/png;base64,tiny",
+      dataBlockImageFloor: true,
+    });
+  });
+
+  it("leaves large files without floor attr", () => {
+    expect(
+      buildInitialBlockImageInsertAttrs("data:image/png;base64,large", 2048),
+    ).toEqual({ src: "data:image/png;base64,large" });
   });
 });
 

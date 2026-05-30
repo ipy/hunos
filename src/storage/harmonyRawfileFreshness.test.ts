@@ -24,4 +24,21 @@ describe("harmony rawfile freshness", () => {
   it("does not include removed wiki-link-bracket-visible CSS", () => {
     expect(rawfile).not.toContain(".wiki-link-bracket-visible {");
   });
+
+  it("includes resolveInsertedImagePos selection.from-1 fallback", () => {
+    expect(rawfile).toContain("selection.from-1");
+  });
+
+  it("includes focusCanonical playground locale sync", () => {
+    expect(rawfile).toContain("focusCanonical");
+  });
+
+  it("includes zh playgroundFlushDropped copy", () => {
+    expect(rawfile).toContain("playgroundFlushDropped");
+  });
+
+  it("uses tiny-only block image floor attr instead of blanket height selector", () => {
+    expect(rawfile).toContain("data-block-image-floor");
+    expect(rawfile).not.toContain('not([style*="height"])');
+  });
 });

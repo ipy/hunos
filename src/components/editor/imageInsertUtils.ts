@@ -8,6 +8,7 @@ import {
 } from "./imageEmbedUtils";
 import {
   buildBlockImageInsertAttrs,
+  buildInitialBlockImageInsertAttrs,
   getSelectedBlockImagePos,
   type BlockImageInsertAttrs,
 } from "./imageResizeUtils";
@@ -69,23 +70,34 @@ export function applyDeferredBlockImageMinHeight(
   src: string,
 ): void {
   void loadImageDimensions(src).then((dims) => {
-    const insertAttrs = buildBlockImageInsertAttrs(src, dims?.height);
-    if (insertAttrs.height === undefined) {
-      return;
-    }
+    const targetAttrs = buildBlockImageInsertAttrs(src, dims?.height);
 
     const node = view.state.doc.nodeAt(imagePos);
     if (!node || node.type.name !== "image" || node.attrs.src !== src) {
       return;
     }
-    if (node.attrs.height === insertAttrs.height) {
+
+    const nextAttrs = { ...node.attrs };
+    let changed = false;
+
+    if (nextAttrs.dataBlockImageFloor) {
+      nextAttrs.dataBlockImageFloor = null;
+      changed = true;
+    }
+
+    if (
+      targetAttrs.height !== undefined &&
+      nextAttrs.height !== targetAttrs.height
+    ) {
+      nextAttrs.height = targetAttrs.height;
+      changed = true;
+    }
+
+    if (!changed) {
       return;
     }
 
-    const tr = view.state.tr.setNodeMarkup(imagePos, undefined, {
-      ...node.attrs,
-      height: insertAttrs.height,
-    });
+    const tr = view.state.tr.setNodeMarkup(imagePos, undefined, nextAttrs);
     view.dispatch(tr);
   });
 }
@@ -93,7 +105,7 @@ export function applyDeferredBlockImageMinHeight(
 async function insertBlockImageFromFile(
   editor: ImageInsertEditor,
   file: File,
-  insert: (src: string) => boolean,
+  insert: (attrs: BlockImageInsertAttrs) => boolean,
   hintPos?: number,
 ): Promise<boolean> {
   const src = await readImageFileAsDataUrl(file);
@@ -101,7 +113,8 @@ async function insertBlockImageFromFile(
     return false;
   }
 
-  if (!insert(src)) {
+  const insertAttrs = buildInitialBlockImageInsertAttrs(src, file.size);
+  if (!insert(insertAttrs)) {
     return false;
   }
 
@@ -122,8 +135,8 @@ export async function insertImageFromFileAtCursor(
     return false;
   }
 
-  return insertBlockImageFromFile(editor, file, (src) =>
-    editor.chain().focus().setImage({ src }).run(),
+  return insertBlockImageFromFile(editor, file, (attrs) =>
+    editor.chain().focus().setImage(attrs).run(),
   );
 }
 
@@ -140,11 +153,11 @@ export async function insertImageFromFileAtPosition(
   return insertBlockImageFromFile(
     editor,
     file,
-    (src) =>
+    (attrs) =>
       editor
         .chain()
         .focus()
-        .insertContentAt(pos, { type: "image", attrs: { src } })
+        .insertContentAt(pos, { type: "image", attrs })
         .run(),
     pos,
   );
