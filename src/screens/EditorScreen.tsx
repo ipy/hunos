@@ -640,8 +640,8 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   }
 
   const isPlaygroundNote = isFormatPlaygroundNote(note.title, note.content);
-  const showRestorePlayground =
-    isPlaygroundNote && FORMAT_PLAYGROUND_TITLES.includes(note.title);
+  // Keep restore available after non-canonical renames (AC3 cleanup after AC5).
+  const showRestorePlayground = isPlaygroundNote;
   const restorePlaygroundLabel = t("notes.actions.restorePlayground");
   const restorePlaygroundVisibleText =
     layout === "mobile"
