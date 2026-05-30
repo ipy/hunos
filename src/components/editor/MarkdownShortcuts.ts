@@ -27,7 +27,8 @@ import type { Node, NodeType, ResolvedPos } from "@tiptap/pm/model";
 import type { Transaction } from "@tiptap/pm/state";
 import type { InputRuleMatch } from "@tiptap/core";
 
-const UNDERLINE_INPUT_REGEX = /(?:^|\s)(__(?!\s+__)((?:[^_]+))__(?!\s+__))$/;
+export const UNDERLINE_INPUT_REGEX =
+  /(?:^|\s)(__(?!\s+__)((?:[^_]+))__(?!\s+__))$/;
 const TASK_BRACKET_INPUT_REGEX = /^\s*(\[([ x])?\])\s$/;
 const TASK_ITEM_INPUT_REGEX = /^\s*-\s*\[([ x])\]\s$/;
 const TASK_PREFIX_REGEX = /^\s*-\s*\[/;

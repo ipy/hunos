@@ -25,6 +25,15 @@ describe("harmony rawfile freshness", () => {
     expect(rawfile).toMatch(/==\(\?!\\s\+==\)/);
   });
 
+  it("includes bold and underline markdown input rules (iter 99)", () => {
+    expect(rawfile).toContain('bold:{open:"**"');
+    expect(rawfile).toContain('underline:{open:"__"');
+    expect(rawfile).toContain(
+      String.raw`\*\*(?!\s+\*\*)((?:[^*]+))\*\*(?!\s+\*\*)`,
+    );
+    expect(rawfile).toMatch(/__\(\?!\\s\+__\)/);
+  });
+
   it("includes bootstrapAppData startup sequence", () => {
     // bootstrapAppData is minified in the bundle; loadNotes runs before locale sync.
     expect(rawfile).toContain('loadNotes({status:"active"})');

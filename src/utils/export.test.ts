@@ -276,6 +276,46 @@ describe("exportNote markdown inline marks", () => {
     expect(exportNote(note, "markdown")).toBe("*ItalicExport91*");
   });
 
+  it("exports bold as **text**", () => {
+    const note = makeNote({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "BoldExport99",
+              marks: [{ type: "bold" }],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(exportNote(note, "markdown")).toBe("**BoldExport99**");
+  });
+
+  it("exports underline as <u>text</u>", () => {
+    const note = makeNote({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "UnderlineExport99",
+              marks: [{ type: "underline" }],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(exportNote(note, "markdown")).toBe("<u>UnderlineExport99</u>");
+  });
+
   it("exports inline code as `text`", () => {
     const note = makeNote({
       type: "doc",
