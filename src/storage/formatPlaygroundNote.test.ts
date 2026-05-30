@@ -183,7 +183,7 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(listsSectionIndex).toBeGreaterThan(-1);
   });
 
-  it("preserves user-added blocks after the seed when migrating locale", () => {
+  it("drops user-added blocks during locale migration (clean slate)", () => {
     const base = buildPlaygroundContent("en") as {
       type: "doc";
       attrs?: Record<string, unknown>;
@@ -202,8 +202,44 @@ describe("migratePlaygroundContentIfStale", () => {
     const parsed = JSON.parse(migrated!) as {
       content: Array<{ type: string; content?: Array<{ text?: string }> }>;
     };
-    const last = parsed.content[parsed.content.length - 1];
-    expect(last?.content?.[0]?.text).toBe("User test block");
+    const freshZh = buildPlaygroundContent("zh") as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    expect(parsed.content.length).toBe(freshZh.content.length);
+    expect(
+      parsed.content.some(
+        (node) => node.content?.[0]?.text === "User test block",
+      ),
+    ).toBe(false);
+  });
+
+  it("drops LocaleUndoMarker when migrating zh to en", () => {
+    const base = buildPlaygroundContent("zh") as {
+      type: "doc";
+      attrs?: Record<string, unknown>;
+      content: unknown[];
+    };
+    base.content.push({
+      type: "paragraph",
+      content: [{ type: "text", text: "LocaleUndoMarker" }],
+    });
+    const migrated = migratePlaygroundContentIfStale(
+      JSON.stringify(base),
+      "en",
+    );
+    expect(migrated).not.toBeNull();
+
+    const parsed = JSON.parse(migrated!) as {
+      attrs?: { playgroundContentLocale?: string };
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    expect(parsed.attrs?.playgroundContentLocale).toBe("en");
+    expect(parsed.content[0]?.content?.[0]?.text).toBe("Format Playground");
+    expect(
+      parsed.content.some(
+        (node) => node.content?.[0]?.text === "LocaleUndoMarker",
+      ),
+    ).toBe(false);
   });
 
   it("preserves user-resized sample image height during locale migration", () => {
@@ -613,9 +649,7 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(tryHintText).toContain("Cmd+F 在笔记内查找");
     expect(tryHintText).toContain("Cmd+Option+F 查找并替换");
     expect(tryHintText).toContain("Cmd+Shift+F 搜索全部笔记");
-    expect(tryHintText).toContain(
-      "空引用行按 Enter 或行首 Backspace 退出引用",
-    );
+    expect(tryHintText).toContain("空引用行按 Enter 或行首 Backspace 退出引用");
     expect(tryHintText).toContain(
       "Mod+Enter（或代码块末尾空行连按 Enter）离开代码块",
     );

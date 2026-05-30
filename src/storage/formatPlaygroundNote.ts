@@ -450,11 +450,6 @@ type PlaygroundDoc = {
   content: PlaygroundDocNode[];
 };
 
-const TRY_SECTION_HEADINGS = new Set([
-  STRINGS.en.sectionTry,
-  STRINGS.zh.sectionTry,
-]);
-
 function readPlaygroundContentLocale(
   parsed: PlaygroundDoc,
 ): PlaygroundLocale | null {
@@ -486,19 +481,6 @@ function inferPlaygroundLocaleFromContent(
     return "zh";
   }
   return "en";
-}
-
-function findPlaygroundSeedEndIndex(nodes: PlaygroundDocNode[]): number {
-  const tryIndex = nodes.findIndex(
-    (node) =>
-      node.type === "heading" &&
-      node.attrs?.level === 2 &&
-      TRY_SECTION_HEADINGS.has(headingText(node)),
-  );
-  if (tryIndex === -1) {
-    return nodes.length;
-  }
-  return Math.min(tryIndex + 2, nodes.length);
 }
 
 function findPlaygroundSampleImageIndex(nodes: PlaygroundDocNode[]): number {
@@ -542,8 +524,6 @@ function applyPlaygroundLocaleMigration(
   locale: Locale,
 ): PlaygroundDoc {
   const fresh = buildPlaygroundContent(locale) as PlaygroundDoc;
-  const seedEnd = findPlaygroundSeedEndIndex(parsed.content);
-  const userSuffix = parsed.content.slice(seedEnd);
   const preservedHeight = readPlaygroundSampleImageHeight(parsed.content);
   const freshContent = [...fresh.content];
 
@@ -563,7 +543,7 @@ function applyPlaygroundLocaleMigration(
 
   return {
     ...fresh,
-    content: [...freshContent, ...userSuffix],
+    content: freshContent,
   };
 }
 
