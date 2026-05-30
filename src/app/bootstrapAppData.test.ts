@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createWelcomeNotesIfNeeded = vi.fn().mockResolvedValue(undefined);
 const flushEditorAutosave = vi.fn().mockResolvedValue(null);
+const clearStashedEditorAutosave = vi.fn();
 const syncFormatPlaygroundOnLocaleChange = vi.fn().mockResolvedValue(undefined);
 const loadNotes = vi.fn().mockResolvedValue(undefined);
 const loadTags = vi.fn();
@@ -14,6 +15,7 @@ vi.mock("@/storage/welcomeNotes", () => ({
 
 vi.mock("@/store/editorAutosaveRegistry", () => ({
   flushEditorAutosave: () => flushEditorAutosave(),
+  clearStashedEditorAutosave: () => clearStashedEditorAutosave(),
 }));
 
 vi.mock("@/storage/formatPlaygroundNote", () => ({
@@ -43,6 +45,7 @@ describe("bootstrapAppData", () => {
   beforeEach(() => {
     createWelcomeNotesIfNeeded.mockClear();
     flushEditorAutosave.mockClear();
+    clearStashedEditorAutosave.mockClear();
     syncFormatPlaygroundOnLocaleChange.mockClear();
     loadNotes.mockClear();
     loadTags.mockClear();
@@ -63,6 +66,9 @@ describe("bootstrapAppData", () => {
     syncFormatPlaygroundOnLocaleChange.mockImplementation(async () => {
       order.push("sync");
     });
+    clearStashedEditorAutosave.mockImplementation(() => {
+      order.push("clearStash");
+    });
     loadNotes.mockImplementation(async () => {
       order.push("loadNotes");
     });
@@ -77,6 +83,14 @@ describe("bootstrapAppData", () => {
     expect(syncFormatPlaygroundOnLocaleChange).toHaveBeenCalledWith("zh", null);
     expect(loadNotes).toHaveBeenCalledWith({ status: "active" });
     expect(loadTags).toHaveBeenCalled();
-    expect(order).toEqual(["seed", "flush", "sync", "loadNotes", "loadTags"]);
+    expect(clearStashedEditorAutosave).toHaveBeenCalled();
+    expect(order).toEqual([
+      "seed",
+      "flush",
+      "sync",
+      "clearStash",
+      "loadNotes",
+      "loadTags",
+    ]);
   });
 });

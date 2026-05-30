@@ -5,6 +5,7 @@ const settingsStorageGetAll = vi.fn();
 const settingsStorageSet = vi.fn().mockResolvedValue(undefined);
 const bootstrapAppData = vi.fn().mockResolvedValue(undefined);
 const flushEditorAutosave = vi.fn().mockResolvedValue(null);
+const clearStashedEditorAutosave = vi.fn();
 const syncFormatPlaygroundOnLocaleChange = vi.fn().mockResolvedValue({
   canonicalNoteId: null,
   switchedFromNoteId: null,
@@ -39,6 +40,7 @@ vi.mock("@/app/bootstrapAppData", () => ({
 
 vi.mock("@/store/editorAutosaveRegistry", () => ({
   flushEditorAutosave: () => flushEditorAutosave(),
+  clearStashedEditorAutosave: () => clearStashedEditorAutosave(),
 }));
 
 vi.mock("@/storage/formatPlaygroundNote", () => ({
@@ -62,6 +64,7 @@ describe("useSettingsStore", () => {
     settingsStorageGetAll.mockReset();
     settingsStorageSet.mockClear();
     flushEditorAutosave.mockClear();
+    clearStashedEditorAutosave.mockClear();
     bootstrapAppData.mockClear();
     syncFormatPlaygroundOnLocaleChange.mockClear();
     writeLocaleToUrl.mockClear();
@@ -83,6 +86,7 @@ describe("useSettingsStore", () => {
     expect(writeLocaleToUrl).toHaveBeenCalledWith("en");
     expect(useSettingsStore.getState().locale).toBe("en");
     expect(showToast).not.toHaveBeenCalled();
+    expect(clearStashedEditorAutosave).toHaveBeenCalled();
   });
 
   it("setLocale syncs playground when locale unchanged but editor flush is pending", async () => {

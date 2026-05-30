@@ -462,6 +462,22 @@ function readPlaygroundContentLocale(
   return locale === "zh" || locale === "en" ? locale : null;
 }
 
+/** Whether editor JSON matches the active settings locale (ignores version staleness). */
+export function playgroundContentMatchesLocale(
+  content: string,
+  locale: Locale,
+): boolean {
+  try {
+    const parsed = JSON.parse(content) as PlaygroundDoc;
+    const docLocale =
+      readPlaygroundContentLocale(parsed) ??
+      inferPlaygroundLocaleFromContent(parsed);
+    return docLocale === resolvePlaygroundLocale(locale);
+  } catch {
+    return false;
+  }
+}
+
 function inferPlaygroundLocaleFromContent(
   parsed: PlaygroundDoc,
 ): PlaygroundLocale {

@@ -40,6 +40,11 @@ export function takeStashedEditorAutosave(): EditorAutosaveSnapshot | null {
   return snapshot;
 }
 
+/** Drop pending stash after locale sync or when noteId no longer matches. */
+export function clearStashedEditorAutosave(): void {
+  stashedSnapshot = null;
+}
+
 /** Collect pending editor JSON before locale migration (handler or unmount stash). */
 export async function flushEditorAutosave(): Promise<string | null> {
   if (flushHandler) {

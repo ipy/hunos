@@ -11,6 +11,7 @@ import {
   getFormatPlaygroundTitle,
   isFormatPlaygroundNote,
   migratePlaygroundContentIfStale,
+  playgroundContentMatchesLocale,
   restoreFormatPlaygroundContent,
 } from "./formatPlaygroundNote";
 
@@ -135,6 +136,17 @@ describe("buildPlaygroundContent", () => {
       .join("");
     expect(joined).not.toContain(" and link to ");
     expect(joined).toContain("并链接");
+  });
+});
+
+describe("playgroundContentMatchesLocale", () => {
+  it("matches doc attrs locale", () => {
+    const en = JSON.stringify(buildPlaygroundContent("en"));
+    const zh = JSON.stringify(buildPlaygroundContent("zh"));
+    expect(playgroundContentMatchesLocale(en, "en")).toBe(true);
+    expect(playgroundContentMatchesLocale(en, "zh")).toBe(false);
+    expect(playgroundContentMatchesLocale(zh, "zh")).toBe(true);
+    expect(playgroundContentMatchesLocale(zh, "en-US")).toBe(false);
   });
 });
 

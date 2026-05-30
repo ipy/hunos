@@ -21,8 +21,10 @@ import {
   getFormatPlaygroundTitle,
   isFormatPlaygroundNote,
   migratePlaygroundContentIfStale,
+  playgroundContentMatchesLocale,
 } from "@/storage/formatPlaygroundNote";
 import {
+  clearStashedEditorAutosave,
   peekStashedEditorAutosave,
   registerEditorAutosaveFlush,
   stashEditorAutosaveSnapshot,
@@ -196,6 +198,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
     const snapshot = peekStashedEditorAutosave();
     if (snapshot?.noteId !== note.id) {
+      if (snapshot) clearStashedEditorAutosave();
       setEditorSeedContent(null);
       return;
     }
@@ -205,6 +208,10 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
     const isPlayground = isFormatPlaygroundNote(note.title, note.content);
     if (isPlayground) {
+      if (!playgroundContentMatchesLocale(taken.content, settings.locale)) {
+        setEditorSeedContent(null);
+        return;
+      }
       pendingContentRef.current = taken.content;
       setEditorSeedContent(taken.content);
       return;
@@ -212,7 +219,20 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
     setEditorSeedContent(null);
     void saveNoteContent(note.id, taken.content);
-  }, [note?.id, note?.title, note?.content, saveNoteContent]);
+  }, [
+    note?.id,
+    note?.title,
+    note?.content,
+    saveNoteContent,
+    settings.locale,
+  ]);
+
+  useEffect(() => {
+    if (!note?.id) return;
+    if (!isFormatPlaygroundNote(note.title, note.content)) return;
+    clearStashedEditorAutosave();
+    setEditorSeedContent(null);
+  }, [settings.locale, note?.id]);
 
   useEffect(() => {
     if (!note?.id || !isFormatPlaygroundNote(note.title, note.content)) return;

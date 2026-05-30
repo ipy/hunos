@@ -11,7 +11,10 @@ import { DEFAULT_SETTINGS } from "@/types/settings";
 import { settingsStorage } from "@/storage/settingsStorage";
 import { bootstrapAppData } from "@/app/bootstrapAppData";
 import { syncFormatPlaygroundOnLocaleChange } from "@/storage/formatPlaygroundNote";
-import { flushEditorAutosave } from "@/store/editorAutosaveRegistry";
+import {
+  clearStashedEditorAutosave,
+  flushEditorAutosave,
+} from "@/store/editorAutosaveRegistry";
 import { useUIStore } from "@/store/uiStore";
 import { readLocaleFromUrl, writeLocaleToUrl } from "@/utils/localeBootstrap";
 import i18n from "@/i18n";
@@ -68,6 +71,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       flushedContent,
       { focusCanonical: true },
     );
+    clearStashedEditorAutosave();
 
     if (syncResult.flushDropped) {
       useUIStore

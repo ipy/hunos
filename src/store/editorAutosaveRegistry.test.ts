@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  clearStashedEditorAutosave,
   flushEditorAutosave,
   peekStashedEditorAutosave,
   registerEditorAutosaveFlush,
@@ -38,5 +39,12 @@ describe("editorAutosaveRegistry", () => {
       content: "{}",
     });
     expect(peekStashedEditorAutosave()).toBeNull();
+  });
+
+  it("clearStashedEditorAutosave drops peek and take results", () => {
+    stashEditorAutosaveSnapshot("note-1", "{}");
+    clearStashedEditorAutosave();
+    expect(peekStashedEditorAutosave()).toBeNull();
+    expect(takeStashedEditorAutosave()).toBeNull();
   });
 });
