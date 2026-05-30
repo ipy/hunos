@@ -1,17 +1,18 @@
-import { db } from './database';
-import type { Note, NoteFilter, NoteStatus } from '@/types/note';
-import { generateId } from '@/utils/uuid';
+import { db } from "./database";
+import type { Note, NoteFilter, NoteStatus } from "@/types/note";
+import { generateId } from "@/utils/uuid";
+import { sanitizeBlockImageNoteContent } from "@/utils/migrateBlockImageFloor";
 
 export const noteStorage = {
   async create(partial?: Partial<Note>): Promise<Note> {
     const now = Date.now();
     const note: Note = {
       id: generateId(),
-      title: '',
-      content: '',
-      contentPlain: '',
+      title: "",
+      content: "",
+      contentPlain: "",
       isPinned: false,
-      status: 'active',
+      status: "active",
       trashedAt: null,
       createdAt: now,
       modifiedAt: now,
@@ -26,8 +27,21 @@ export const noteStorage = {
     return db.notes.get(id);
   },
 
-  async update(id: string, updates: Partial<Note>): Promise<void> {
-    await db.notes.update(id, { ...updates, modifiedAt: Date.now() });
+  async update(
+    id: string,
+    updates: Partial<Note>,
+  ): Promise<{ content?: string } | undefined> {
+    const payload: Partial<Note> & { modifiedAt: number } = {
+      ...updates,
+      modifiedAt: Date.now(),
+    };
+    if (updates.content !== undefined) {
+      payload.content = sanitizeBlockImageNoteContent(updates.content).content;
+    }
+    await db.notes.update(id, payload);
+    return updates.content !== undefined
+      ? { content: payload.content as string }
+      : undefined;
   },
 
   async delete(id: string): Promise<void> {
@@ -36,30 +50,30 @@ export const noteStorage = {
 
   async list(filter: NoteFilter = {}): Promise<Note[]> {
     const {
-      status = 'active',
+      status = "active",
       isPinned,
-      sortBy = 'modifiedAt',
-      sortOrder = 'desc',
+      sortBy = "modifiedAt",
+      sortOrder = "desc",
       limit,
       offset = 0,
     } = filter;
 
-    let collection = db.notes.where('status').equals(status);
+    let collection = db.notes.where("status").equals(status);
 
     let results = await collection.toArray();
 
     if (isPinned !== undefined) {
-      results = results.filter(n => n.isPinned === isPinned);
+      results = results.filter((n) => n.isPinned === isPinned);
     }
 
     results.sort((a, b) => {
       let cmp: number;
-      if (sortBy === 'title') {
+      if (sortBy === "title") {
         cmp = a.title.localeCompare(b.title);
       } else {
         cmp = (a[sortBy] as number) - (b[sortBy] as number);
       }
-      return sortOrder === 'desc' ? -cmp : cmp;
+      return sortOrder === "desc" ? -cmp : cmp;
     });
 
     if (offset > 0) results = results.slice(offset);
@@ -69,25 +83,26 @@ export const noteStorage = {
   },
 
   async listByTag(tagId: string, filter: NoteFilter = {}): Promise<Note[]> {
-    const noteTags = await db.noteTags.where('tagId').equals(tagId).toArray();
-    const noteIds = noteTags.map(nt => nt.noteId);
+    const noteTags = await db.noteTags.where("tagId").equals(tagId).toArray();
+    const noteIds = noteTags.map((nt) => nt.noteId);
     if (noteIds.length === 0) return [];
 
     const notes = await db.notes.bulkGet(noteIds);
     let results = notes.filter(
-      (n): n is Note => n !== undefined && n.status === (filter.status || 'active')
+      (n): n is Note =>
+        n !== undefined && n.status === (filter.status || "active"),
     );
 
-    const sortBy = filter.sortBy || 'modifiedAt';
-    const sortOrder = filter.sortOrder || 'desc';
+    const sortBy = filter.sortBy || "modifiedAt";
+    const sortOrder = filter.sortOrder || "desc";
     results.sort((a, b) => {
       let cmp: number;
-      if (sortBy === 'title') {
+      if (sortBy === "title") {
         cmp = a.title.localeCompare(b.title);
       } else {
         cmp = (a[sortBy] as number) - (b[sortBy] as number);
       }
-      return sortOrder === 'desc' ? -cmp : cmp;
+      return sortOrder === "desc" ? -cmp : cmp;
     });
 
     return results;
@@ -97,37 +112,39 @@ export const noteStorage = {
     if (!query.trim()) return [];
     const lower = query.toLowerCase();
     return db.notes
-      .filter(note =>
-        note.status === 'active' && (
-          note.title.toLowerCase().includes(lower) ||
-          note.contentPlain.toLowerCase().includes(lower)
-        )
+      .filter(
+        (note) =>
+          note.status === "active" &&
+          (note.title.toLowerCase().includes(lower) ||
+            note.contentPlain.toLowerCase().includes(lower)),
       )
       .toArray();
   },
 
-  async count(status: NoteStatus = 'active'): Promise<number> {
-    return db.notes.where('status').equals(status).count();
+  async count(status: NoteStatus = "active"): Promise<number> {
+    return db.notes.where("status").equals(status).count();
   },
 
   async countUntagged(): Promise<number> {
     const allNoteIds = new Set(
-      (await db.noteTags.toArray()).map(nt => nt.noteId)
+      (await db.noteTags.toArray()).map((nt) => nt.noteId),
     );
     return db.notes
-      .where('status').equals('active')
-      .filter(n => !allNoteIds.has(n.id))
+      .where("status")
+      .equals("active")
+      .filter((n) => !allNoteIds.has(n.id))
       .count();
   },
 
   async purgeTrash(olderThanMs: number): Promise<number> {
     const cutoff = Date.now() - olderThanMs;
     const toDelete = await db.notes
-      .where('status').equals('trashed')
-      .filter(n => n.trashedAt !== null && n.trashedAt < cutoff)
+      .where("status")
+      .equals("trashed")
+      .filter((n) => n.trashedAt !== null && n.trashedAt < cutoff)
       .toArray();
 
-    await db.notes.bulkDelete(toDelete.map(n => n.id));
+    await db.notes.bulkDelete(toDelete.map((n) => n.id));
     return toDelete.length;
   },
 };

@@ -1,11 +1,14 @@
-import { linkStorage } from '@/storage/linkStorage';
-import { tagStorage } from '@/storage/tagStorage';
-import { noteStorage } from '@/storage/noteStorage';
-import { extractFromPlainText, extractPlainTextFromTiptap } from './linkExtractor';
-import { isValidTagName } from '@/utils/tagPattern';
-import { replaceWikiLinkTitleInContent } from '@/utils/wikiLink';
-import type { BacklinkResult } from '@/types/graph';
-import type { Note } from '@/types/note';
+import { linkStorage } from "@/storage/linkStorage";
+import { tagStorage } from "@/storage/tagStorage";
+import { noteStorage } from "@/storage/noteStorage";
+import {
+  extractFromPlainText,
+  extractPlainTextFromTiptap,
+} from "./linkExtractor";
+import { isValidTagName } from "@/utils/tagPattern";
+import { replaceWikiLinkTitleInContent } from "@/utils/wikiLink";
+import type { BacklinkResult } from "@/types/graph";
+import type { Note } from "@/types/note";
 
 export const graphEngine = {
   async syncNoteLinks(noteId: string, content: string): Promise<void> {
@@ -19,8 +22,8 @@ export const graphEngine = {
 
     const extraction = extractFromPlainText(plainText);
 
-    await linkStorage.deleteBySourceAndType(noteId, 'tag_ref');
-    await linkStorage.deleteBySourceAndType(noteId, 'wiki_link');
+    await linkStorage.deleteBySourceAndType(noteId, "tag_ref");
+    await linkStorage.deleteBySourceAndType(noteId, "wiki_link");
     await tagStorage.removeAllForNote(noteId);
 
     for (const tagRef of extraction.tags) {
@@ -30,20 +33,20 @@ export const graphEngine = {
       if (!tag) continue;
 
       await tagStorage.addNoteTag(noteId, tag.id, tagRef.position);
-      await linkStorage.create(noteId, tag.id, 'tag_ref', '', tagRef.position);
+      await linkStorage.create(noteId, tag.id, "tag_ref", "", tagRef.position);
     }
 
     for (const wikiLink of extraction.wikiLinks) {
       const targetNotes = await noteStorage.search(wikiLink.title);
       const target = targetNotes.find(
-        n => n.title.toLowerCase() === wikiLink.title.toLowerCase()
+        (n) => n.title.toLowerCase() === wikiLink.title.toLowerCase(),
       );
 
       if (target) {
         await linkStorage.create(
           noteId,
           target.id,
-          'wiki_link',
+          "wiki_link",
           wikiLink.context,
           wikiLink.position,
         );
@@ -57,12 +60,15 @@ export const graphEngine = {
   },
 
   /** When a note title changes, update [[oldTitle]] wikilinks in every other note. */
-  async renameWikiLinkTargets(oldTitle: string, newTitle: string): Promise<Note[]> {
+  async renameWikiLinkTargets(
+    oldTitle: string,
+    newTitle: string,
+  ): Promise<Note[]> {
     if (!oldTitle.trim() || !newTitle.trim() || oldTitle === newTitle) {
       return [];
     }
 
-    const notes = await noteStorage.list({ status: 'active' });
+    const notes = await noteStorage.list({ status: "active" });
     const updated: Note[] = [];
 
     for (const note of notes) {
@@ -75,9 +81,10 @@ export const graphEngine = {
       if (nextContent === note.content) continue;
 
       await noteStorage.update(note.id, { content: nextContent });
-      await graphEngine.syncNoteLinks(note.id, nextContent);
       const fresh = await noteStorage.get(note.id);
-      if (fresh) updated.push(fresh);
+      if (!fresh) continue;
+      await graphEngine.syncNoteLinks(note.id, fresh.content);
+      updated.push(fresh);
     }
 
     return updated;
@@ -85,12 +92,12 @@ export const graphEngine = {
 
   async getBacklinks(noteId: string): Promise<BacklinkResult[]> {
     const incoming = await linkStorage.getIncoming(noteId);
-    const wikiLinks = incoming.filter(l => l.type === 'wiki_link');
+    const wikiLinks = incoming.filter((l) => l.type === "wiki_link");
 
     const results: BacklinkResult[] = [];
     for (const link of wikiLinks) {
       const note = await noteStorage.get(link.sourceNoteId);
-      if (note && note.status === 'active') {
+      if (note && note.status === "active") {
         results.push({
           noteId: note.id,
           noteTitle: note.title,
@@ -105,17 +112,17 @@ export const graphEngine = {
 
   async getOutgoingLinks(noteId: string): Promise<BacklinkResult[]> {
     const outgoing = await linkStorage.getOutgoing(noteId);
-    const wikiLinks = outgoing.filter(l => l.type === 'wiki_link');
+    const wikiLinks = outgoing.filter((l) => l.type === "wiki_link");
 
     const results: BacklinkResult[] = [];
     for (const link of wikiLinks) {
       const note = await noteStorage.get(link.targetNoteId);
-      if (note && note.status === 'active') {
+      if (note && note.status === "active") {
         results.push({
           noteId: note.id,
           noteTitle: note.title,
           context: link.context,
-          type: 'wiki_link',
+          type: "wiki_link",
         });
       }
     }

@@ -37,9 +37,10 @@ describe("harmony rawfile freshness", () => {
     expect(rawfile).toContain("playgroundFlushDropped");
   });
 
-  it("writes durable height on tiny paste without transient floor attr", () => {
+  it("persists block-image height without transient editor floor attrs", () => {
     expect(rawfile).not.toContain("data-block-image-floor");
-    expect(rawfile).not.toContain("dataBlockImageFloor");
     expect(rawfile).not.toContain('not([style*="height"])');
+    // Storage-boundary migration strips legacy JSON floor flag (iter 72).
+    expect(rawfile).toContain("dataBlockImageFloor");
   });
 });

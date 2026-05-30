@@ -37,7 +37,7 @@ import {
   takeStashedEditorAutosave,
   unregisterEditorAutosaveFlush,
 } from "@/store/editorAutosaveRegistry";
-import { migrateLegacyBlockImageFloor } from "@/utils/migrateBlockImageFloor";
+import { sanitizeBlockImageNoteContent } from "@/utils/migrateBlockImageFloor";
 
 interface EditorScreenProps {
   layout?: LayoutMode;
@@ -79,13 +79,10 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const lastPlaygroundMigrateKeyRef = useRef<string | null>(null);
 
   const note = notes.find((n) => n.id === activeNoteId);
-  const noteContentForEditor = useMemo(
-    () =>
-      note?.content
-        ? (migrateLegacyBlockImageFloor(note.content) ?? note.content)
-        : "",
-    [note?.content],
-  );
+  const noteContentForEditor = useMemo(() => {
+    if (!note?.content) return "";
+    return sanitizeBlockImageNoteContent(note.content).content;
+  }, [note?.content]);
   const showBackButton = layout === "mobile";
   const isCompactChrome = focusMode && layout === "tablet";
   const prevFocusModeRef = useRef(focusMode);
@@ -226,8 +223,11 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         setEditorSeedContent(null);
         return;
       }
-      pendingContentRef.current = taken.content;
-      setEditorSeedContent(taken.content);
+      const { content: sanitized } = sanitizeBlockImageNoteContent(
+        taken.content,
+      );
+      pendingContentRef.current = sanitized;
+      setEditorSeedContent(sanitized);
       return;
     }
 
@@ -245,9 +245,9 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   useEffect(() => {
     if (!note?.id || !note.content) return;
 
-    const migrated = migrateLegacyBlockImageFloor(note.content);
-    if (migrated) {
-      void saveNoteContent(note.id, migrated);
+    const { content, changed } = sanitizeBlockImageNoteContent(note.content);
+    if (changed) {
+      void saveNoteContent(note.id, content);
     }
   }, [note?.id, note?.content, saveNoteContent]);
 
