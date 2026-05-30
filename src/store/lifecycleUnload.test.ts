@@ -164,6 +164,24 @@ describe("lifecycleUnload", () => {
     expect(takeUnloadBackup()).toBeNull();
   });
 
+  it("keeps backup when playground flush stashes body without IDB persist", async () => {
+    registerUnloadDraftCollector(() => ({
+      noteId: "pg-1",
+      title: "格式试炼场",
+      content: '{"type":"doc","text":"UnloadPhrase2"}',
+      savedAt: 0,
+    }));
+    flushEditorAutosaveResult.mockResolvedValue({
+      content: '{"type":"doc","text":"UnloadPhrase2"}',
+      persisted: false,
+    });
+
+    await flushForPageUnload();
+    expect(peekUnloadBackup()?.content).toBe(
+      '{"type":"doc","text":"UnloadPhrase2"}',
+    );
+  });
+
   it("uses stable sessionStorage key", () => {
     expect(UNLOAD_BACKUP_KEY).toBe("hunos:unload-backup");
   });

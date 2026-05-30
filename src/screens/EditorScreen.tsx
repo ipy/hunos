@@ -281,7 +281,8 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       if (isPlayground) {
         stashEditorAutosaveSnapshot(activeNoteId, json);
         pendingContentRef.current = null;
-        return { content: json, persisted: titleOk };
+        // Body stays in memory stash, not IDB — keep sessionStorage unload backup.
+        return { content: json, persisted: false };
       }
 
       const contentOk = await persistEditorContent(activeNoteId, json);
