@@ -10,6 +10,7 @@ import { clearLinkEditorSelection } from "./linkEditorSelection";
 import {
   captureEditorOverlaySelection,
   clearEditorOverlaySelection,
+  restoreEditorSelectionOnOverlayDismiss,
   runToolbarActionWithOverlaySelection,
 } from "@/utils/editorOverlaySelection";
 
@@ -287,5 +288,67 @@ describe("toggleMark with overlay selection", () => {
     expect(chain.setTextSelection).toHaveBeenCalledTimes(1);
     expect(chain.setTextSelection).toHaveBeenCalledWith({ from: 50, to: 50 });
     expect(chain.toggleBold).toHaveBeenCalled();
+  });
+
+  it("applies bold after stats dismiss restored the list selection into the editor", () => {
+    clearEditorOverlaySelection();
+    const chain = {
+      focus: vi.fn().mockReturnThis(),
+      setTextSelection: vi.fn().mockReturnThis(),
+      toggleBold: vi.fn().mockReturnThis(),
+      run: vi.fn(() => true),
+    };
+    const editor = {
+      isActive: vi.fn(() => false),
+      isDestroyed: false,
+      state: {
+        selection: {
+          empty: true,
+          from: 1,
+          to: 1,
+          $from: { start: () => 1, end: () => 5 },
+        },
+        doc: { content: { size: 300 } },
+      },
+      chain: vi.fn(() => chain),
+      _chain: chain,
+      commands: {
+        focus: vi.fn(() => true),
+        setTextSelection: vi.fn(() => true),
+      },
+    };
+
+    captureEditorOverlaySelection({
+      state: {
+        selection: { from: 80, to: 95 },
+        doc: { content: { size: 300 } },
+      },
+    } as never);
+
+    restoreEditorSelectionOnOverlayDismiss(editor as never);
+    expect(editor._chain.setTextSelection).toHaveBeenCalledWith({
+      from: 80,
+      to: 95,
+    });
+
+    editor.state.selection = {
+      empty: false,
+      from: 80,
+      to: 95,
+      $from: { start: () => 80, end: () => 95 },
+    };
+
+    const postDismissChain = {
+      focus: vi.fn().mockReturnThis(),
+      setTextSelection: vi.fn().mockReturnThis(),
+      toggleBold: vi.fn().mockReturnThis(),
+      run: vi.fn(() => true),
+    };
+    editor.chain = vi.fn(() => postDismissChain);
+
+    toggleMark(editor as never, "bold", (c) => c.toggleBold());
+
+    expect(postDismissChain.toggleBold).toHaveBeenCalled();
+    expect(postDismissChain.setTextSelection).not.toHaveBeenCalled();
   });
 });

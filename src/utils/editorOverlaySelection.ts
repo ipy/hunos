@@ -70,6 +70,30 @@ function clampSavedSelection(editor: Editor): SavedEditorSelection | null {
   return { from, to };
 }
 
+/**
+ * Push the overlay bookmark into the editor before the panel closes.
+ * Clears the bookmark so post-dismiss toolbar commands use the live selection.
+ */
+export function restoreEditorSelectionOnOverlayDismiss(
+  editor: Editor,
+): boolean {
+  if (editor.isDestroyed || !hasSavedEditorOverlaySelection()) {
+    return false;
+  }
+
+  const selection = clampSavedSelection(editor);
+  clearEditorOverlaySelection();
+  if (!selection) {
+    return false;
+  }
+
+  return editor
+    .chain()
+    .focus()
+    .setTextSelection({ from: selection.from, to: selection.to })
+    .run();
+}
+
 /** Focus the editor and restore overlay selection in a single transaction. */
 export function focusEditorWithOverlaySelection(editor: Editor): boolean {
   if (editor.isDestroyed) return false;

@@ -27,6 +27,7 @@ import { dismissEditorOverlayOnEscape } from "@/utils/editorOverlayEscape";
 import {
   captureEditorOverlaySelection,
   clearEditorOverlaySelection,
+  restoreEditorSelectionOnOverlayDismiss,
 } from "@/utils/editorOverlaySelection";
 import { shouldSuppressFocusModeEscape } from "@/utils/editorSuggestionMenu";
 import { editorHasNonEmptySelection } from "@/utils/editorSelection";
@@ -156,6 +157,20 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     if (editorInstanceRef.current) {
       captureEditorOverlaySelection(editorInstanceRef.current);
     }
+  }, []);
+
+  const dismissStatsOverlay = useCallback(() => {
+    if (editorInstanceRef.current) {
+      restoreEditorSelectionOnOverlayDismiss(editorInstanceRef.current);
+    }
+    setShowStats(false);
+  }, []);
+
+  const dismissActionsOverlay = useCallback(() => {
+    if (editorInstanceRef.current) {
+      restoreEditorSelectionOnOverlayDismiss(editorInstanceRef.current);
+    }
+    setShowActions(false);
   }, []);
 
   useEffect(() => {
@@ -702,8 +717,8 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           e.key,
           { showActions, showStats },
           {
-            closeActions: () => setShowActions(false),
-            closeStats: () => setShowStats(false),
+            closeActions: dismissActionsOverlay,
+            closeStats: dismissStatsOverlay,
           },
         )
       ) {
@@ -719,7 +734,15 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [focusMode, setFocusMode, editorInstance, showActions, showStats]);
+  }, [
+    focusMode,
+    setFocusMode,
+    editorInstance,
+    showActions,
+    showStats,
+    dismissActionsOverlay,
+    dismissStatsOverlay,
+  ]);
 
   const handlePin = () => {
     if (!note) return;
@@ -727,7 +750,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     showToast(
       note.isPinned ? t("notes.actions.unpin") : t("notes.actions.pin"),
     );
-    setShowActions(false);
+    dismissActionsOverlay();
   };
 
   const handleArchive = () => {
@@ -798,7 +821,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         showToast(t("notes.actions.restorePlaygroundDone"));
         pendingRestoreToastRef.current = false;
       }
-      setShowActions(false);
+      dismissActionsOverlay();
     } catch {
       pendingRestoreToastRef.current = false;
       restoreSession.end();
@@ -974,7 +997,9 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
               onPointerDownCapture={() => {
                 if (!showStats) captureSelectionForOverlay();
               }}
-              onClick={() => setShowStats(!showStats)}
+              onClick={() =>
+                showStats ? dismissStatsOverlay() : setShowStats(true)
+              }
               title={t("editor.stats.title")}
               aria-label={t("editor.stats.title")}
               style={{
@@ -1091,7 +1116,9 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
                   onPointerDownCapture={() => {
                     if (!showStats) captureSelectionForOverlay();
                   }}
-                  onClick={() => setShowStats(!showStats)}
+                  onClick={() =>
+                    showStats ? dismissStatsOverlay() : setShowStats(true)
+                  }
                   title={t("editor.stats.title")}
                   aria-label={t("editor.stats.title")}
                   style={{
@@ -1134,7 +1161,9 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
                   onPointerDownCapture={() => {
                     if (!showActions) captureSelectionForOverlay();
                   }}
-                  onClick={() => setShowActions(!showActions)}
+                  onClick={() =>
+                    showActions ? dismissActionsOverlay() : setShowActions(true)
+                  }
                   aria-label={t("common.actions.more")}
                   style={{
                     background: "none",
@@ -1186,7 +1215,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         <>
           <div
             data-testid="editor-more-actions-backdrop"
-            onClick={() => setShowActions(false)}
+            onClick={dismissActionsOverlay}
             style={{
               position: "fixed",
               inset: 0,
@@ -1223,7 +1252,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
                     danger: false,
                     action: () => {
                       restoreNote(note.id);
-                      setShowActions(false);
+                      dismissActionsOverlay();
                       if (layout === "mobile") goBack();
                     },
                   },
@@ -1233,7 +1262,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
                     danger: true,
                     action: () => {
                       permanentlyDelete(note.id);
-                      setShowActions(false);
+                      dismissActionsOverlay();
                       if (layout === "mobile") goBack();
                     },
                   },
@@ -1282,7 +1311,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
                         .catch(() => {
                           showToast(t("export.copyFailed"), "error");
                         });
-                      setShowActions(false);
+                      dismissActionsOverlay();
                     },
                   },
                   {
@@ -1291,7 +1320,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
                     danger: false,
                     action: () => {
                       exportAndDownload(note, "markdown");
-                      setShowActions(false);
+                      dismissActionsOverlay();
                     },
                   },
                   {
@@ -1300,7 +1329,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
                     danger: false,
                     action: () => {
                       exportAndDownload(note, "html");
-                      setShowActions(false);
+                      dismissActionsOverlay();
                     },
                   },
                 ]
@@ -1363,7 +1392,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         <InfoPanel
           note={note}
           editor={editorInstance}
-          onClose={() => setShowStats(false)}
+          onClose={dismissStatsOverlay}
           hideCompletedTasks={hideCompletedTasks}
           onHideCompletedTasksChange={setHideCompletedTasks}
         />
@@ -1371,7 +1400,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
       <div
         style={{ flex: 1, overflow: "auto", minHeight: 0 }}
-        onClick={() => showActions && setShowActions(false)}
+        onClick={() => showActions && dismissActionsOverlay()}
       >
         <div
           style={{

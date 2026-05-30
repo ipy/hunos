@@ -5,6 +5,7 @@ import {
   focusEditorWithOverlaySelection,
   getSavedEditorOverlaySelection,
   restoreEditorOverlaySelection,
+  restoreEditorSelectionOnOverlayDismiss,
   runToolbarActionWithOverlaySelection,
   getOverlayToolbarAnchorPos,
   runToolbarChain,
@@ -93,6 +94,19 @@ describe("editorOverlaySelection", () => {
   it("clears saved selection when overlays close", () => {
     captureEditorOverlaySelection(mockEditor({ from: 1, to: 3 }) as never);
     clearEditorOverlaySelection();
+    expect(getSavedEditorOverlaySelection()).toBeNull();
+  });
+
+  it("restores bookmark into the editor on overlay dismiss and clears it", () => {
+    clearEditorOverlaySelection();
+    const editor = mockEditor({ from: 42, to: 58 });
+
+    captureEditorOverlaySelection(editor as never);
+    expect(restoreEditorSelectionOnOverlayDismiss(editor as never)).toBe(true);
+    expect(editor._chain.setTextSelection).toHaveBeenCalledWith({
+      from: 42,
+      to: 58,
+    });
     expect(getSavedEditorOverlaySelection()).toBeNull();
   });
 
