@@ -255,6 +255,46 @@ describe("exportNote markdown inline marks", () => {
 
     expect(exportNote(note, "markdown")).toBe("~~StrikeIter88~~");
   });
+
+  it("exports italic as *text*", () => {
+    const note = makeNote({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "ItalicExport91",
+              marks: [{ type: "italic" }],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(exportNote(note, "markdown")).toBe("*ItalicExport91*");
+  });
+
+  it("exports inline code as `text`", () => {
+    const note = makeNote({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "CodeExport91",
+              marks: [{ type: "code" }],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(exportNote(note, "markdown")).toBe("`CodeExport91`");
+  });
 });
 
 describe("exportNote markdown links", () => {
