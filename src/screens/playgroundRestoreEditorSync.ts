@@ -97,7 +97,6 @@ export function handlePlaygroundRestoreApplyResult(options: {
   session: PlaygroundRestoreSession;
 }): boolean {
   if (options.applied) {
-    options.session.end();
     return true;
   }
   options.session.queueContent(options.content);
@@ -121,15 +120,10 @@ export function finalizePlaygroundRestoreInEditor(options: {
     return false;
   }
 
-  const applied = applyPlaygroundRestoreContentToEditor(
+  return applyPlaygroundRestoreContentToEditor(
     options.editor,
     options.restoredContent,
   );
-  if (applied) {
-    options.session.end();
-    return true;
-  }
-  return false;
 }
 
 /** Apply content queued while the editor was still mounting. */

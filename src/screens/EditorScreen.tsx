@@ -47,6 +47,7 @@ import {
   unregisterEditorAutosaveFlush,
 } from "@/store/editorAutosaveRegistry";
 import { bindEditorLifecycleAutosaveFlush } from "@/store/editorLifecycleAutosave";
+import { getPlaygroundWriteEpoch } from "@/store/noteStorePlaygroundWriteEpoch";
 import {
   clearUnloadBackup,
   registerUnloadDraftCollector,
@@ -115,6 +116,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const editorInstanceRef = useRef<Editor | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const pendingContentRef = useRef<string | null>(null);
+  const contentWriteEpochRef = useRef(0);
   const lastPlaygroundMigrateKeyRef = useRef<string | null>(null);
   const playgroundRestoreSessionRef = useRef(createPlaygroundRestoreSession());
   const pendingRestoreToastRef = useRef(false);
@@ -160,7 +162,15 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       pendingTitleRef.current = null;
     }
     setTitleValue(note?.title ?? "");
+    if (note?.id) {
+      contentWriteEpochRef.current = getPlaygroundWriteEpoch(note.id);
+    }
   }, [note?.id]);
+
+  useEffect(() => {
+    if (!note?.id) return;
+    contentWriteEpochRef.current = getPlaygroundWriteEpoch(note.id);
+  }, [note?.id, note?.content, note?.modifiedAt]);
 
   useEffect(() => {
     if (!note?.title) return;
@@ -183,8 +193,17 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   );
 
   const persistEditorContent = useCallback(
-    async (noteId: string, json: string): Promise<boolean> => {
-      const saved = await persistNoteContent(saveNoteContent, noteId, json);
+    async (
+      noteId: string,
+      json: string,
+      writeEpoch = contentWriteEpochRef.current,
+    ): Promise<boolean> => {
+      const saved = await persistNoteContent(
+        saveNoteContent,
+        noteId,
+        json,
+        writeEpoch,
+      );
       if (saved && pendingContentRef.current === json) {
         pendingContentRef.current = null;
       } else if (!saved) {
@@ -213,7 +232,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           playgroundEditorContentMatchesStored(
             json,
             noteContentForEditor,
-            settings.locale,
+            resolvePlaygroundSeedLocale(noteContentForEditor, settings.locale),
           )
         ) {
           playgroundRestoreSessionRef.current.end();
@@ -227,16 +246,20 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         formatPlaygroundMatchesCanonicalSeed(
           note.title,
           noteContentForEditor,
-          settings.locale,
+          resolvePlaygroundSeedLocale(noteContentForEditor, settings.locale),
         )
       ) {
-        const storedFingerprint = normalizePlaygroundContentSnapshot(
+        const playgroundLocale = resolvePlaygroundSeedLocale(
           noteContentForEditor,
           settings.locale,
         );
+        const storedFingerprint = normalizePlaygroundContentSnapshot(
+          noteContentForEditor,
+          playgroundLocale,
+        );
         const liveFingerprint = normalizePlaygroundContentSnapshot(
           json,
-          settings.locale,
+          playgroundLocale,
         );
         if (liveFingerprint === storedFingerprint) {
           pendingContentRef.current = null;
@@ -249,13 +272,14 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       }
 
       pendingContentRef.current = json;
+      const writeEpoch = contentWriteEpochRef.current;
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       if (flushSave) {
-        void persistEditorContent(activeNoteId, json);
+        void persistEditorContent(activeNoteId, json, writeEpoch);
         return;
       }
       saveTimeoutRef.current = setTimeout(() => {
-        void persistEditorContent(activeNoteId, json);
+        void persistEditorContent(activeNoteId, json, writeEpoch);
       }, 400);
     },
     [
@@ -624,6 +648,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         settings.locale,
       );
       await restoreFormatPlayground(note.id, seedLocale);
+      contentWriteEpochRef.current = getPlaygroundWriteEpoch(note.id);
       clearUnloadBackup();
       const restoredNote = useNoteStore
         .getState()

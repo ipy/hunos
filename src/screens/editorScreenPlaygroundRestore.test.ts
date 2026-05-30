@@ -83,8 +83,8 @@ describe("EditorScreen playground restore ordering", () => {
     });
 
     expect(applied).toBe(true);
-    expect(session.isActive()).toBe(false);
-    expect(shouldStashAutosaveOnEffectCleanup(session.isActive())).toBe(true);
+    expect(session.isActive()).toBe(true);
+    expect(shouldStashAutosaveOnEffectCleanup(session.isActive())).toBe(false);
   });
 
   it("restore → store update → stash guard → queue until editor mounts", () => {
@@ -107,8 +107,8 @@ describe("EditorScreen playground restore ordering", () => {
       }),
     ).toBe(true);
 
-    expect(session.isActive()).toBe(false);
-    expect(shouldStashAutosaveOnEffectCleanup(session.isActive())).toBe(true);
+    expect(session.isActive()).toBe(true);
+    expect(shouldStashAutosaveOnEffectCleanup(session.isActive())).toBe(false);
   });
 
   it("post-await editor ref: editor attaches after store update and queued flush applies seed", () => {
@@ -130,7 +130,7 @@ describe("EditorScreen playground restore ordering", () => {
       }),
     ).toBe(true);
 
-    expect(session.isActive()).toBe(false);
+    expect(session.isActive()).toBe(true);
   });
 
   it("apply-false fallback keeps session active for editorSeedContent sync", () => {

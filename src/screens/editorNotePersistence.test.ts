@@ -25,7 +25,7 @@ describe("editorNotePersistence", () => {
     const save = vi.fn().mockResolvedValue(undefined);
 
     expect(await persistNoteContent(save, "note-1", "{}")).toBe(true);
-    expect(save).toHaveBeenCalledWith("note-1", "{}");
+    expect(save).toHaveBeenCalledWith("note-1", "{}", undefined);
     expect(showToast).not.toHaveBeenCalled();
   });
 

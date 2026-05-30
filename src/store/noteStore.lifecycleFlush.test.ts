@@ -72,7 +72,10 @@ vi.mock("@/graph/graphEngine", () => ({
   },
 }));
 
-import { buildPlaygroundContent, getFormatPlaygroundTitle } from "@/storage/formatPlaygroundNote";
+import {
+  buildPlaygroundContent,
+  getFormatPlaygroundTitle,
+} from "@/storage/formatPlaygroundNote";
 import { noteStorage } from "@/storage/noteStorage";
 import {
   recoverPendingUnloadBackup,
@@ -148,7 +151,9 @@ describe("noteStore lifecycle rapid saves", () => {
     expect(stored?.title).toBe(getFormatPlaygroundTitle("zh"));
     expect(stored?.content).not.toContain("T4-MIXED-persist");
     expect(stored?.contentPlain).toContain("格式试炼场");
-    const inMemory = useNoteStore.getState().notes.find((n) => n.id === note.id);
+    const inMemory = useNoteStore
+      .getState()
+      .notes.find((n) => n.id === note.id);
     expect(inMemory?.content).not.toContain("T4-MIXED-persist");
   });
 
@@ -171,8 +176,7 @@ describe("noteStore lifecycle rapid saves", () => {
         };
         const listsIndex = parsed.content.findIndex(
           (node) =>
-            node.type === "heading" &&
-            node.content?.[0]?.text === "列表",
+            node.type === "heading" && node.content?.[0]?.text === "列表",
         );
         parsed.content.splice(listsIndex + 2, 0, {
           type: "paragraph",
@@ -200,5 +204,37 @@ describe("noteStore lifecycle rapid saves", () => {
     const afterRecover = notesById.get(note.id);
     expect(afterRecover?.content).not.toContain("T5-MIXED-lists");
     expect(afterRecover?.title).toBe(getFormatPlaygroundTitle("zh"));
+  });
+
+  it("ignores stale playground content save after restore bumps write epoch", async () => {
+    const seed = JSON.stringify(buildPlaygroundContent("en"));
+    const note = await noteStorage.create({
+      title: "Format Playground",
+      content: seed,
+      contentPlain: "Format Playground",
+    });
+    useNoteStore.setState({ notes: [note] });
+
+    const polluted = JSON.stringify({
+      type: "doc",
+      attrs: {
+        playgroundContentVersion: 22,
+        playgroundContentLocale: "en",
+      },
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "T5-MIXED-FOR" }],
+        },
+      ],
+    });
+
+    await useNoteStore.getState().saveNoteContent(note.id, polluted, 0);
+    await useNoteStore.getState().restoreFormatPlayground(note.id, "en");
+    await useNoteStore.getState().saveNoteContent(note.id, polluted, 0);
+
+    const stored = notesById.get(note.id);
+    expect(stored?.content).not.toContain("T5-MIXED-FOR");
+    expect(stored?.title).toBe("Format Playground");
   });
 });

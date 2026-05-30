@@ -9,6 +9,11 @@ import {
   flushEditorAutosave,
 } from "@/store/editorAutosaveRegistry";
 import { clearUnloadBackup } from "@/store/lifecycleUnload";
+import {
+  bumpPlaygroundWriteEpoch,
+  getPlaygroundWriteEpoch,
+  isStalePlaygroundWrite,
+} from "@/store/noteStorePlaygroundWriteEpoch";
 import { enqueueActiveNoteSwitch } from "@/store/noteStoreActiveNoteSwitch";
 import { useTagStore } from "@/store/tagStore";
 function sortByModifiedDesc(notes: Note[]): Note[] {
@@ -23,7 +28,11 @@ interface NoteStore {
   loadNotes: (filter?: NoteFilter) => Promise<void>;
   loadNotesByTag: (tagId: string, filter?: NoteFilter) => Promise<void>;
   createNote: (title?: string) => Promise<Note>;
-  saveNoteContent: (id: string, content: string) => Promise<void>;
+  saveNoteContent: (
+    id: string,
+    content: string,
+    writeEpoch?: number,
+  ) => Promise<void>;
   saveNoteTitle: (id: string, title: string) => Promise<void>;
   pinNote: (id: string, pinned: boolean) => Promise<void>;
   archiveNote: (id: string) => Promise<void>;
@@ -60,7 +69,10 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     return note;
   },
 
-  saveNoteContent: async (id, content) => {
+  saveNoteContent: async (id, content, writeEpoch) => {
+    if (isStalePlaygroundWrite(id, writeEpoch)) {
+      return;
+    }
     const applied = await noteStorage.update(id, { content });
     const sanitized = applied?.content ?? content;
     await graphEngine.syncNoteLinks(id, sanitized);
@@ -157,6 +169,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   },
 
   restoreFormatPlayground: async (id, locale) => {
+    bumpPlaygroundWriteEpoch(id);
     await restoreFormatPlaygroundContent(id, locale);
     clearUnloadBackup();
     clearStashedEditorAutosave();

@@ -498,6 +498,40 @@ describe("syncFormatPlaygroundOnLocaleChange", () => {
     expect(saved).not.toContain("locale-switch-pending-marker");
   });
 
+  it("skips flushDropped polluted flush when canonical playground is already stored", async () => {
+    const polluted = JSON.stringify({
+      type: "doc",
+      attrs: {
+        playgroundContentVersion: 22,
+        playgroundContentLocale: "en",
+      },
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "T5-MIXED-FOR" }],
+        },
+      ],
+    });
+
+    mockNoteStoreState.activeNoteId = null;
+    mockNoteStoreState.notes = [
+      {
+        id: "pg-en",
+        title: "Format Playground",
+        content: JSON.stringify(buildPlaygroundContent("en")),
+        isPinned: true,
+        modifiedAt: 500,
+      },
+    ];
+
+    const result = await syncFormatPlaygroundOnLocaleChange("en", polluted, {
+      focusCanonical: true,
+    });
+
+    expect(result.flushDropped).toBe(true);
+    expect(saveNoteContent).not.toHaveBeenCalled();
+  });
+
   it("does not switch focus when active note is not a playground", async () => {
     mockNoteStoreState.activeNoteId = "note-1";
     mockNoteStoreState.notes = [

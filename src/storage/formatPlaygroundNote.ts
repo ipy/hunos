@@ -507,7 +507,10 @@ export function formatPlaygroundMatchesCanonicalSeed(
   if (title !== getFormatPlaygroundTitle(seedLocale)) return false;
 
   const canonical = JSON.stringify(buildPlaygroundContent(seedLocale));
-  const normalizedStored = normalizePlaygroundContentSnapshot(content, seedLocale);
+  const normalizedStored = normalizePlaygroundContentSnapshot(
+    content,
+    seedLocale,
+  );
   const normalizedCanonical = normalizePlaygroundContentSnapshot(
     canonical,
     seedLocale,
@@ -569,12 +572,14 @@ export function shouldShowPlaygroundRestoreButton(options: {
     fallbackLocale,
   } = options;
 
+  const seedLocale = resolvePlaygroundSeedLocale(storedContent, fallbackLocale);
+
   const storedIsCanonical =
     displayTitle === storedTitle &&
     formatPlaygroundMatchesCanonicalSeed(
       storedTitle,
       storedContent,
-      fallbackLocale,
+      seedLocale,
     );
 
   if (storedIsCanonical) {
@@ -583,7 +588,7 @@ export function shouldShowPlaygroundRestoreButton(options: {
         displayTitle,
         storedContent,
         liveContent: pendingDraftContent,
-        fallbackLocale,
+        fallbackLocale: seedLocale,
       });
     }
     return false;
@@ -593,23 +598,19 @@ export function shouldShowPlaygroundRestoreButton(options: {
     return formatPlaygroundNeedsRestore(
       displayTitle,
       pendingDraftContent,
-      fallbackLocale,
+      seedLocale,
     );
   }
 
   const editorDrift =
     editorContent != null &&
-    formatPlaygroundNeedsRestore(displayTitle, editorContent, fallbackLocale);
+    formatPlaygroundNeedsRestore(displayTitle, editorContent, seedLocale);
 
   if (editorDrift) {
     return true;
   }
 
-  return formatPlaygroundNeedsRestore(
-    displayTitle,
-    storedContent,
-    fallbackLocale,
-  );
+  return formatPlaygroundNeedsRestore(displayTitle, storedContent, seedLocale);
 }
 
 export async function createFormatPlaygroundNote(
@@ -1104,7 +1105,11 @@ export async function syncFormatPlaygroundOnLocaleChange(
   if (migrated) {
     await saveNoteContent(note.id, migrated);
   } else if (flushDropped) {
-    await saveNoteContent(note.id, sourceContent);
+    if (
+      !formatPlaygroundMatchesCanonicalSeed(note.title, note.content, locale)
+    ) {
+      await saveNoteContent(note.id, sourceContent);
+    }
   }
   if (titleNeedsUpdate) {
     await saveNoteTitle(note.id, expectedTitle);

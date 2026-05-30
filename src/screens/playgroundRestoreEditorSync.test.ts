@@ -155,7 +155,7 @@ describe("applyPlaygroundRestoreContentToEditor", () => {
 });
 
 describe("finalizePlaygroundRestoreInEditor", () => {
-  it("ends session after explicit apply without waiting for onUpdate match", () => {
+  it("keeps session active after explicit apply until editor sync confirms", () => {
     const session = createPlaygroundRestoreSession();
     session.begin("note-a");
     const { editor } = createMockEditor();
@@ -168,7 +168,7 @@ describe("finalizePlaygroundRestoreInEditor", () => {
       }),
     ).toBe(true);
 
-    expect(session.isActive()).toBe(false);
+    expect(session.isActive()).toBe(true);
   });
 
   it("keeps session active when editor is not ready so queued apply can finish", () => {
@@ -220,7 +220,7 @@ describe("finalizePlaygroundRestoreInEditor", () => {
 });
 
 describe("applyQueuedPlaygroundRestoreWhenEditorReady", () => {
-  it("applies queued content and ends session once the editor mounts", () => {
+  it("applies queued content and keeps session active until editor sync", () => {
     const session = createPlaygroundRestoreSession();
     session.begin("note-a");
     finalizePlaygroundRestoreInEditor({
@@ -238,7 +238,7 @@ describe("applyQueuedPlaygroundRestoreWhenEditorReady", () => {
         activeNoteId: "note-a",
       }),
     ).toBe(true);
-    expect(session.isActive()).toBe(false);
+    expect(session.isActive()).toBe(true);
     expect(session.hasQueuedContent()).toBe(false);
   });
 
@@ -289,7 +289,7 @@ describe("applyQueuedPlaygroundRestoreWhenEditorReady", () => {
 });
 
 describe("handlePlaygroundRestoreApplyResult", () => {
-  it("ends session when apply succeeds", () => {
+  it("returns true when apply succeeds without ending session early", () => {
     const session = createPlaygroundRestoreSession();
     session.begin("note-a");
 
@@ -300,7 +300,7 @@ describe("handlePlaygroundRestoreApplyResult", () => {
         session,
       }),
     ).toBe(true);
-    expect(session.isActive()).toBe(false);
+    expect(session.isActive()).toBe(true);
   });
 
   it("re-queues content when apply fails", () => {
