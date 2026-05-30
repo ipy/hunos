@@ -1,5 +1,6 @@
 import {
   formatPlaygroundMatchesCanonicalSeed,
+  getFormatPlaygroundIntroExcerpt,
   isFormatPlaygroundNote,
   resolvePlaygroundSeedLocale,
 } from "@/storage/formatPlaygroundNote";
@@ -12,10 +13,10 @@ function normalizePlainExcerpt(plain: string): string {
   return plain.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
 }
 
-/** Compact list excerpt — unmodified playground uses a fixed label; edited body shows plain text. */
+/** List excerpt — canonical playground shows seed intro; edited body shows plain text. */
 export function deriveNoteListPreview(
   note: Pick<Note, "title" | "content" | "contentPlain">,
-  playgroundLabel: string,
+  _playgroundLabel: string,
   locale: Locale,
 ): string {
   if (isFormatPlaygroundNote(note.title, note.content)) {
@@ -23,7 +24,7 @@ export function deriveNoteListPreview(
     if (
       formatPlaygroundMatchesCanonicalSeed(note.title, note.content, seedLocale)
     ) {
-      return playgroundLabel;
+      return getFormatPlaygroundIntroExcerpt(seedLocale);
     }
     const plain = normalizePlainExcerpt(note.contentPlain ?? "");
     return plain.length > PREVIEW_CHAR_LIMIT

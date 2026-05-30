@@ -9,6 +9,7 @@ import {
   PLAYGROUND_CONTENT_VERSION,
   buildPlaygroundContent,
   filterNotesForPlaygroundList,
+  getFormatPlaygroundIntroExcerpt,
   getFormatPlaygroundTitle,
   isFormatPlaygroundNote,
   migratePlaygroundContentIfStale,
@@ -1347,6 +1348,20 @@ describe("migratePlaygroundContentIfStale", () => {
   });
 });
 
+describe("getFormatPlaygroundIntroExcerpt", () => {
+  it("returns truncated English seed intro for list preview", () => {
+    const excerpt = getFormatPlaygroundIntroExcerpt("en");
+    expect(excerpt).toContain("Test every format");
+    expect(excerpt.length).toBeLessThanOrEqual(120);
+  });
+
+  it("returns truncated zh seed intro for list preview", () => {
+    const excerpt = getFormatPlaygroundIntroExcerpt("zh");
+    expect(excerpt).toContain("在这一篇笔记里测试所有格式");
+    expect(excerpt.length).toBeLessThanOrEqual(120);
+  });
+});
+
 describe("formatPlayground restore gating", () => {
   it("matches canonical zh seed and detects title or body drift", () => {
     const seed = JSON.stringify(buildPlaygroundContent("zh"));
@@ -1410,7 +1425,6 @@ describe("formatPlayground restore gating", () => {
         storedTitle: "格式试炼场",
         storedContent: seed,
         pendingDraftContent: null,
-        editorContent: null,
         fallbackLocale: "en",
       }),
     ).toBe(false);
@@ -1437,7 +1451,6 @@ describe("formatPlayground restore gating", () => {
         storedTitle: "格式试炼场",
         storedContent: seed,
         pendingDraftContent: editorEcho,
-        editorContent: editorEcho,
         fallbackLocale: "zh",
       }),
     ).toBe(false);

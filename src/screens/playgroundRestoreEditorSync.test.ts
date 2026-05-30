@@ -155,7 +155,7 @@ describe("applyPlaygroundRestoreContentToEditor", () => {
 });
 
 describe("finalizePlaygroundRestoreInEditor", () => {
-  it("keeps session active after explicit apply until editor sync confirms", () => {
+  it("ends session after explicit apply so restore chip hides immediately", () => {
     const session = createPlaygroundRestoreSession();
     session.begin("note-a");
     const { editor } = createMockEditor();
@@ -168,7 +168,7 @@ describe("finalizePlaygroundRestoreInEditor", () => {
       }),
     ).toBe(true);
 
-    expect(session.isActive()).toBe(true);
+    expect(session.isActive()).toBe(false);
   });
 
   it("keeps session active when editor is not ready so queued apply can finish", () => {
@@ -220,7 +220,7 @@ describe("finalizePlaygroundRestoreInEditor", () => {
 });
 
 describe("applyQueuedPlaygroundRestoreWhenEditorReady", () => {
-  it("applies queued content and keeps session active until editor sync", () => {
+  it("applies queued content and ends session for immediate chip hide", () => {
     const session = createPlaygroundRestoreSession();
     session.begin("note-a");
     finalizePlaygroundRestoreInEditor({
@@ -238,7 +238,7 @@ describe("applyQueuedPlaygroundRestoreWhenEditorReady", () => {
         activeNoteId: "note-a",
       }),
     ).toBe(true);
-    expect(session.isActive()).toBe(true);
+    expect(session.isActive()).toBe(false);
     expect(session.hasQueuedContent()).toBe(false);
   });
 

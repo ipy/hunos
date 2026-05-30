@@ -1,6 +1,9 @@
 import type { Editor } from "@tiptap/react";
 import { resetEditorHistory } from "@/components/editor/resetEditorHistory";
-import { playgroundEditorContentMatchesStored } from "@/storage/formatPlaygroundNote";
+import {
+  playgroundEditorContentMatchesStored,
+  resolvePlaygroundSeedLocale,
+} from "@/storage/formatPlaygroundNote";
 import type { Locale } from "@/types/settings";
 
 export type PlaygroundRestoreSession = {
@@ -120,10 +123,14 @@ export function finalizePlaygroundRestoreInEditor(options: {
     return false;
   }
 
-  return applyPlaygroundRestoreContentToEditor(
+  const applied = applyPlaygroundRestoreContentToEditor(
     options.editor,
     options.restoredContent,
   );
+  if (applied) {
+    options.session.end();
+  }
+  return applied;
 }
 
 /** Apply content queued while the editor was still mounting. */
@@ -143,6 +150,9 @@ export function applyQueuedPlaygroundRestoreWhenEditorReady(options: {
     options.editor,
     content,
   );
+  if (applied) {
+    options.session.end();
+  }
   return handlePlaygroundRestoreApplyResult({
     applied,
     content,
@@ -160,9 +170,13 @@ export function shouldEndPlaygroundRestoreSession(options: {
   if (!options.isRestoringPlayground) return false;
   if (!options.hasNoteContent) return true;
   if (!options.editorContentJson) return false;
+  const seedLocale = resolvePlaygroundSeedLocale(
+    options.restoredContent,
+    options.fallbackLocale,
+  );
   return playgroundEditorContentMatchesStored(
     options.editorContentJson,
     options.restoredContent,
-    options.fallbackLocale,
+    seedLocale,
   );
 }

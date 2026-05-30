@@ -83,7 +83,6 @@ export function clearUnloadBackup(): void {
 export function unloadBackupWouldRegressStoredNote(
   backup: UnloadBackup,
   stored: Pick<Note, "title" | "content" | "modifiedAt">,
-  locale: Locale,
 ): boolean {
   if (backup.savedAt <= stored.modifiedAt) {
     return true;
@@ -95,23 +94,32 @@ export function unloadBackupWouldRegressStoredNote(
 
   const backupTitle =
     backup.title != null && backup.title !== "" ? backup.title : stored.title;
+  const seedLocale = resolveBackupLocale(stored);
 
   if (
     isFormatPlaygroundNote(stored.title, stored.content) &&
-    formatPlaygroundMatchesCanonicalSeed(stored.title, stored.content, locale)
+    formatPlaygroundMatchesCanonicalSeed(
+      stored.title,
+      stored.content,
+      seedLocale,
+    )
   ) {
     if (
-      !formatPlaygroundMatchesCanonicalSeed(backupTitle, backup.content, locale)
+      !formatPlaygroundMatchesCanonicalSeed(
+        backupTitle,
+        backup.content,
+        seedLocale,
+      )
     ) {
       return true;
     }
     const storedFingerprint = normalizePlaygroundContentSnapshot(
       stored.content,
-      locale,
+      seedLocale,
     );
     const backupFingerprint = normalizePlaygroundContentSnapshot(
       backup.content,
-      locale,
+      seedLocale,
     );
     if (backupFingerprint !== storedFingerprint) {
       return true;
@@ -129,14 +137,7 @@ function collectAndPersistSyncBackup(): void {
   const inMemory = useNoteStore
     .getState()
     .notes.find((note) => note.id === draft.noteId);
-  if (
-    inMemory &&
-    unloadBackupWouldRegressStoredNote(
-      snapshot,
-      inMemory,
-      resolveBackupLocale(inMemory),
-    )
-  ) {
+  if (inMemory && unloadBackupWouldRegressStoredNote(snapshot, inMemory)) {
     return;
   }
 
@@ -208,14 +209,12 @@ export async function flushForPageUnload(
 }
 
 /** Apply sessionStorage backup after reload when async flush did not finish. */
-export async function recoverPendingUnloadBackup(
-  locale: Locale = "en",
-): Promise<void> {
+export async function recoverPendingUnloadBackup(): Promise<void> {
   const backup = takeUnloadBackup();
   if (!backup?.noteId) return;
 
   const stored = await noteStorage.get(backup.noteId);
-  if (stored && unloadBackupWouldRegressStoredNote(backup, stored, locale)) {
+  if (stored && unloadBackupWouldRegressStoredNote(backup, stored)) {
     return;
   }
 

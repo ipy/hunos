@@ -561,7 +561,6 @@ export function shouldShowPlaygroundRestoreButton(options: {
   storedContent: string;
   pendingDraftContent: string | null;
   pendingTitleDraft?: string | null;
-  editorContent: string | null;
   fallbackLocale: Locale;
   isRestoringPlayground?: boolean;
 }): boolean {
@@ -613,7 +612,7 @@ export function shouldShowPlaygroundRestoreButton(options: {
     );
   }
 
-  return formatPlaygroundNeedsRestore(displayTitle, storedContent, seedLocale);
+  return formatPlaygroundNeedsRestore(storedTitle, storedContent, seedLocale);
 }
 
 export async function createFormatPlaygroundNote(
@@ -1002,6 +1001,17 @@ export function pickFormatPlaygroundNote<T extends PlaygroundPickCandidate>(
 /** Plain-text excerpt of the locale seed — used for list preview seed detection. */
 export function getFormatPlaygroundSeedPlain(locale: Locale): string {
   return extractPlainTextFromTiptap(buildPlaygroundContent(locale));
+}
+
+const PLAYGROUND_INTRO_PREVIEW_LIMIT = 120;
+
+/** Intro paragraph shown in the note list when the playground row matches seed. */
+export function getFormatPlaygroundIntroExcerpt(locale: Locale): string {
+  const intro = STRINGS[resolvePlaygroundLocale(locale)].intro;
+  const normalized = intro.replace(/\s+/g, " ").trim();
+  return normalized.length > PLAYGROUND_INTRO_PREVIEW_LIMIT
+    ? normalized.slice(0, PLAYGROUND_INTRO_PREVIEW_LIMIT)
+    : normalized;
 }
 
 /** Hide duplicate canonical-title playground cards; renamed/custom-title copies stay visible. */

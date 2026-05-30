@@ -91,7 +91,7 @@ describe("bootstrapAppData", () => {
 
     expect(createWelcomeNotesIfNeeded).toHaveBeenCalledWith("zh");
     expect(flushEditorAutosave).toHaveBeenCalled();
-    expect(recoverPendingUnloadBackup).toHaveBeenCalledWith("zh");
+    expect(recoverPendingUnloadBackup).toHaveBeenCalledWith();
     expect(loadNotes).toHaveBeenCalledWith({ status: "active" });
     expect(syncFormatPlaygroundOnLocaleChange).toHaveBeenCalledWith(
       "zh",

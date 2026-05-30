@@ -190,7 +190,7 @@ describe("lifecycleUnload", () => {
       savedAt: Date.now(),
     });
 
-    await recoverPendingUnloadBackup("en");
+    await recoverPendingUnloadBackup();
 
     expect(saveNoteTitle).toHaveBeenCalledWith("note-1", "TitleUnload2");
     expect(saveNoteContent).toHaveBeenCalledWith("note-1", '{"type":"doc"}');
@@ -211,7 +211,7 @@ describe("lifecycleUnload", () => {
       savedAt: 1_000,
     });
 
-    await recoverPendingUnloadBackup("zh");
+    await recoverPendingUnloadBackup();
 
     expect(saveNoteContent).not.toHaveBeenCalled();
     expect(takeUnloadBackup()).toBeNull();
@@ -245,7 +245,7 @@ describe("lifecycleUnload", () => {
       savedAt: 9_000,
     });
 
-    await recoverPendingUnloadBackup("zh");
+    await recoverPendingUnloadBackup();
 
     expect(saveNoteContent).not.toHaveBeenCalled();
     expect(
@@ -261,7 +261,6 @@ describe("lifecycleUnload", () => {
           content: seed,
           modifiedAt: 2_000,
         },
-        "zh",
       ),
     ).toBe(true);
   });
@@ -302,7 +301,7 @@ describe("lifecycleUnload", () => {
       savedAt: 9_000,
     });
 
-    await recoverPendingUnloadBackup("zh");
+    await recoverPendingUnloadBackup();
 
     expect(saveNoteContent).not.toHaveBeenCalled();
     expect(
@@ -318,7 +317,39 @@ describe("lifecycleUnload", () => {
           content: seed,
           modifiedAt: 2_000,
         },
-        "zh",
+      ),
+    ).toBe(true);
+  });
+
+  it("unloadBackupWouldRegressStoredNote blocks drift over canonical EN playground", () => {
+    const seed = JSON.stringify(buildPlaygroundContent("en"));
+    const polluted = JSON.stringify({
+      type: "doc",
+      attrs: {
+        playgroundContentVersion: 22,
+        playgroundContentLocale: "en",
+      },
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "T6-MIXED-reload" }],
+        },
+      ],
+    });
+
+    expect(
+      unloadBackupWouldRegressStoredNote(
+        {
+          noteId: "pg-en",
+          title: "Format Playground",
+          content: polluted,
+          savedAt: 9_000,
+        },
+        {
+          title: "Format Playground",
+          content: seed,
+          modifiedAt: 2_000,
+        },
       ),
     ).toBe(true);
   });
@@ -357,7 +388,7 @@ describe("lifecycleUnload", () => {
       savedAt: 9_000,
     });
 
-    await recoverPendingUnloadBackup("zh");
+    await recoverPendingUnloadBackup();
 
     expect(saveNoteContent).not.toHaveBeenCalled();
     expect(
@@ -373,7 +404,6 @@ describe("lifecycleUnload", () => {
           content: seed,
           modifiedAt: 2_000,
         },
-        "zh",
       ),
     ).toBe(true);
   });

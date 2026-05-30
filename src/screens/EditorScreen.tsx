@@ -525,11 +525,12 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     }
     lastPlaygroundMigrateKeyRef.current = migrateKey;
 
-    const migrated = migratePlaygroundContentIfStale(
+    const seedLocale = resolvePlaygroundSeedLocale(
       note.content,
       settings.locale,
     );
-    const expectedTitle = getFormatPlaygroundTitle(settings.locale);
+    const migrated = migratePlaygroundContentIfStale(note.content, seedLocale);
+    const expectedTitle = getFormatPlaygroundTitle(seedLocale);
     const titleNeedsUpdate =
       FORMAT_PLAYGROUND_TITLES.includes(note.title) &&
       note.title !== expectedTitle;
@@ -665,6 +666,8 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       if (!applied && restoredContent) {
         setEditorSeedContent(restoredContent);
         setRestoreEditorSyncTick((tick) => tick + 1);
+      } else {
+        restoreSession.end();
       }
       setTitleValue(getFormatPlaygroundTitle(seedLocale));
       if (!restoreSession.isActive()) {
@@ -731,9 +734,6 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     storedContent: noteContentForEditor,
     pendingDraftContent: pendingContentRef.current,
     pendingTitleDraft: pendingTitleRef.current,
-    editorContent: editorInstance
-      ? JSON.stringify(editorInstance.getJSON())
-      : null,
     fallbackLocale: settings.locale,
     isRestoringPlayground: playgroundRestoreSessionRef.current.isActive(),
   });

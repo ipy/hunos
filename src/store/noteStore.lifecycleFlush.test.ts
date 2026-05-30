@@ -199,7 +199,7 @@ describe("noteStore lifecycle rapid saves", () => {
       savedAt: restored.modifiedAt + 10_000,
     });
 
-    await recoverPendingUnloadBackup("zh");
+    await recoverPendingUnloadBackup();
 
     const afterRecover = notesById.get(note.id);
     expect(afterRecover?.content).not.toContain("T5-MIXED-lists");

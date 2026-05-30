@@ -16,7 +16,7 @@ const TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 export async function bootstrapAppData(locale: Locale): Promise<void> {
   await createWelcomeNotesIfNeeded(locale);
   await useNoteStore.getState().loadNotes({ status: "active" });
-  await recoverPendingUnloadBackup(locale);
+  await recoverPendingUnloadBackup();
   const flushedContent = await flushEditorAutosave();
   await syncFormatPlaygroundOnLocaleChange(locale, flushedContent, {
     focusCanonical: true,
