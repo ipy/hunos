@@ -20,11 +20,11 @@ describe("playground restore visibility", () => {
   });
 
   it("shows restore after non-canonical title rename with seed body", () => {
-    expect(isFormatPlaygroundNote("NonCanonicalTitleFinal4", seedContent)).toBe(
+    expect(isFormatPlaygroundNote("NonCanonicalTitleFinal5", seedContent)).toBe(
       true,
     );
     expect(
-      formatPlaygroundNeedsRestore("NonCanonicalTitleFinal4", seedContent, "zh"),
+      formatPlaygroundNeedsRestore("NonCanonicalTitleFinal5", seedContent, "zh"),
     ).toBe(true);
     expect(
       formatPlaygroundNeedsRestore("TitleUnload3", seedContent, "zh"),
@@ -37,10 +37,56 @@ describe("playground restore visibility", () => {
     };
     parsed.content.push({
       type: "paragraph",
-      content: [{ type: "text", text: "T4-MIXED-marker" }],
+      content: [{ type: "text", text: "T5-MIXED-marker" }],
     });
     const drifted = JSON.stringify(parsed);
     expect(formatPlaygroundNeedsRestore("格式试炼场", drifted, "zh")).toBe(true);
+  });
+
+  it("hides restore when pending draft is editor round-trip of canonical seed", () => {
+    const parsed = JSON.parse(seedContent) as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    while (
+      parsed.content.at(-1)?.type === "paragraph" &&
+      !(parsed.content.at(-1)?.content?.length)
+    ) {
+      parsed.content.pop();
+    }
+    const roundTripPending = JSON.stringify(parsed);
+
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seedContent,
+        pendingDraftContent: roundTripPending,
+        editorContent: roundTripPending,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
+
+  it("shows restore when pending draft inserts T5-MIXED drift", () => {
+    const parsed = JSON.parse(seedContent) as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    parsed.content.splice(10, 0, {
+      type: "paragraph",
+      content: [{ type: "text", text: "T5-MIXED-lists" }],
+    });
+    const pendingDraft = JSON.stringify(parsed);
+
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seedContent,
+        pendingDraftContent: pendingDraft,
+        editorContent: pendingDraft,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(true);
   });
 
   it("hides restore when persisted row is canonical even if editor JSON differs", () => {

@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { buildPlaygroundContent } from "@/storage/formatPlaygroundNote";
 import type { Note } from "@/types/note";
 
 const dbUpdate = vi.fn();
@@ -166,18 +165,27 @@ describe("noteStore lifecycle rapid saves", () => {
         playgroundContentVersion: 22,
         playgroundContentLocale: "zh",
       },
-      content: [
-        {
+      content: (() => {
+        const parsed = JSON.parse(seed) as {
+          content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+        };
+        const listsIndex = parsed.content.findIndex(
+          (node) =>
+            node.type === "heading" &&
+            node.content?.[0]?.text === "列表",
+        );
+        parsed.content.splice(listsIndex + 2, 0, {
           type: "paragraph",
-          content: [{ type: "text", text: "T4-MIXED-reload" }],
-        },
-      ],
+          content: [{ type: "text", text: "T5-MIXED-lists" }],
+        });
+        return parsed.content;
+      })(),
     });
     await useNoteStore.getState().saveNoteContent(note.id, polluted);
     await useNoteStore.getState().restoreFormatPlayground(note.id, "zh");
 
     const restored = notesById.get(note.id)!;
-    expect(restored.content).not.toContain("T4-MIXED-reload");
+    expect(restored.content).not.toContain("T5-MIXED-lists");
     expect(restored.modifiedAt).toBeGreaterThan(0);
 
     writeUnloadBackupSync({
@@ -190,7 +198,7 @@ describe("noteStore lifecycle rapid saves", () => {
     await recoverPendingUnloadBackup("zh");
 
     const afterRecover = notesById.get(note.id);
-    expect(afterRecover?.content).not.toContain("T4-MIXED-reload");
+    expect(afterRecover?.content).not.toContain("T5-MIXED-lists");
     expect(afterRecover?.title).toBe(getFormatPlaygroundTitle("zh"));
   });
 });

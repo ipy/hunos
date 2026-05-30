@@ -31,6 +31,7 @@ import {
   FORMAT_PLAYGROUND_TITLES,
   getFormatPlaygroundTitle,
   isFormatPlaygroundNote,
+  resolvePlaygroundSeedLocale,
   shouldShowPlaygroundRestoreButton,
   migratePlaygroundContentIfStale,
   playgroundContentMatchesLocale,
@@ -567,7 +568,11 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     clearStashedEditorAutosave();
     setEditorSeedContent(null);
     try {
-      await restoreFormatPlayground(note.id, settings.locale);
+      const seedLocale = resolvePlaygroundSeedLocale(
+        note.content,
+        settings.locale,
+      );
+      await restoreFormatPlayground(note.id, seedLocale);
       clearUnloadBackup();
       const restoredNote = useNoteStore
         .getState()
@@ -585,7 +590,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         setEditorSeedContent(restoredContent);
         setRestoreEditorSyncTick((tick) => tick + 1);
       }
-      setTitleValue(getFormatPlaygroundTitle(settings.locale));
+      setTitleValue(getFormatPlaygroundTitle(seedLocale));
       if (!restoreSession.isActive()) {
         showToast(t("notes.actions.restorePlaygroundDone"));
         pendingRestoreToastRef.current = false;

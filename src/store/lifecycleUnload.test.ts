@@ -264,6 +264,62 @@ describe("lifecycleUnload", () => {
     )).toBe(true);
   });
 
+  it("recoverPendingUnloadBackup skips reorder drift backup with unchanged plain text", async () => {
+    const seed = JSON.stringify(buildPlaygroundContent("zh"));
+    const reordered = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          type?: string;
+          content?: Array<{ text?: string }>;
+        }>;
+      }>;
+    };
+    const listsIndex = reordered.content.findIndex(
+      (node) =>
+        node.type === "heading" && node.content?.[0]?.text === "列表",
+    );
+    const bulletList = reordered.content[listsIndex + 1];
+    const items = bulletList?.content ?? [];
+    if (items.length >= 2) {
+      [items[0], items[1]] = [items[1], items[0]];
+    }
+    const drifted = JSON.stringify(reordered);
+
+    noteStorageGet.mockResolvedValue({
+      id: "pg-1",
+      title: "格式试炼场",
+      content: seed,
+      modifiedAt: 2_000,
+    });
+    writeUnloadBackupSync({
+      noteId: "pg-1",
+      title: "格式试炼场",
+      content: drifted,
+      savedAt: 9_000,
+    });
+
+    await recoverPendingUnloadBackup("zh");
+
+    expect(saveNoteContent).not.toHaveBeenCalled();
+    expect(
+      unloadBackupWouldRegressStoredNote(
+        {
+          noteId: "pg-1",
+          title: "格式试炼场",
+          content: drifted,
+          savedAt: 9_000,
+        },
+        {
+          title: "格式试炼场",
+          content: seed,
+          modifiedAt: 2_000,
+        },
+        "zh",
+      ),
+    ).toBe(true);
+  });
+
   it("persistUnloadDraftSync skips backup that would regress canonical playground in memory", () => {
     const seed = JSON.stringify(buildPlaygroundContent("zh"));
     useNoteStoreNotes = [

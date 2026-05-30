@@ -395,12 +395,16 @@ export function buildPlaygroundContent(locale: Locale) {
 
 export async function restoreFormatPlaygroundContent(
   noteId: string,
-  locale: Locale,
+  fallbackLocale: Locale,
 ): Promise<void> {
-  const content = buildPlaygroundContent(locale);
+  const existing = await noteStorage.get(noteId);
+  const seedLocale = existing?.content
+    ? resolvePlaygroundSeedLocale(existing.content, fallbackLocale)
+    : resolvePlaygroundLocale(fallbackLocale);
+  const content = buildPlaygroundContent(seedLocale);
   const contentStr = JSON.stringify(content);
   const contentPlain = extractPlainTextFromTiptap(content);
-  const title = getFormatPlaygroundTitle(locale);
+  const title = getFormatPlaygroundTitle(seedLocale);
 
   await noteStorage.update(noteId, {
     content: contentStr,
@@ -424,7 +428,26 @@ function stripTrailingEmptyParagraphs(
   return result;
 }
 
-function normalizePlaygroundContentSnapshot(
+function normalizePlaygroundDocForFingerprint(
+  parsed: PlaygroundDoc,
+  seedLocale: PlaygroundLocale,
+): PlaygroundDoc {
+  const content = stripTrailingEmptyParagraphs(parsed.content).map((node) => {
+    const migratedImage = migratePlaygroundSampleImageNode(node);
+    return migratedImage ?? node;
+  });
+  return {
+    type: "doc",
+    attrs: {
+      playgroundContentVersion: PLAYGROUND_CONTENT_VERSION,
+      playgroundContentLocale: seedLocale,
+    },
+    content,
+  };
+}
+
+/** Stable JSON fingerprint for canonical seed comparison (editor round-trip tolerant). */
+export function normalizePlaygroundContentSnapshot(
   content: string,
   locale: Locale,
 ): string {
@@ -434,10 +457,10 @@ function normalizePlaygroundContentSnapshot(
     if (parsed.type !== "doc" || !Array.isArray(parsed.content)) {
       return migrated;
     }
-    return JSON.stringify({
-      ...parsed,
-      content: stripTrailingEmptyParagraphs(parsed.content),
-    });
+    const seedLocale = resolvePlaygroundSeedLocale(migrated, locale);
+    return JSON.stringify(
+      normalizePlaygroundDocForFingerprint(parsed, seedLocale),
+    );
   } catch {
     return migrated;
   }
@@ -475,28 +498,7 @@ export function formatPlaygroundMatchesCanonicalSeed(
     canonical,
     seedLocale,
   );
-  if (normalizedStored === normalizedCanonical) return true;
-
-  try {
-    const storedPlain = extractPlainTextFromTiptap(
-      JSON.parse(normalizedStored),
-    );
-    const canonicalPlain = extractPlainTextFromTiptap(
-      JSON.parse(normalizedCanonical),
-    );
-    if (storedPlain !== canonicalPlain) return false;
-
-    const storedDoc = JSON.parse(normalizedStored) as PlaygroundDoc;
-    const canonicalDoc = JSON.parse(normalizedCanonical) as PlaygroundDoc;
-    return (
-      (storedDoc.attrs?.playgroundContentVersion ?? 0) ===
-        (canonicalDoc.attrs?.playgroundContentVersion ?? 0) &&
-      (readPlaygroundContentLocale(storedDoc) ??
-        inferPlaygroundLocaleFromContent(storedDoc)) === seedLocale
-    );
-  } catch {
-    return false;
-  }
+  return normalizedStored === normalizedCanonical;
 }
 
 /** Show restore when playground attrs are present but title or body drifted from seed. */

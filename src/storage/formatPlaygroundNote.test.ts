@@ -21,11 +21,13 @@ import {
 } from "./formatPlaygroundNote";
 
 const noteStorageUpdate = vi.fn();
+const noteStorageGet = vi.fn();
 const syncNoteLinks = vi.fn();
 
 vi.mock("./noteStorage", () => ({
   noteStorage: {
     update: (...args: unknown[]) => noteStorageUpdate(...args),
+    get: (...args: unknown[]) => noteStorageGet(...args),
   },
 }));
 
@@ -1351,7 +1353,7 @@ describe("formatPlayground restore gating", () => {
       true,
     );
     expect(formatPlaygroundNeedsRestore("格式试炼场", seed, "zh")).toBe(false);
-    expect(formatPlaygroundNeedsRestore("NonCanonicalTitleFinal4", seed, "zh")).toBe(
+    expect(formatPlaygroundNeedsRestore("NonCanonicalTitleFinal5", seed, "zh")).toBe(
       true,
     );
 
@@ -1360,10 +1362,39 @@ describe("formatPlayground restore gating", () => {
     };
     parsed.content.push({
       type: "paragraph",
-      content: [{ type: "text", text: "T4-MIXED-body" }],
+      content: [{ type: "text", text: "T5-MIXED-body" }],
     });
     const drifted = JSON.stringify(parsed);
     expect(formatPlaygroundNeedsRestore("格式试炼场", drifted, "zh")).toBe(true);
+  });
+
+  it("detects mid-document reorder drift even when plain text is unchanged", () => {
+    const seed = JSON.parse(JSON.stringify(buildPlaygroundContent("zh"))) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          type?: string;
+          content?: Array<{ text?: string }>;
+        }>;
+      }>;
+    };
+    const listsIndex = seed.content.findIndex(
+      (node) =>
+        node.type === "heading" &&
+        node.content?.[0]?.text === "列表",
+    );
+    const bulletList = seed.content[listsIndex + 1];
+    const items = bulletList?.content ?? [];
+    if (items.length >= 2) {
+      [items[0], items[1]] = [items[1], items[0]];
+    }
+    const reordered = JSON.stringify(seed);
+    expect(
+      formatPlaygroundMatchesCanonicalSeed("格式试炼场", reordered, "zh"),
+    ).toBe(false);
+    expect(formatPlaygroundNeedsRestore("格式试炼场", reordered, "zh")).toBe(
+      true,
+    );
   });
 
   it("matches canonical zh seed when app locale is en", () => {
@@ -1388,7 +1419,9 @@ describe("formatPlayground restore gating", () => {
 describe("restoreFormatPlaygroundContent", () => {
   it("resets content, plain text, and localized title", async () => {
     noteStorageUpdate.mockClear();
+    noteStorageGet.mockClear();
     syncNoteLinks.mockClear();
+    noteStorageGet.mockResolvedValue(undefined);
 
     await restoreFormatPlaygroundContent("playground-id", "zh");
 
@@ -1417,6 +1450,7 @@ describe("restoreFormatPlaygroundContent", () => {
 
   it("uses English title when locale is en", async () => {
     noteStorageUpdate.mockClear();
+    noteStorageGet.mockResolvedValue(undefined);
 
     await restoreFormatPlaygroundContent("playground-id", "en");
 
@@ -1425,6 +1459,44 @@ describe("restoreFormatPlaygroundContent", () => {
       { title: string },
     ];
     expect(payload.title).toBe("Format Playground");
+  });
+
+  it("restores zh seed from note attrs when app fallback locale is en", async () => {
+    noteStorageUpdate.mockClear();
+    noteStorageGet.mockResolvedValue({
+      id: "playground-id",
+      content: JSON.stringify(buildPlaygroundContent("zh")),
+    });
+
+    await restoreFormatPlaygroundContent("playground-id", "en");
+
+    const [, payload] = noteStorageUpdate.mock.calls[0] as [
+      string,
+      { title: string; content: string },
+    ];
+    expect(payload.title).toBe("格式试炼场");
+    expect(
+      JSON.parse(payload.content).attrs?.playgroundContentLocale,
+    ).toBe("zh");
+  });
+
+  it("restores en seed from note attrs when app fallback locale is zh", async () => {
+    noteStorageUpdate.mockClear();
+    noteStorageGet.mockResolvedValue({
+      id: "playground-id",
+      content: JSON.stringify(buildPlaygroundContent("en")),
+    });
+
+    await restoreFormatPlaygroundContent("playground-id", "zh");
+
+    const [, payload] = noteStorageUpdate.mock.calls[0] as [
+      string,
+      { title: string; content: string },
+    ];
+    expect(payload.title).toBe("Format Playground");
+    expect(
+      JSON.parse(payload.content).attrs?.playgroundContentLocale,
+    ).toBe("en");
   });
 });
 
