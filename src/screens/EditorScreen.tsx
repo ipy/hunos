@@ -161,6 +161,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       clearPendingTitleTimer(titleTimeoutRef);
       pendingTitleRef.current = null;
     }
+    pendingContentRef.current = null;
     setTitleValue(note?.title ?? "");
     if (note?.id) {
       contentWriteEpochRef.current = getPlaygroundWriteEpoch(note.id);
@@ -242,7 +243,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
       if (
         note &&
-        isFormatPlaygroundNote(note.title, note.content) &&
+        isFormatPlaygroundNote(note.title, noteContentForEditor) &&
         formatPlaygroundMatchesCanonicalSeed(
           note.title,
           noteContentForEditor,
@@ -262,10 +263,14 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           playgroundLocale,
         );
         if (liveFingerprint === storedFingerprint) {
+          const hadPending = pendingContentRef.current != null;
           pendingContentRef.current = null;
           if (saveTimeoutRef.current) {
             clearTimeout(saveTimeoutRef.current);
             saveTimeoutRef.current = undefined;
+          }
+          if (hadPending) {
+            setRestoreEditorSyncTick((tick) => tick + 1);
           }
           return;
         }
@@ -519,16 +524,15 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   useEffect(() => {
     if (!note?.id || !isFormatPlaygroundNote(note.title, note.content)) return;
 
-    const migrateKey = `${note.id}:${settings.locale}`;
-    if (lastPlaygroundMigrateKeyRef.current === migrateKey) {
-      return;
-    }
-    lastPlaygroundMigrateKeyRef.current = migrateKey;
-
     const seedLocale = resolvePlaygroundSeedLocale(
       note.content,
       settings.locale,
     );
+    const migrateKey = `${note.id}:${seedLocale}`;
+    if (lastPlaygroundMigrateKeyRef.current === migrateKey) {
+      return;
+    }
+    lastPlaygroundMigrateKeyRef.current = migrateKey;
     const migrated = migratePlaygroundContentIfStale(note.content, seedLocale);
     const expectedTitle = getFormatPlaygroundTitle(seedLocale);
     const titleNeedsUpdate =

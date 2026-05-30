@@ -3,6 +3,8 @@ import {
   buildPlaygroundContent,
   formatPlaygroundMatchesCanonicalSeed,
   getFormatPlaygroundIntroExcerpt,
+  playgroundPersistedContentForRow,
+  shouldShowPlaygroundRestoreButton,
 } from "@/storage/formatPlaygroundNote";
 import { extractPlainTextFromTiptap } from "@/graph/linkExtractor";
 import { deriveNoteListPreview } from "@/utils/noteListPreview";
@@ -99,6 +101,26 @@ describe("deriveNoteListPreview", () => {
       "en",
     );
     expect(preview.length).toBeLessThanOrEqual(120);
+  });
+
+  it("list preview and restore chip agree on canonical EN row", () => {
+    const enContent = JSON.stringify(buildPlaygroundContent("en"));
+    const rowContent = playgroundPersistedContentForRow(enContent);
+    const note = {
+      title: "Format Playground",
+      content: enContent,
+      contentPlain: "stale",
+    };
+    const preview = deriveNoteListPreview(note, "Formatting samples", "zh");
+    const showRestore = shouldShowPlaygroundRestoreButton({
+      displayTitle: note.title,
+      storedTitle: note.title,
+      storedContent: rowContent,
+      pendingDraftContent: null,
+      fallbackLocale: "zh",
+    });
+    expect(preview).toBe(getFormatPlaygroundIntroExcerpt("en"));
+    expect(showRestore).toBe(false);
   });
 
   it("detects playground notes by title", () => {

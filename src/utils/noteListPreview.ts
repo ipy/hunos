@@ -2,6 +2,7 @@ import {
   formatPlaygroundMatchesCanonicalSeed,
   getFormatPlaygroundIntroExcerpt,
   isFormatPlaygroundNote,
+  playgroundPersistedContentForRow,
   resolvePlaygroundSeedLocale,
 } from "@/storage/formatPlaygroundNote";
 import type { Note } from "@/types/note";
@@ -19,11 +20,10 @@ export function deriveNoteListPreview(
   _playgroundLabel: string,
   locale: Locale,
 ): string {
-  if (isFormatPlaygroundNote(note.title, note.content)) {
-    const seedLocale = resolvePlaygroundSeedLocale(note.content, locale);
-    if (
-      formatPlaygroundMatchesCanonicalSeed(note.title, note.content, seedLocale)
-    ) {
+  const rowContent = playgroundPersistedContentForRow(note.content);
+  if (isFormatPlaygroundNote(note.title, rowContent)) {
+    const seedLocale = resolvePlaygroundSeedLocale(rowContent, locale);
+    if (formatPlaygroundMatchesCanonicalSeed(note.title, rowContent, seedLocale)) {
       return getFormatPlaygroundIntroExcerpt(seedLocale);
     }
     const plain = normalizePlainExcerpt(note.contentPlain ?? "");

@@ -9,6 +9,7 @@ import {
   PLAYGROUND_SAMPLE_IMAGE_TESTID,
 } from "@/components/editor/imageEmbedUtils";
 import type { Locale } from "@/types/settings";
+import { sanitizeBlockImageNoteContent } from "@/utils/migrateBlockImageFloor";
 
 type PlaygroundLocale = "en" | "zh";
 
@@ -458,6 +459,12 @@ export function playgroundEditorContentMatchesStored(
     normalizePlaygroundContentSnapshot(editorContentJson, fallbackLocale) ===
     normalizePlaygroundContentSnapshot(storedContent, fallbackLocale)
   );
+}
+
+/** Persisted JSON normalized the same way for list preview and restore chip gating. */
+export function playgroundPersistedContentForRow(content: string): string {
+  if (!content) return "";
+  return sanitizeBlockImageNoteContent(content).content;
 }
 
 /** Stable JSON fingerprint for canonical seed comparison (editor round-trip tolerant). */
