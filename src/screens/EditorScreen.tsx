@@ -44,6 +44,7 @@ import {
 } from "@/utils/migrateBlockImageFloor";
 import {
   createPlaygroundRestoreSession,
+  finalizePlaygroundRestoreInEditor,
   shouldEndPlaygroundRestoreSession,
   shouldStashAutosaveOnEffectCleanup,
 } from "@/screens/playgroundRestoreEditorSync";
@@ -410,6 +411,18 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     setEditorSeedContent(null);
     try {
       await restoreFormatPlayground(note.id, settings.locale);
+      const restoredNote = useNoteStore
+        .getState()
+        .notes.find((candidate) => candidate.id === note.id);
+      const restoredRaw = restoredNote?.content ?? "";
+      const restoredContent = restoredRaw
+        ? sanitizeBlockImageNoteContent(restoredRaw).content
+        : "";
+      finalizePlaygroundRestoreInEditor({
+        session: restoreSession,
+        editor: editorInstance,
+        restoredContent,
+      });
       setTitleValue(getFormatPlaygroundTitle(settings.locale));
       showToast(t("notes.actions.restorePlaygroundDone"));
       setShowActions(false);
