@@ -133,7 +133,7 @@ chmod +x build.sh
 
 The script:
 1. Runs `npx vite build --config vite.config.harmony.ts` → `dist-harmony/app.js`
-2. Inlines `app.js` into a single `index.html` in `entry/src/main/resources/rawfile/`
+2. Packages into `entry/src/main/resources/rawfile/` via `scripts/package-rawfile.sh` (gitignored)
 3. Runs `hvigorw assembleHap --no-daemon` to produce the HAP
 
 Output: `harmony/entry/build/default/outputs/default/entry-default-unsigned.hap`
@@ -144,14 +144,16 @@ Output: `harmony/entry/build/default/outputs/default/entry-default-unsigned.hap`
 # 1. Build IIFE bundle
 npm run build:harmony
 
-# 2. Inline into rawfile (or run harmony/build.sh steps 2–3 manually)
+# 2. Package into rawfile (gitignored)
+npm run harmony:package
+
 # 3. Open harmony/ in DevEco Studio and Build > Build Hap(s)
 ```
 
 ### DevEco Studio
 
 1. Open the `harmony/` directory as a project
-2. Ensure rawfile assets are current (`./build.sh` or manual inline step)
+2. Ensure rawfile assets are current (`./build.sh` or `npm run build:harmony && npm run harmony:package`)
 3. Configure signing if deploying to device (File > Project Structure > Signing Configs)
 4. Run on emulator or device (not Previewer — see Known Issues)
 

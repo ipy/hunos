@@ -29,4 +29,5 @@ android/.gradle/
 harmony/.hvigor/
 harmony/.idea/
 harmony/entry/build/
+harmony/entry/src/main/resources/rawfile/
 harmony/oh_modules/

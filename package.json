@@ -8,6 +8,7 @@
     "dev:e2e": "vite --port 5176 --strictPort",
     "build": "tsc && vite build",
     "build:harmony": "vite build --config vite.config.harmony.ts",
+    "harmony:package": "bash harmony/scripts/package-rawfile.sh",
     "preview": "vite preview",
     "cap:sync": "npx cap sync",
     "cap:ios": "npx cap open ios",

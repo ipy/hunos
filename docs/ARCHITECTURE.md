@@ -85,7 +85,7 @@
 
 ### OpenHarmony (ArkWeb Shell)
 - `npm run build:harmony` produces an IIFE bundle via `vite.config.harmony.ts` → `dist-harmony/app.js`
-- `harmony/build.sh` inlines the IIFE into a single `index.html` in `rawfile/`
+- `npm run harmony:package` (or `harmony/build.sh`) inlines the IIFE into `rawfile/index.html` (gitignored)
 - ArkTS `Index.ets` loads the HTML via `$rawfile('index.html')` in an ArkWeb component
 - WebView flags: `javaScriptAccess`, `domStorageAccess`, `databaseAccess` (enables IndexedDB)
 - No React Native, Metro, Hermes, or RNOH involved

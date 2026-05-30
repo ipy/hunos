@@ -13,7 +13,7 @@ harmony/
 │       │   ├── entryability/EntryAbility.ets   # Application lifecycle
 │       │   └── pages/Index.ets                  # WebView host page
 │       └── resources/
-│           └── rawfile/                         # Web assets (copied during build)
+│           └── rawfile/                         # Generated web assets (gitignored)
 ├── build-profile.json5    # SDK & product configuration
 ├── oh-package.json5       # Package dependencies
 └── build.sh               # Automated build script
@@ -39,17 +39,18 @@ chmod +x build.sh
 ```
 
 This script:
-1. Builds the web assets (`npx vite build` in the project root)
-2. Copies `dist/index.html` and `dist/assets/*` into `entry/src/main/resources/rawfile/`
-3. Fixes asset paths to be relative (WebView `$rawfile` requirement)
-4. Runs `hvigorw assembleHap --no-daemon` to produce the HAP
+1. Builds the web assets (`npx vite build --config vite.config.harmony.ts` → `dist-harmony/`)
+2. Packages `dist-harmony/` into `entry/src/main/resources/rawfile/` via `scripts/package-rawfile.sh`
+3. Runs `hvigorw assembleHap --no-daemon` to produce the HAP
+
+`rawfile/` is gitignored (like Capacitor `public/` on iOS/Android). Run `./build.sh` or at least `npm run build:harmony && npm run harmony:package` before building in DevEco Studio.
 
 Output: `entry/build/default/outputs/default/entry-default-unsigned.hap`
 
 ### Build from DevEco Studio
 
 1. Open this `harmony/` directory as a project in DevEco Studio
-2. Ensure rawfile assets are up to date (run steps 1-3 of `build.sh` manually, or build web first)
+2. Ensure rawfile assets are up to date: `./build.sh` or `npm run build:harmony && npm run harmony:package` from the repo root
 3. Use **Build > Build Hap(s)/APP(s) > Build Hap(s)**
 4. To run on device/emulator, click **Run** (requires signing config)
 
