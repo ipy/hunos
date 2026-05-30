@@ -276,7 +276,15 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         }
       }
 
+      const hadNoPending = pendingContentRef.current == null;
       pendingContentRef.current = json;
+      if (
+        hadNoPending &&
+        note &&
+        isFormatPlaygroundNote(note.title, noteContentForEditor)
+      ) {
+        setRestoreEditorSyncTick((tick) => tick + 1);
+      }
       const writeEpoch = contentWriteEpochRef.current;
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       if (flushSave) {
@@ -732,15 +740,26 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     );
   }
 
-  const showRestorePlayground = shouldShowPlaygroundRestoreButton({
-    displayTitle: titleValue.trim() || note.title,
-    storedTitle: note.title,
-    storedContent: noteContentForEditor,
-    pendingDraftContent: pendingContentRef.current,
-    pendingTitleDraft: pendingTitleRef.current,
-    fallbackLocale: settings.locale,
-    isRestoringPlayground: playgroundRestoreSessionRef.current.isActive(),
-  });
+  const showRestorePlayground = useMemo(
+    () =>
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: titleValue.trim() || note.title,
+        storedTitle: note.title,
+        storedContent: noteContentForEditor,
+        pendingDraftContent: pendingContentRef.current,
+        pendingTitleDraft: pendingTitleRef.current,
+        fallbackLocale: settings.locale,
+        isRestoringPlayground:
+          playgroundRestoreSessionRef.current.isActive(),
+      }),
+    [
+      note.title,
+      noteContentForEditor,
+      titleValue,
+      settings.locale,
+      restoreEditorSyncTick,
+    ],
+  );
   const restorePlaygroundLabel = t("notes.actions.restorePlayground");
   const restorePlaygroundVisibleText =
     layout === "mobile"

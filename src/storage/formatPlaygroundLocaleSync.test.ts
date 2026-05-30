@@ -133,6 +133,24 @@ describe("syncFormatPlaygroundOnLocaleChange", () => {
     expect(saveNoteTitle).toHaveBeenCalledWith("pg-1", "Format Playground");
   });
 
+  it("retitles playground to match seed content locale not app locale label", async () => {
+    mockNoteStoreState.activeNoteId = null;
+    mockNoteStoreState.notes = [];
+    noteStorageList.mockResolvedValue([
+      {
+        id: "pg-en",
+        title: "格式试炼场",
+        content: JSON.stringify(buildPlaygroundContent("en")),
+      },
+    ]);
+
+    await syncFormatPlaygroundOnLocaleChange("en");
+
+    expect(saveNoteContent).not.toHaveBeenCalled();
+    expect(saveNoteTitle).toHaveBeenCalledWith("pg-en", "Format Playground");
+    expect(saveNoteTitle).not.toHaveBeenCalledWith("pg-en", "格式试炼场");
+  });
+
   it("no-ops when flushed content is already current for locale", async () => {
     const content = JSON.stringify(buildPlaygroundContent("zh"));
     await syncFormatPlaygroundOnLocaleChange("zh", content);

@@ -103,6 +103,40 @@ describe("deriveNoteListPreview", () => {
     expect(preview.length).toBeLessThanOrEqual(120);
   });
 
+  it("list preview and restore chip agree after mismatched title on EN seed body", () => {
+    const enContent = JSON.stringify(buildPlaygroundContent("en"));
+    const rowContent = playgroundPersistedContentForRow(enContent);
+    const note = {
+      title: "格式试炼场",
+      content: enContent,
+      contentPlain: "stale",
+    };
+    const preview = deriveNoteListPreview(note, "Formatting samples", "en");
+    const showRestore = shouldShowPlaygroundRestoreButton({
+      displayTitle: "Format Playground",
+      storedTitle: note.title,
+      storedContent: rowContent,
+      pendingDraftContent: null,
+      fallbackLocale: "en",
+    });
+    expect(showRestore).toBe(true);
+    expect(preview).not.toBe(getFormatPlaygroundIntroExcerpt("en"));
+
+    const aligned = { ...note, title: "Format Playground" };
+    expect(deriveNoteListPreview(aligned, "Formatting samples", "en")).toBe(
+      getFormatPlaygroundIntroExcerpt("en"),
+    );
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: aligned.title,
+        storedTitle: aligned.title,
+        storedContent: rowContent,
+        pendingDraftContent: null,
+        fallbackLocale: "en",
+      }),
+    ).toBe(false);
+  });
+
   it("list preview and restore chip agree on canonical EN row", () => {
     const enContent = JSON.stringify(buildPlaygroundContent("en"));
     const rowContent = playgroundPersistedContentForRow(enContent);

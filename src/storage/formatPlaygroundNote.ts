@@ -1117,7 +1117,9 @@ export async function syncFormatPlaygroundOnLocaleChange(
       ? flushedContent
       : note.content;
   const migrated = migratePlaygroundContentIfStale(sourceContent, locale);
-  const expectedTitle = getFormatPlaygroundTitle(locale);
+  const effectiveContent = migrated ?? sourceContent;
+  const seedLocale = resolvePlaygroundSeedLocale(effectiveContent, locale);
+  const expectedTitle = getFormatPlaygroundTitle(seedLocale);
   const titleNeedsUpdate =
     FORMAT_PLAYGROUND_TITLES.includes(note.title) &&
     note.title !== expectedTitle;
@@ -1125,12 +1127,11 @@ export async function syncFormatPlaygroundOnLocaleChange(
   if (migrated) {
     await saveNoteContent(note.id, migrated);
   } else if (flushDropped) {
-    const seedLocale = resolvePlaygroundSeedLocale(note.content, locale);
     if (
       !formatPlaygroundMatchesCanonicalSeed(
         note.title,
         note.content,
-        seedLocale,
+        resolvePlaygroundSeedLocale(note.content, locale),
       )
     ) {
       await saveNoteContent(note.id, sourceContent);
