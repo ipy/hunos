@@ -75,6 +75,9 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const prevFocusModeRef = useRef(focusMode);
   const suppressFocusToastRef = useRef(false);
   const [titleValue, setTitleValue] = useState("");
+  const [editorSeedContent, setEditorSeedContent] = useState<string | null>(
+    null,
+  );
   const titleTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
@@ -189,14 +192,27 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   ]);
 
   useEffect(() => {
-    if (!activeNoteId) return;
+    if (!note?.id) return;
+
     const snapshot = peekStashedEditorAutosave();
-    if (snapshot?.noteId !== activeNoteId) return;
+    if (snapshot?.noteId !== note.id) {
+      setEditorSeedContent(null);
+      return;
+    }
 
     const taken = takeStashedEditorAutosave();
     if (!taken) return;
-    void saveNoteContent(activeNoteId, taken.content);
-  }, [activeNoteId, saveNoteContent]);
+
+    const isPlayground = isFormatPlaygroundNote(note.title, note.content);
+    if (isPlayground) {
+      pendingContentRef.current = taken.content;
+      setEditorSeedContent(taken.content);
+      return;
+    }
+
+    setEditorSeedContent(null);
+    void saveNoteContent(note.id, taken.content);
+  }, [note?.id, note?.title, note?.content, saveNoteContent]);
 
   useEffect(() => {
     if (!note?.id || !isFormatPlaygroundNote(note.title, note.content)) return;
@@ -857,7 +873,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         </div>
         <TiptapEditor
           noteId={note.id}
-          initialContent={note.content}
+          initialContent={editorSeedContent ?? note.content}
           onChange={handleContentChange}
           onEditorReady={setEditorInstance}
           fontFamily={settings.editorFont}

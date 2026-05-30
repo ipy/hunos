@@ -61,18 +61,13 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 
   setLocale: async (locale) => {
     const current = get().locale;
-    if (current === locale) return;
-
     const flushedContent = await flushEditorAutosave();
+
     const syncResult = await syncFormatPlaygroundOnLocaleChange(
       locale,
       flushedContent,
       { focusCanonical: true },
     );
-
-    await settingsStorage.set("locale", locale);
-    writeLocaleToUrl(locale);
-    set({ locale });
 
     if (syncResult.flushDropped) {
       useUIStore
@@ -81,6 +76,14 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
           i18n.t("settings.language.playgroundFlushDropped", { lng: locale }),
         );
     }
+
+    if (current === locale) {
+      return;
+    }
+
+    await settingsStorage.set("locale", locale);
+    writeLocaleToUrl(locale);
+    set({ locale });
   },
 
   setEditorFont: async (editorFont) => {

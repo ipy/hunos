@@ -85,6 +85,29 @@ describe("useSettingsStore", () => {
     expect(showToast).not.toHaveBeenCalled();
   });
 
+  it("setLocale syncs playground when locale unchanged but editor flush is pending", async () => {
+    syncFormatPlaygroundOnLocaleChange.mockResolvedValue({
+      canonicalNoteId: "pg-zh",
+      switchedFromNoteId: "pg-en",
+      flushDropped: true,
+    });
+    flushEditorAutosave.mockResolvedValue('{"type":"doc"}');
+
+    const { useSettingsStore } = await import("./settingsStore");
+    useSettingsStore.setState({ locale: "zh" });
+
+    await useSettingsStore.getState().setLocale("zh");
+
+    expect(syncFormatPlaygroundOnLocaleChange).toHaveBeenCalledWith("zh", '{"type":"doc"}', {
+      focusCanonical: true,
+    });
+    expect(showToast).toHaveBeenCalledWith(
+      "settings.language.playgroundFlushDropped:zh",
+    );
+    expect(settingsStorageSet).not.toHaveBeenCalledWith("locale", "zh");
+    expect(writeLocaleToUrl).not.toHaveBeenCalled();
+  });
+
   it("setLocale shows toast when playground flush is dropped on wrong duplicate", async () => {
     syncFormatPlaygroundOnLocaleChange.mockResolvedValue({
       canonicalNoteId: "pg-zh",
