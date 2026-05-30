@@ -100,4 +100,37 @@ describe("useNoteStore.saveNoteContent", () => {
       modifiedAt: expect.any(Number),
     });
   });
+
+  it("hydrates in-memory notes with contentPlain after saveNoteContent", async () => {
+    const note = await noteStorage.create({
+      title: "Snippet card",
+      content: JSON.stringify({
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "Original snippet baseline" }],
+          },
+        ],
+      }),
+    });
+    useNoteStore.setState({ notes: [note] });
+
+    const content = JSON.stringify({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "DistinctiveSnippetLine" }],
+        },
+      ],
+    });
+
+    await useNoteStore.getState().saveNoteContent(note.id, content);
+
+    const stored = useNoteStore.getState().notes.find((n) => n.id === note.id);
+    expect(stored?.contentPlain).toContain("DistinctiveSnippetLine");
+    expect(stored?.wordCount).toBe(1);
+    expect(stored?.content).toBe(content);
+  });
 });

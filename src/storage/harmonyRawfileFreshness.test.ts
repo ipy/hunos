@@ -46,4 +46,12 @@ describe("harmony rawfile freshness", () => {
     // Storage-boundary migration strips legacy JSON floor flag (iter 72).
     expect(rawfile).toContain("dataBlockImageFloor");
   });
+
+  it("includes live stats readingTimeMinutes (iter 81 AC8)", () => {
+    expect(rawfile).toContain("readingTimeMinutes");
+  });
+
+  it("includes addToHistory false on note-switch setContent (iter 81 undo isolation)", () => {
+    expect(rawfile).toContain("addToHistory");
+  });
 });

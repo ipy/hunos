@@ -48,6 +48,7 @@ import { PlaygroundDocument } from "./PlaygroundDocument";
 import { getHunosCodeBlockExtension } from "./HunosCodeBlock";
 import { getCodeBlockHighlightStyles } from "./codeBlockHighlightStyles";
 import { resetEditorHistory } from "./resetEditorHistory";
+import { syncNoteContentInEditor } from "./noteSwitchContentUtils";
 import ListItem from "@tiptap/extension-list-item";
 import { SelectionBubbleMenu } from "./SelectionBubbleMenu";
 import { LinkEditorBubble } from "./LinkEditorBubble";
@@ -308,33 +309,34 @@ export function TiptapEditor({
     const contentChangedExternally =
       !noteChanged && initialContent !== lastExternalContentRef.current;
 
-    if (!noteChanged && !contentChangedExternally) return;
+    const outcome = syncNoteContentInEditor({
+      initialContent,
+      noteChanged,
+      contentChangedExternally,
+      editorContentJson: JSON.stringify(editor.getJSON()),
+      setContent: (parsed) => {
+        editor
+          .chain()
+          .setMeta("addToHistory", false)
+          .setContent(parsed, false)
+          .run();
+      },
+      clearContent: () => {
+        editor.chain().setMeta("addToHistory", false).clearContent(true).run();
+      },
+      resetHistory: () => resetEditorHistory(editor),
+      focusStart: () => editor.commands.focus("start"),
+    });
 
-    if (
-      !noteChanged &&
-      contentChangedExternally &&
-      editorContentMatchesStored(editor, initialContent)
-    ) {
+    if (outcome === "noop") return;
+
+    if (outcome === "skipped-echo") {
       lastExternalContentRef.current = initialContent;
       return;
     }
 
     prevNoteIdRef.current = noteId;
     lastExternalContentRef.current = initialContent;
-
-    if (!initialContent) {
-      editor.chain().setMeta("addToHistory", false).clearContent(true).run();
-    } else {
-      const parsed = tryParseJson(initialContent);
-      if (parsed) {
-        editor.chain().setMeta("addToHistory", false).setContent(parsed, false).run();
-      }
-    }
-
-    if (noteChanged) {
-      resetEditorHistory(editor);
-      editor.commands.focus("start");
-    }
   }, [noteId, editor, initialContent]);
 
   const textFontCSS = resolveTextFontFamily(fontFamily);
@@ -606,13 +608,4 @@ function tryParseJson(str: string): object | string | undefined {
   } catch {
     return str;
   }
-}
-
-/** Skip autosave echo sync so ProseMirror history is not reset by setContent. */
-function editorContentMatchesStored(
-  editor: Editor,
-  storedContent: string,
-): boolean {
-  if (!storedContent) return false;
-  return storedContent === JSON.stringify(editor.getJSON());
 }
