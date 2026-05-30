@@ -13,6 +13,8 @@ import {
   isFormatPlaygroundNote,
   migratePlaygroundContentIfStale,
   playgroundContentMatchesLocale,
+  formatPlaygroundMatchesCanonicalSeed,
+  formatPlaygroundNeedsRestore,
   restoreFormatPlaygroundContent,
 } from "./formatPlaygroundNote";
 
@@ -1337,6 +1339,29 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(
       migratePlaygroundContentIfStale(JSON.stringify(edited), "en"),
     ).toBeNull();
+  });
+});
+
+describe("formatPlayground restore gating", () => {
+  it("matches canonical zh seed and detects title or body drift", () => {
+    const seed = JSON.stringify(buildPlaygroundContent("zh"));
+    expect(formatPlaygroundMatchesCanonicalSeed("格式试炼场", seed, "zh")).toBe(
+      true,
+    );
+    expect(formatPlaygroundNeedsRestore("格式试炼场", seed, "zh")).toBe(false);
+    expect(formatPlaygroundNeedsRestore("NonCanonicalTitleFinal4", seed, "zh")).toBe(
+      true,
+    );
+
+    const parsed = JSON.parse(seed) as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    parsed.content.push({
+      type: "paragraph",
+      content: [{ type: "text", text: "T4-MIXED-body" }],
+    });
+    const drifted = JSON.stringify(parsed);
+    expect(formatPlaygroundNeedsRestore("格式试炼场", drifted, "zh")).toBe(true);
   });
 });
 

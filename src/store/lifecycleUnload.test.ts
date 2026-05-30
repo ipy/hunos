@@ -106,6 +106,18 @@ describe("lifecycleUnload", () => {
     expect(order).toEqual(["flush-start", "flush-end"]);
   });
 
+  it("coalesces sequential hide and unload after first flush persisted", async () => {
+    flushEditorAutosaveResult.mockResolvedValue({
+      content: '{"type":"doc","text":"phrase"}',
+      persisted: true,
+    });
+
+    await flushForDocumentHide();
+    await flushForPageUnload();
+
+    expect(flushEditorAutosaveResult).toHaveBeenCalledOnce();
+  });
+
   it("dedupes rapid hide and unload into one flush", async () => {
     let resolveFlush!: (value: {
       content: string | null;

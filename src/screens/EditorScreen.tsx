@@ -30,6 +30,7 @@ import { editorHasNonEmptySelection } from "@/utils/editorSelection";
 import {
   FORMAT_PLAYGROUND_TITLES,
   getFormatPlaygroundTitle,
+  formatPlaygroundNeedsRestore,
   isFormatPlaygroundNote,
   migratePlaygroundContentIfStale,
   playgroundContentMatchesLocale,
@@ -43,6 +44,7 @@ import {
 } from "@/store/editorAutosaveRegistry";
 import { bindEditorLifecycleAutosaveFlush } from "@/store/editorLifecycleAutosave";
 import {
+  clearUnloadBackup,
   registerUnloadDraftCollector,
   unregisterUnloadDraftCollector,
   persistUnloadDraftSync,
@@ -565,6 +567,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     setEditorSeedContent(null);
     try {
       await restoreFormatPlayground(note.id, settings.locale);
+      clearUnloadBackup();
       const restoredNote = useNoteStore
         .getState()
         .notes.find((candidate) => candidate.id === note.id);
@@ -594,6 +597,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   };
 
   if (!note) {
+    const hasNotes = notes.length > 0;
     return (
       <div
         style={{
@@ -632,16 +636,22 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
               marginTop: 0,
             }}
           >
-            {t("notes.empty")}
+            {hasNotes ? t("notes.selectPrompt") : t("notes.empty")}
           </p>
         </div>
       </div>
     );
   }
 
-  const isPlaygroundNote = isFormatPlaygroundNote(note.title, note.content);
-  // Keep restore available after non-canonical renames (AC3 cleanup after AC5).
-  const showRestorePlayground = isPlaygroundNote;
+  const playgroundDraftContent =
+    pendingContentRef.current ??
+    (editorInstance ? JSON.stringify(editorInstance.getJSON()) : null) ??
+    note.content;
+  const showRestorePlayground = formatPlaygroundNeedsRestore(
+    titleValue.trim() || note.title,
+    playgroundDraftContent ?? "",
+    settings.locale,
+  );
   const restorePlaygroundLabel = t("notes.actions.restorePlayground");
   const restorePlaygroundVisibleText =
     layout === "mobile"

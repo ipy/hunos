@@ -29,6 +29,7 @@
   "notes": {
     "title": "Notes",
     "empty": "No notes yet",
+    "selectPrompt": "Select a note from the list",
     "emptyAction": "Tap + to create your first note",
     "search": {
       "placeholder": "Search notes...",

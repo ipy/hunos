@@ -410,6 +410,40 @@ export async function restoreFormatPlaygroundContent(
   await graphEngine.syncNoteLinks(noteId, contentStr);
 }
 
+function normalizePlaygroundContentSnapshot(
+  content: string,
+  locale: Locale,
+): string {
+  return migratePlaygroundContentIfStale(content, locale) ?? content;
+}
+
+/** True when title and body match the locale seed (post-migration). */
+export function formatPlaygroundMatchesCanonicalSeed(
+  title: string,
+  content: string,
+  locale: Locale,
+): boolean {
+  if (!content || !isFormatPlaygroundNote(title, content)) return false;
+  if (title !== getFormatPlaygroundTitle(locale)) return false;
+
+  const canonical = JSON.stringify(buildPlaygroundContent(locale));
+  return (
+    normalizePlaygroundContentSnapshot(content, locale) ===
+    normalizePlaygroundContentSnapshot(canonical, locale)
+  );
+}
+
+/** Show restore when playground attrs are present but title or body drifted from seed. */
+export function formatPlaygroundNeedsRestore(
+  title: string,
+  content: string | undefined,
+  locale: Locale,
+): boolean {
+  const body = content ?? "";
+  if (!isFormatPlaygroundNote(title, body)) return false;
+  return !formatPlaygroundMatchesCanonicalSeed(title, body, locale);
+}
+
 export async function createFormatPlaygroundNote(
   locale: Locale,
 ): Promise<void> {

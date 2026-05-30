@@ -17,6 +17,10 @@ type UnloadDraftCollector = () => UnloadBackup | null;
 
 let unloadDraftCollector: UnloadDraftCollector | null = null;
 let inFlightFlush: Promise<EditorAutosaveFlushResult> | null = null;
+let lastPersistedFlush: EditorAutosaveFlushResult | null = null;
+let lastPersistedFlushAt = 0;
+
+const FLUSH_COALESCE_MS = 500;
 
 export function registerUnloadDraftCollector(
   collector: UnloadDraftCollector,
@@ -87,10 +91,20 @@ export function scheduleLifecycleFlush(options?: {
   }
   if (inFlightFlush) return inFlightFlush;
 
+  const now = Date.now();
+  if (
+    lastPersistedFlush?.persisted &&
+    now - lastPersistedFlushAt < FLUSH_COALESCE_MS
+  ) {
+    return Promise.resolve(lastPersistedFlush);
+  }
+
   inFlightFlush = flushEditorAutosaveResult()
     .then((result) => {
       if (result.persisted) {
         clearUnloadBackup();
+        lastPersistedFlush = result;
+        lastPersistedFlushAt = Date.now();
       }
       return result;
     })
@@ -101,9 +115,9 @@ export function scheduleLifecycleFlush(options?: {
   return inFlightFlush;
 }
 
-/** Background hide — page stays alive; await persist. */
+/** Background hide — sync backup then await persist (same path as unload). */
 export async function flushForDocumentHide(): Promise<EditorAutosaveFlushResult> {
-  return scheduleLifecycleFlush();
+  return scheduleLifecycleFlush({ syncBackup: true });
 }
 
 /** Tab close / navigation teardown — sync backup then await persist. */
@@ -132,5 +146,7 @@ export async function recoverPendingUnloadBackup(): Promise<void> {
 export function resetLifecycleUnloadForTests(): void {
   inFlightFlush = null;
   unloadDraftCollector = null;
+  lastPersistedFlush = null;
+  lastPersistedFlushAt = 0;
   clearUnloadBackup();
 }

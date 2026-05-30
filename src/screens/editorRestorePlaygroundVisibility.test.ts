@@ -1,21 +1,44 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildPlaygroundContent } from "@/storage/formatPlaygroundNote";
-import { isFormatPlaygroundNote } from "@/storage/formatPlaygroundNote";
+import {
+  buildPlaygroundContent,
+  formatPlaygroundMatchesCanonicalSeed,
+  formatPlaygroundNeedsRestore,
+  isFormatPlaygroundNote,
+} from "@/storage/formatPlaygroundNote";
 
-const editorSource = readFileSync(
-  join(process.cwd(), "src/screens/EditorScreen.tsx"),
-  "utf-8",
-);
+describe("playground restore visibility", () => {
+  const seedContent = JSON.stringify(buildPlaygroundContent("zh"));
 
-describe("EditorScreen restore playground visibility", () => {
-  it("shows restore for playground content even after non-canonical title rename", () => {
-    expect(editorSource).toContain("showRestorePlayground = isPlaygroundNote");
-    expect(editorSource).toContain("persistUnloadDraftSync");
+  it("hides restore when title and body match canonical zh seed", () => {
+    expect(
+      formatPlaygroundNeedsRestore("格式试炼场", seedContent, "zh"),
+    ).toBe(false);
+    expect(
+      formatPlaygroundMatchesCanonicalSeed("格式试炼场", seedContent, "zh"),
+    ).toBe(true);
+  });
 
-    const content = JSON.stringify(buildPlaygroundContent("zh"));
-    expect(isFormatPlaygroundNote("TitleUnload3", content)).toBe(true);
-    expect(isFormatPlaygroundNote("NonCanonicalRestore3", content)).toBe(true);
+  it("shows restore after non-canonical title rename with seed body", () => {
+    expect(isFormatPlaygroundNote("NonCanonicalTitleFinal4", seedContent)).toBe(
+      true,
+    );
+    expect(
+      formatPlaygroundNeedsRestore("NonCanonicalTitleFinal4", seedContent, "zh"),
+    ).toBe(true);
+    expect(
+      formatPlaygroundNeedsRestore("TitleUnload3", seedContent, "zh"),
+    ).toBe(true);
+  });
+
+  it("shows restore when body drifts from seed", () => {
+    const parsed = JSON.parse(seedContent) as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    parsed.content.push({
+      type: "paragraph",
+      content: [{ type: "text", text: "T4-MIXED-marker" }],
+    });
+    const drifted = JSON.stringify(parsed);
+    expect(formatPlaygroundNeedsRestore("格式试炼场", drifted, "zh")).toBe(true);
   });
 });
