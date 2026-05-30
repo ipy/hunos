@@ -194,6 +194,84 @@ describe("syncFormatPlaygroundOnLocaleChange", () => {
     expect(saveNoteContent).not.toHaveBeenCalledWith("pg-en", expect.anything());
   });
 
+  it("syncs zh canonical when active EN duplicate is open", async () => {
+    mockNoteStoreState.activeNoteId = "pg-en";
+    mockNoteStoreState.notes = duplicatePlaygroundPair();
+
+    await syncFormatPlaygroundOnLocaleChange("zh");
+
+    expect(saveNoteContent).toHaveBeenCalledTimes(1);
+    expect(saveNoteContent).toHaveBeenCalledWith("pg-zh", expect.any(String));
+    expect(saveNoteContent).not.toHaveBeenCalledWith("pg-en", expect.anything());
+    expect(saveNoteTitle).not.toHaveBeenCalledWith(
+      "pg-en",
+      "格式试炼场",
+    );
+  });
+
+  it("syncs en canonical when active zh duplicate is open", async () => {
+    mockNoteStoreState.activeNoteId = "pg-zh";
+    mockNoteStoreState.notes = [
+      {
+        id: "pg-zh",
+        title: "格式试炼场",
+        content: JSON.stringify(buildPlaygroundContent("zh")),
+        isPinned: false,
+        modifiedAt: 200,
+      },
+      {
+        id: "pg-en",
+        title: "Format Playground",
+        content: playgroundContentWithVersion("zh", PLAYGROUND_CONTENT_VERSION),
+        isPinned: false,
+        modifiedAt: 100,
+      },
+    ];
+
+    await syncFormatPlaygroundOnLocaleChange("en");
+
+    expect(saveNoteContent).toHaveBeenCalledTimes(1);
+    expect(saveNoteContent).toHaveBeenCalledWith("pg-en", expect.any(String));
+    expect(saveNoteContent).not.toHaveBeenCalledWith("pg-zh", expect.anything());
+    expect(saveNoteTitle).not.toHaveBeenCalledWith("pg-zh", expect.anything());
+    expect(saveNoteTitle).not.toHaveBeenCalledWith(
+      "pg-zh",
+      "Format Playground",
+    );
+  });
+
+  it("applies flushed editor JSON only when active note is the picked canonical", async () => {
+    const enDoc = buildPlaygroundContent("en") as {
+      content: Array<{
+        type: string;
+        attrs?: { height?: number };
+        content?: Array<{ text?: string }>;
+      }>;
+    };
+    const imagesIndex = enDoc.content.findIndex(
+      (node) =>
+        node.type === "heading" && node.content?.[0]?.text === "Images",
+    );
+    const imageNode = enDoc.content[imagesIndex + 2];
+    if (imageNode?.attrs) {
+      imageNode.attrs.height = 180;
+    }
+    const flushed = JSON.stringify(enDoc);
+
+    mockNoteStoreState.activeNoteId = "pg-en";
+    mockNoteStoreState.notes = duplicatePlaygroundPair();
+
+    await syncFormatPlaygroundOnLocaleChange("zh", flushed);
+
+    expect(saveNoteContent).toHaveBeenCalledTimes(1);
+    expect(saveNoteContent).toHaveBeenCalledWith("pg-zh", expect.any(String));
+    const saved = JSON.parse(saveNoteContent.mock.calls[0][1] as string) as {
+      content: Array<{ attrs?: { height?: number } }>;
+    };
+    const savedImage = saved.content.find((n) => n.attrs?.height != null);
+    expect(savedImage?.attrs?.height).not.toBe(180);
+  });
+
   it("prefers en-titled playground when syncing en locale with duplicate canonical notes", async () => {
     mockNoteStoreState.activeNoteId = null;
     mockNoteStoreState.notes = [];

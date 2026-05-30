@@ -792,14 +792,7 @@ export function pickFormatPlaygroundNote<
 }
 
 async function findFormatPlaygroundNoteForSync(locale: Locale) {
-  const { activeNoteId, notes } = useNoteStore.getState();
-
-  if (activeNoteId) {
-    const active = notes.find((n) => n.id === activeNoteId);
-    if (active && isFormatPlaygroundNote(active.title, active.content)) {
-      return active;
-    }
-  }
+  const { notes } = useNoteStore.getState();
 
   const inStore = pickFormatPlaygroundNote(notes, locale);
   if (inStore) return inStore;
