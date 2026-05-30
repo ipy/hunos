@@ -4,6 +4,8 @@ import type { Locale } from "@/types/settings";
 import { noteStorage } from "@/storage/noteStorage";
 import { graphEngine } from "@/graph/graphEngine";
 import { restoreFormatPlaygroundContent } from "@/storage/formatPlaygroundNote";
+import { flushEditorAutosave } from "@/store/editorAutosaveRegistry";
+import { enqueueActiveNoteSwitch } from "@/store/noteStoreActiveNoteSwitch";
 import { useTagStore } from "@/store/tagStore";
 function sortByModifiedDesc(notes: Note[]): Note[] {
   return [...notes].sort((a, b) => b.modifiedAt - a.modifiedAt);
@@ -25,7 +27,7 @@ interface NoteStore {
   restoreNote: (id: string) => Promise<void>;
   permanentlyDelete: (id: string) => Promise<void>;
   restoreFormatPlayground: (id: string, locale: Locale) => Promise<void>;
-  setActiveNote: (id: string | null) => void;
+  setActiveNote: (id: string | null) => Promise<void>;
 }
 
 export const useNoteStore = create<NoteStore>((set, get) => ({
@@ -46,6 +48,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   },
 
   createNote: async (title?: string) => {
+    await flushEditorAutosave();
     const note = await noteStorage.create(title ? { title } : undefined);
     const { notes } = get();
     set({ notes: [note, ...notes], activeNoteId: note.id });
@@ -104,8 +107,12 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   },
 
   archiveNote: async (id) => {
+    const { activeNoteId } = get();
+    if (activeNoteId === id) {
+      await flushEditorAutosave();
+    }
     await noteStorage.update(id, { status: "archived" });
-    const { notes, activeNoteId } = get();
+    const { notes } = get();
     set({
       notes: notes.filter((n) => n.id !== id),
       activeNoteId: activeNoteId === id ? null : activeNoteId,
@@ -113,8 +120,12 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   },
 
   trashNote: async (id) => {
+    const { activeNoteId } = get();
+    if (activeNoteId === id) {
+      await flushEditorAutosave();
+    }
     await noteStorage.update(id, { status: "trashed", trashedAt: Date.now() });
-    const { notes, activeNoteId } = get();
+    const { notes } = get();
     set({
       notes: notes.filter((n) => n.id !== id),
       activeNoteId: activeNoteId === id ? null : activeNoteId,
@@ -128,8 +139,12 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   },
 
   permanentlyDelete: async (id) => {
+    const { activeNoteId } = get();
+    if (activeNoteId === id) {
+      await flushEditorAutosave();
+    }
     await noteStorage.delete(id);
-    const { notes, activeNoteId } = get();
+    const { notes } = get();
     set({
       notes: notes.filter((n) => n.id !== id),
       activeNoteId: activeNoteId === id ? null : activeNoteId,
@@ -150,5 +165,10 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     }
   },
 
-  setActiveNote: (id) => set({ activeNoteId: id }),
+  setActiveNote: (id) =>
+    enqueueActiveNoteSwitch(
+      id,
+      () => get().activeNoteId,
+      (nextId) => set({ activeNoteId: nextId }),
+    ),
 }));

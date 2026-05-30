@@ -39,6 +39,7 @@ import {
   takeStashedEditorAutosave,
   unregisterEditorAutosaveFlush,
 } from "@/store/editorAutosaveRegistry";
+import { bindEditorLifecycleAutosaveFlush } from "@/store/editorLifecycleAutosave";
 import {
   sanitizeBlockImageNoteContent,
   sanitizeEditorStashContent,
@@ -208,7 +209,9 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
   useEffect(() => {
     registerEditorAutosaveFlush(flushPendingAutosave);
+    const unbindLifecycle = bindEditorLifecycleAutosaveFlush();
     return () => {
+      unbindLifecycle();
       if (
         shouldStashAutosaveOnEffectCleanup(
           playgroundRestoreSessionRef.current.isActive(),
