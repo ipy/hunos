@@ -3,6 +3,7 @@ import { buildPlaygroundContent } from "@/storage/formatPlaygroundNote";
 import type { Note } from "@/types/note";
 
 const createWelcomeNotesIfNeeded = vi.fn().mockResolvedValue(undefined);
+const reconcileBootstrapTags = vi.fn().mockResolvedValue(undefined);
 const flushEditorAutosave = vi.fn().mockResolvedValue(null);
 const clearStashedEditorAutosave = vi.fn();
 const loadTags = vi.fn();
@@ -36,6 +37,10 @@ function duplicatePlaygroundPair(): Note[] {
     },
   ];
 }
+
+vi.mock("@/storage/bootstrapTagReconcile", () => ({
+  reconcileBootstrapTags: (...args: unknown[]) => reconcileBootstrapTags(...args),
+}));
 
 vi.mock("@/storage/welcomeNotes", () => ({
   createWelcomeNotesIfNeeded: (...args: unknown[]) =>
@@ -72,6 +77,7 @@ vi.mock("@/storage/noteStorage", () => ({
 describe("bootstrapAppData focusCanonical", () => {
   beforeEach(async () => {
     createWelcomeNotesIfNeeded.mockClear();
+    reconcileBootstrapTags.mockClear();
     flushEditorAutosave.mockClear();
     clearStashedEditorAutosave.mockClear();
     loadTags.mockClear();

@@ -35,4 +35,8 @@ describe("TiptapEditor inline markdown wiring", () => {
       expect(extension.name).toBeTruthy();
     }
   });
+
+  it("registers MarkdownCode with elevated priority for backtick input", () => {
+    expect(MarkdownCode.config.priority).toBe(1100);
+  });
 });

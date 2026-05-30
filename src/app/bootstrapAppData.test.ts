@@ -4,6 +4,7 @@ const createWelcomeNotesIfNeeded = vi.fn().mockResolvedValue(undefined);
 const flushEditorAutosave = vi.fn().mockResolvedValue(null);
 const clearStashedEditorAutosave = vi.fn();
 const syncFormatPlaygroundOnLocaleChange = vi.fn().mockResolvedValue(undefined);
+const reconcileBootstrapTags = vi.fn().mockResolvedValue(undefined);
 const loadNotes = vi.fn().mockResolvedValue(undefined);
 const loadTags = vi.fn();
 const purgeTrash = vi.fn().mockResolvedValue(undefined);
@@ -28,6 +29,10 @@ vi.mock("@/store/editorAutosaveRegistry", () => ({
 vi.mock("@/storage/formatPlaygroundNote", () => ({
   syncFormatPlaygroundOnLocaleChange: (...args: unknown[]) =>
     syncFormatPlaygroundOnLocaleChange(...args),
+}));
+
+vi.mock("@/storage/bootstrapTagReconcile", () => ({
+  reconcileBootstrapTags: (...args: unknown[]) => reconcileBootstrapTags(...args),
 }));
 
 vi.mock("@/store/noteStore", () => ({
@@ -55,6 +60,7 @@ describe("bootstrapAppData", () => {
     clearStashedEditorAutosave.mockClear();
     recoverPendingUnloadBackup.mockClear();
     syncFormatPlaygroundOnLocaleChange.mockClear();
+    reconcileBootstrapTags.mockClear();
     loadNotes.mockClear();
     loadTags.mockClear();
     purgeTrash.mockClear();
@@ -83,7 +89,10 @@ describe("bootstrapAppData", () => {
     clearStashedEditorAutosave.mockImplementation(() => {
       order.push("clearStash");
     });
-    loadTags.mockImplementation(() => {
+    reconcileBootstrapTags.mockImplementation(async () => {
+      order.push("reconcileTags");
+    });
+    loadTags.mockImplementation(async () => {
       order.push("loadTags");
     });
 
@@ -101,6 +110,7 @@ describe("bootstrapAppData", () => {
       },
     );
     expect(clearStashedEditorAutosave).toHaveBeenCalled();
+    expect(reconcileBootstrapTags).toHaveBeenCalledWith("zh");
     expect(loadTags).toHaveBeenCalled();
     expect(order).toEqual([
       "seed",
@@ -109,6 +119,7 @@ describe("bootstrapAppData", () => {
       "flush",
       "sync",
       "clearStash",
+      "reconcileTags",
       "loadTags",
     ]);
   });

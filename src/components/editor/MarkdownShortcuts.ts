@@ -216,8 +216,10 @@ export const MarkdownItalic = Italic.extend({
   },
 });
 
-/** Inline code via backticks. */
+/** Inline code via backticks — high priority so block rules do not swallow closing `. */
 export const MarkdownCode = Code.extend({
+  priority: 1100,
+
   addInputRules() {
     return [
       markInputRule({

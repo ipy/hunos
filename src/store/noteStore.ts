@@ -13,8 +13,6 @@ import {
 } from "@/store/editorAutosaveRegistry";
 import { clearUnloadBackup } from "@/store/lifecycleUnload";
 import {
-  bumpPlaygroundWriteEpoch,
-  getPlaygroundWriteEpoch,
   isStalePlaygroundWrite,
 } from "@/store/noteStorePlaygroundWriteEpoch";
 import { enqueueActiveNoteSwitch } from "@/store/noteStoreActiveNoteSwitch";
@@ -193,7 +191,6 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   },
 
   restoreFormatPlayground: async (id, locale) => {
-    bumpPlaygroundWriteEpoch(id);
     await restoreFormatPlaygroundContent(id, locale);
     clearUnloadBackup();
     clearStashedEditorAutosave();

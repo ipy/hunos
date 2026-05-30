@@ -22,5 +22,8 @@ describe("EditorScreen post-restore AC1 fixes", () => {
     expect(source).toContain("skipTitleSyncOnceRef.current = true");
     expect(source).toContain("setTitleValue(restoredTitle)");
     expect(source).toContain("titleInputRef.current?.blur()");
+    expect(source).toMatch(
+      /setRestoreChipSuppressed\(true\)[\s\S]*finalizePlaygroundRestoreInEditor/,
+    );
   });
 });

@@ -141,6 +141,39 @@ describe("createWelcomeNotesIfNeeded", () => {
     expect(createFormatPlaygroundNote).toHaveBeenCalledTimes(1);
   });
 
+  it("migrates a sibling-locale welcome row to the bootstrap locale seed", async () => {
+    notesWhereEquals.mockImplementation(async (title: string) =>
+      title === "Welcome to Hunos"
+        ? {
+            id: "welcome-en",
+            title: "Welcome to Hunos",
+            content: JSON.stringify({
+              type: "doc",
+              content: [
+                {
+                  type: "paragraph",
+                  content: [{ type: "text", text: "#hunos/welcome" }],
+                },
+              ],
+            }),
+          }
+        : undefined,
+    );
+
+    const { createWelcomeNotesIfNeeded } = await import("./welcomeNotes");
+    await createWelcomeNotesIfNeeded("zh");
+
+    expect(noteStorageCreate).not.toHaveBeenCalled();
+    expect(noteStorageUpdate).toHaveBeenCalledOnce();
+    expect(noteStorageUpdate.mock.calls[0]?.[0]).toBe("welcome-en");
+    expect(noteStorageUpdate.mock.calls[0]?.[1]?.title).toBe("欢迎使用 Hunos");
+    const syncedContent = graphSync.mock.calls[
+      graphSync.mock.calls.length - 1
+    ]?.[1] as string;
+    expect(syncedContent).toContain("#格式测试/欢迎");
+    expect(syncedContent).not.toContain("#hunos/welcome");
+  });
+
   it("migrates existing welcome note content to latest seed tags", async () => {
     notesWhereEquals.mockImplementation(async (title: string) =>
       title === "Welcome to Hunos"

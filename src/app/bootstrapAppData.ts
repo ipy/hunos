@@ -1,4 +1,5 @@
 import type { Locale } from "@/types/settings";
+import { reconcileBootstrapTags } from "@/storage/bootstrapTagReconcile";
 import { createWelcomeNotesIfNeeded } from "@/storage/welcomeNotes";
 import { syncFormatPlaygroundOnLocaleChange } from "@/storage/formatPlaygroundNote";
 import {
@@ -22,6 +23,7 @@ export async function bootstrapAppData(locale: Locale): Promise<void> {
     focusCanonical: true,
   });
   clearStashedEditorAutosave();
-  useTagStore.getState().loadTags();
+  await reconcileBootstrapTags(locale);
+  await useTagStore.getState().loadTags();
   void noteStorage.purgeTrash(TRASH_RETENTION_MS);
 }

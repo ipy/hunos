@@ -255,6 +255,19 @@ async function ensureWelcomeNote(locale: Locale): Promise<void> {
     return;
   }
 
+  for (const altTitle of WELCOME_NOTE_TITLES) {
+    if (altTitle === title) continue;
+    const alt = await db.notes.where("title").equals(altTitle).first();
+    if (!alt) continue;
+    await noteStorage.update(alt.id, {
+      title,
+      content: contentStr,
+      contentPlain,
+    });
+    await graphEngine.syncNoteLinks(alt.id, contentStr);
+    return;
+  }
+
   if (await hasWelcomeNote()) {
     return;
   }
