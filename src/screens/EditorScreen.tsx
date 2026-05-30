@@ -51,6 +51,11 @@ import {
   shouldEndPlaygroundRestoreSession,
   shouldStashAutosaveOnEffectCleanup,
 } from "@/screens/playgroundRestoreEditorSync";
+import {
+  clearPendingTitleTimer,
+  markPendingTitle,
+  takePendingTitle,
+} from "@/screens/editorPendingTitleAutosave";
 
 interface EditorScreenProps {
   layout?: LayoutMode;
@@ -111,6 +116,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   );
   const [restoreEditorSyncTick, setRestoreEditorSyncTick] = useState(0);
   const titleTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const pendingTitleRef = useRef<string | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
 
   const handleEditorReady = useCallback((editor: Editor) => {
@@ -124,8 +130,8 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       saveTimeoutRef.current = undefined;
     }
     if (titleTimeoutRef.current) {
-      clearTimeout(titleTimeoutRef.current);
-      titleTimeoutRef.current = undefined;
+      clearPendingTitleTimer(titleTimeoutRef);
+      pendingTitleRef.current = null;
     }
     setTitleValue(note?.title ?? "");
   }, [note?.id]);
@@ -141,11 +147,11 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
   const handleTitleChange = (newTitle: string) => {
     setTitleValue(newTitle);
-    if (!activeNoteId) return;
-    if (titleTimeoutRef.current) clearTimeout(titleTimeoutRef.current);
-    titleTimeoutRef.current = setTimeout(() => {
-      saveNoteTitle(activeNoteId, newTitle);
-    }, 400);
+    const noteId = activeNoteId;
+    if (!noteId) return;
+    markPendingTitle(pendingTitleRef, titleTimeoutRef, newTitle, () => {
+      void saveNoteTitle(noteId, newTitle);
+    });
   };
 
   const handleContentChange = useCallback(
@@ -189,7 +195,17 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     return json;
   }, [activeNoteId, editorInstance]);
 
+  const flushPendingTitle = useCallback(async (): Promise<void> => {
+    const noteId = activeNoteId;
+    if (!noteId) return;
+    const pendingTitle = takePendingTitle(pendingTitleRef, titleTimeoutRef);
+    if (pendingTitle == null) return;
+    await saveNoteTitle(noteId, pendingTitle);
+  }, [activeNoteId, saveNoteTitle]);
+
   const flushPendingAutosave = useCallback(async (): Promise<string | null> => {
+    await flushPendingTitle();
+
     const json = collectPendingAutosave();
     if (!json || !activeNoteId) return null;
 
@@ -205,7 +221,13 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
     await saveNoteContent(activeNoteId, json);
     return json;
-  }, [activeNoteId, collectPendingAutosave, notes, saveNoteContent]);
+  }, [
+    activeNoteId,
+    collectPendingAutosave,
+    flushPendingTitle,
+    notes,
+    saveNoteContent,
+  ]);
 
   useEffect(() => {
     registerEditorAutosaveFlush(flushPendingAutosave);
@@ -233,7 +255,10 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         }
       }
       unregisterEditorAutosaveFlush(flushPendingAutosave);
-      if (titleTimeoutRef.current) clearTimeout(titleTimeoutRef.current);
+      const pendingTitle = takePendingTitle(pendingTitleRef, titleTimeoutRef);
+      if (pendingTitle && activeNoteId) {
+        void saveNoteTitle(activeNoteId, pendingTitle);
+      }
     };
   }, [
     activeNoteId,
@@ -241,6 +266,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     flushPendingAutosave,
     notes,
     saveNoteContent,
+    saveNoteTitle,
   ]);
 
   useEffect(() => {
