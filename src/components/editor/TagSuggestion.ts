@@ -1,37 +1,36 @@
-import { Extension } from '@tiptap/core';
-import { Plugin, PluginKey } from '@tiptap/pm/state';
-import { ReactRenderer } from '@tiptap/react';
-import type { Editor } from '@tiptap/react';
-import type { Tag } from '@/types/graph';
-import {
-  TagSuggestionMenu,
-  type TagSuggestionItem,
-} from './TagSuggestionMenu';
-import { markSuggestionMenuClosedByEscape } from '@/utils/editorSuggestionMenu';
-import { isValidTagName } from '@/utils/tagPattern';
+import { Extension } from "@tiptap/core";
+import { Plugin, PluginKey } from "@tiptap/pm/state";
+import { ReactRenderer } from "@tiptap/react";
+import type { Editor } from "@tiptap/react";
+import type { Tag } from "@/types/graph";
+import { TagSuggestionMenu, type TagSuggestionItem } from "./TagSuggestionMenu";
+import { markSuggestionMenuClosedByEscape } from "@/utils/editorSuggestionMenu";
+import { isValidTagName } from "@/utils/tagPattern";
 import {
   filterTagCandidates,
   findTagSuggestionMatch,
-} from './tagSuggestionUtils';
+} from "./tagSuggestionUtils";
 
 export interface TagSuggestionOptions {
   getTags: () => Tag[];
 }
 
-const tagSuggestionKey = new PluginKey('tagSuggestion');
+const tagSuggestionKey = new PluginKey("tagSuggestion");
 
 function buildItems(tags: Tag[], query: string): TagSuggestionItem[] {
   const candidates = filterTagCandidates(tags, query);
-  const items: TagSuggestionItem[] = candidates.map(tag => ({
-    type: 'tag',
+  const items: TagSuggestionItem[] = candidates.map((tag) => ({
+    type: "tag",
     tag,
   }));
 
   const q = query.trim();
-  const validTags = tags.filter(t => isValidTagName(t.name));
-  const hasExact = validTags.some(t => t.name.toLowerCase() === q.toLowerCase());
+  const validTags = tags.filter((t) => isValidTagName(t.name));
+  const hasExact = validTags.some(
+    (t) => t.name.toLowerCase() === q.toLowerCase(),
+  );
   if (q && !hasExact && candidates.length === 0) {
-    items.push({ type: 'create', query: q });
+    items.push({ type: "create", query: q });
   }
 
   return items;
@@ -42,16 +41,11 @@ function insertTag(
   range: { from: number; to: number },
   name: string,
 ): void {
-  editor
-    .chain()
-    .focus()
-    .deleteRange(range)
-    .insertContent(`#${name}`)
-    .run();
+  editor.chain().focus().deleteRange(range).insertContent(`#${name}`).run();
 }
 
 export const TagSuggestion = Extension.create<TagSuggestionOptions>({
-  name: 'tagSuggestion',
+  name: "tagSuggestion",
 
   addOptions() {
     return {
@@ -67,7 +61,7 @@ export const TagSuggestion = Extension.create<TagSuggestionOptions>({
     let selectedIndex = 0;
     let currentItems: TagSuggestionItem[] = [];
     let activeRange: { from: number; to: number } | null = null;
-    let lastQuery = '';
+    let lastQuery = "";
 
     const destroyMenu = () => {
       renderer?.destroy();
@@ -75,24 +69,30 @@ export const TagSuggestion = Extension.create<TagSuggestionOptions>({
       selectedIndex = 0;
       currentItems = [];
       activeRange = null;
-      lastQuery = '';
+      lastQuery = "";
     };
 
     const selectItem = (index: number) => {
       if (!activeRange || index < 0 || index >= currentItems.length) return;
       const item = currentItems[index];
-      const name = item.type === 'tag' ? item.tag.name : item.query;
+      const name = item.type === "tag" ? item.tag.name : item.query;
       insertTag(editor, activeRange, name);
       destroyMenu();
     };
 
-    const getClientRect = (view: import('@tiptap/pm/view').EditorView) => () => {
-      if (!activeRange) return null;
-      const coords = view.coordsAtPos(activeRange.to);
-      return new DOMRect(coords.left, coords.top, 0, coords.bottom - coords.top);
-    };
+    const getClientRect =
+      (view: import("@tiptap/pm/view").EditorView) => () => {
+        if (!activeRange) return null;
+        const coords = view.coordsAtPos(activeRange.to);
+        return new DOMRect(
+          coords.left,
+          coords.top,
+          0,
+          coords.bottom - coords.top,
+        );
+      };
 
-    const syncRenderer = (view: import('@tiptap/pm/view').EditorView) => {
+    const syncRenderer = (view: import("@tiptap/pm/view").EditorView) => {
       renderer?.updateProps({
         items: currentItems,
         selectedIndex,
@@ -105,7 +105,7 @@ export const TagSuggestion = Extension.create<TagSuggestionOptions>({
       });
     };
 
-    const updateMenu = (view: import('@tiptap/pm/view').EditorView) => {
+    const updateMenu = (view: import("@tiptap/pm/view").EditorView) => {
       if (view.composing) {
         destroyMenu();
         return;
@@ -174,14 +174,14 @@ export const TagSuggestion = Extension.create<TagSuggestionOptions>({
           handleKeyDown(view, event) {
             if (!renderer || currentItems.length === 0) return false;
 
-            if (event.key === 'ArrowDown') {
+            if (event.key === "ArrowDown") {
               event.preventDefault();
               selectedIndex = (selectedIndex + 1) % currentItems.length;
               syncRenderer(view);
               return true;
             }
 
-            if (event.key === 'ArrowUp') {
+            if (event.key === "ArrowUp") {
               event.preventDefault();
               selectedIndex =
                 (selectedIndex - 1 + currentItems.length) % currentItems.length;
@@ -189,13 +189,13 @@ export const TagSuggestion = Extension.create<TagSuggestionOptions>({
               return true;
             }
 
-            if (event.key === 'Enter' || event.key === 'Tab') {
+            if (event.key === "Enter" || event.key === "Tab") {
               event.preventDefault();
               selectItem(selectedIndex);
               return true;
             }
 
-            if (event.key === 'Escape') {
+            if (event.key === "Escape") {
               event.preventDefault();
               markSuggestionMenuClosedByEscape();
               destroyMenu();

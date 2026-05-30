@@ -28,23 +28,29 @@ export const LinkAutolinkGuards = Extension.create({
           let modified = false;
 
           for (const { newRange } of changes) {
-            newState.doc.nodesBetween(newRange.from, newRange.to, (node, pos) => {
-              if (!node.isText || !node.text) {
-                return;
-              }
+            newState.doc.nodesBetween(
+              newRange.from,
+              newRange.to,
+              (node, pos) => {
+                if (!node.isText || !node.text) {
+                  return;
+                }
 
-              const linkMark = node.marks.find((mark) => mark.type.name === "link");
-              if (!linkMark) {
-                return;
-              }
+                const linkMark = node.marks.find(
+                  (mark) => mark.type.name === "link",
+                );
+                if (!linkMark) {
+                  return;
+                }
 
-              const from = pos;
-              const to = pos + node.text.length;
-              if (isAutolinkRangeBlocked(newState, from, to)) {
-                tr.removeMark(from, to, linkMark.type);
-                modified = true;
-              }
-            });
+                const from = pos;
+                const to = pos + node.text.length;
+                if (isAutolinkRangeBlocked(newState, from, to)) {
+                  tr.removeMark(from, to, linkMark.type);
+                  modified = true;
+                }
+              },
+            );
           }
 
           return modified ? tr : null;

@@ -1,18 +1,18 @@
-import { Extension } from '@tiptap/core';
-import { useUIStore } from '@/store/uiStore';
-import { isMobileViewport } from '@/hooks/useAdaptiveLayout';
+import { Extension } from "@tiptap/core";
+import { useUIStore } from "@/store/uiStore";
+import { isMobileViewport } from "@/hooks/useAdaptiveLayout";
 import {
   isEditorSuggestionMenuOpen,
   shouldSuppressFocusModeExitAfterMenuClose,
-} from '@/utils/editorSuggestionMenu';
-import { collapseEditorSelection } from '@/utils/editorSelection';
+} from "@/utils/editorSuggestionMenu";
+import { collapseEditorSelection } from "@/utils/editorSelection";
 
 export const FocusModeShortcuts = Extension.create({
-  name: 'focusModeShortcuts',
+  name: "focusModeShortcuts",
 
   addKeyboardShortcuts() {
     return {
-      'Mod-Shift-f': () => {
+      "Mod-Shift-f": () => {
         if (isMobileViewport()) return false;
         useUIStore.getState().toggleFocusMode();
         return true;

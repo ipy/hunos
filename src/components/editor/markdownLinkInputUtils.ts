@@ -9,9 +9,7 @@ import {
 } from "./markdownLinkUtils";
 
 function showInvalidMarkdownLinkUrlToast(): void {
-  useUIStore
-    .getState()
-    .showToast(i18n.t("editor.link.invalidUrl"), "error");
+  useUIStore.getState().showToast(i18n.t("editor.link.invalidUrl"), "error");
 }
 
 export function tryApplyMarkdownLinkOnSpace(editor: {

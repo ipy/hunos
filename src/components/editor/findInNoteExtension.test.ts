@@ -8,10 +8,7 @@ import {
   findInNotePluginKey,
   getFindInNoteState,
 } from "./FindInNoteExtension";
-import {
-  findMatchesInDoc,
-  sortMatchesForReplaceAll,
-} from "./findInNoteUtils";
+import { findMatchesInDoc, sortMatchesForReplaceAll } from "./findInNoteUtils";
 
 const schema = new Schema({
   nodes: basicSchema.spec.nodes,

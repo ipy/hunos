@@ -1,15 +1,17 @@
-import { create } from 'zustand';
-import type { Tag, TagTreeNode } from '@/types/graph';
-import { tagStorage } from '@/storage/tagStorage';
-import { isValidTagName } from '@/utils/tagPattern';
+import { create } from "zustand";
+import type { Tag, TagTreeNode } from "@/types/graph";
+import { tagStorage } from "@/storage/tagStorage";
+import { isValidTagName } from "@/utils/tagPattern";
 
 function buildTree(tags: Tag[]): TagTreeNode[] {
-  tags = tags.filter(t => isValidTagName(t.name));
+  tags = tags.filter((t) => isValidTagName(t.name));
   const nodeMap = new Map<string, TagTreeNode>();
-  tags.forEach(t => nodeMap.set(t.id, { ...t, children: [], isExpanded: true }));
+  tags.forEach((t) =>
+    nodeMap.set(t.id, { ...t, children: [], isExpanded: true }),
+  );
 
   const roots: TagTreeNode[] = [];
-  nodeMap.forEach(node => {
+  nodeMap.forEach((node) => {
     if (node.parentId && nodeMap.has(node.parentId)) {
       nodeMap.get(node.parentId)!.children.push(node);
     } else {
@@ -20,7 +22,7 @@ function buildTree(tags: Tag[]): TagTreeNode[] {
   roots.sort((a, b) => a.name.localeCompare(b.name));
   const sortChildren = (nodes: TagTreeNode[]) => {
     nodes.sort((a, b) => a.name.localeCompare(b.name));
-    nodes.forEach(n => sortChildren(n.children));
+    nodes.forEach((n) => sortChildren(n.children));
   };
   sortChildren(roots);
 
@@ -47,7 +49,9 @@ export const useTagStore = create<TagStore>((set, get) => ({
   loadTags: async () => {
     set({ isLoading: true });
     await tagStorage.deleteInvalid();
-    const tags = (await tagStorage.listAll()).filter(t => isValidTagName(t.name));
+    const tags = (await tagStorage.listAll()).filter((t) =>
+      isValidTagName(t.name),
+    );
     const tagTree = buildTree(tags);
     set({ tags, tagTree, isLoading: false });
   },
@@ -57,7 +61,7 @@ export const useTagStore = create<TagStore>((set, get) => ({
   toggleExpand: (id) => {
     const { tagTree } = get();
     const toggle = (nodes: TagTreeNode[]): TagTreeNode[] =>
-      nodes.map(n => ({
+      nodes.map((n) => ({
         ...n,
         isExpanded: n.id === id ? !n.isExpanded : n.isExpanded,
         children: toggle(n.children),

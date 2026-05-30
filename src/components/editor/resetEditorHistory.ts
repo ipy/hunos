@@ -5,7 +5,12 @@ import type { Plugin } from "@tiptap/pm/state";
 
 function isHistoryPlugin(plugin: Plugin): boolean {
   const key = plugin.spec.key;
-  return typeof key === "object" && key !== null && "key" in key && key.key === "history";
+  return (
+    typeof key === "object" &&
+    key !== null &&
+    "key" in key &&
+    key.key === "history"
+  );
 }
 
 /** Replace the history plugin so undo/redo stacks start empty. */
@@ -13,8 +18,9 @@ export function createStateWithFreshHistory(state: EditorState): EditorState {
   const freshPlugins = state.plugins.map((plugin) => {
     if (!isHistoryPlugin(plugin)) return plugin;
 
-    const config = (plugin.spec as { config?: { depth?: number; newGroupDelay?: number } })
-      .config;
+    const config = (
+      plugin.spec as { config?: { depth?: number; newGroupDelay?: number } }
+    ).config;
     return history({
       depth: config?.depth ?? 100,
       newGroupDelay: config?.newGroupDelay ?? 500,

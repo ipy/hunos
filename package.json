@@ -5,6 +5,7 @@
   "description": "A beautiful, graph-aware note-taking app",
   "scripts": {
     "dev": "vite",
+    "dev:e2e": "vite --port 5176 --strictPort",
     "build": "tsc && vite build",
     "build:harmony": "vite build --config vite.config.harmony.ts",
     "preview": "vite preview",
@@ -15,7 +16,14 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,json}\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "chrome:e2e": "bash scripts/chrome-e2e.sh",
+    "test:e2e": "node e2e/resolve-runtime.mjs && playwright test",
+    "test:e2e:web": "E2E_RUNTIME=web node e2e/resolve-runtime.mjs && playwright test",
+    "test:e2e:harmony": "E2E_RUNTIME=harmony node e2e/resolve-runtime.mjs && playwright test",
+    "test:e2e:ui": "node e2e/resolve-runtime.mjs && playwright test --ui",
+    "harmony:e2e:install": "bash harmony/scripts/e2e-install.sh",
+    "harmony:e2e:forward": "bash harmony/scripts/e2e-cdp-forward.sh"
   },
   "dependencies": {
     "@capacitor/android": "^6.2.1",
@@ -25,6 +33,15 @@
     "@capacitor/keyboard": "^6.0.4",
     "@capacitor/splash-screen": "^6.0.4",
     "@capacitor/status-bar": "^6.0.3",
+    "@fontsource/fira-code": "^5.2.7",
+    "@fontsource/ibm-plex-sans": "^5.2.8",
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/jetbrains-mono": "^5.2.8",
+    "@fontsource/lora": "^5.2.8",
+    "@fontsource/merriweather": "^5.2.11",
+    "@fontsource/noto-serif": "^5.2.9",
+    "@fontsource/source-code-pro": "^5.2.7",
+    "@fontsource/source-sans-3": "^5.2.9",
     "@tiptap/extension-code-block-lowlight": "^2.8.0",
     "@tiptap/extension-highlight": "^2.8.0",
     "@tiptap/extension-image": "^2.27.2",
@@ -64,6 +81,7 @@
     "typescript": "^5.5.0",
     "vite": "^5.4.0",
     "vite-plugin-pwa": "^1.3.0",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "@playwright/test": "^1.52.0"
   }
 }

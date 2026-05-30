@@ -1,10 +1,13 @@
-import { db } from './database';
-import type { Tag, NoteTag } from '@/types/graph';
-import { getTagDisplayName, isValidTagName } from '@/utils/tagPattern';
-import { generateId } from '@/utils/uuid';
+import { db } from "./database";
+import type { Tag, NoteTag } from "@/types/graph";
+import { getTagDisplayName, isValidTagName } from "@/utils/tagPattern";
+import { generateId } from "@/utils/uuid";
 
 export const tagStorage = {
-  async create(name: string, parentId: string | null = null): Promise<Tag | null> {
+  async create(
+    name: string,
+    parentId: string | null = null,
+  ): Promise<Tag | null> {
     if (!isValidTagName(name)) return null;
 
     const displayName = getTagDisplayName(name);
@@ -21,7 +24,7 @@ export const tagStorage = {
   },
 
   async getByName(name: string): Promise<Tag | undefined> {
-    return db.tags.where('name').equals(name).first();
+    return db.tags.where("name").equals(name).first();
   },
 
   async getOrCreate(name: string): Promise<Tag | null> {
@@ -31,9 +34,9 @@ export const tagStorage = {
     if (existing) return existing;
 
     let parentId: string | null = null;
-    if (name.includes('/')) {
-      const parts = name.split('/');
-      const parentName = parts.slice(0, -1).join('/');
+    if (name.includes("/")) {
+      const parts = name.split("/");
+      const parentName = parts.slice(0, -1).join("/");
       const parent = await this.getOrCreate(parentName);
       if (!parent) return null;
       parentId = parent.id;
@@ -47,20 +50,20 @@ export const tagStorage = {
   },
 
   async updateNoteCount(tagId: string): Promise<void> {
-    const count = await db.noteTags.where('tagId').equals(tagId).count();
+    const count = await db.noteTags.where("tagId").equals(tagId).count();
     await db.tags.update(tagId, { noteCount: count });
   },
 
   async delete(tagId: string): Promise<void> {
-    await db.noteTags.where('tagId').equals(tagId).delete();
+    await db.noteTags.where("tagId").equals(tagId).delete();
     await db.tags.delete(tagId);
   },
 
   async cleanOrphaned(): Promise<number> {
     const allTags = await db.tags.toArray();
-    const orphaned = allTags.filter(t => t.noteCount === 0);
+    const orphaned = allTags.filter((t) => t.noteCount === 0);
     if (orphaned.length > 0) {
-      await db.tags.bulkDelete(orphaned.map(t => t.id));
+      await db.tags.bulkDelete(orphaned.map((t) => t.id));
     }
     return orphaned.length;
   },
@@ -68,7 +71,7 @@ export const tagStorage = {
   async deleteInvalid(): Promise<number> {
     const allTags = await db.tags.toArray();
     const invalid = allTags.filter(
-      t => !isValidTagName(t.name) || !t.displayName.trim(),
+      (t) => !isValidTagName(t.name) || !t.displayName.trim(),
     );
     for (const tag of invalid) {
       await this.delete(tag.id);
@@ -76,7 +79,11 @@ export const tagStorage = {
     return invalid.length;
   },
 
-  async addNoteTag(noteId: string, tagId: string, position: number): Promise<void> {
+  async addNoteTag(
+    noteId: string,
+    tagId: string,
+    position: number,
+  ): Promise<void> {
     const existing = await db.noteTags.get([noteId, tagId]);
     if (!existing) {
       await db.noteTags.add({ noteId, tagId, position });
@@ -85,16 +92,16 @@ export const tagStorage = {
   },
 
   async removeAllForNote(noteId: string): Promise<void> {
-    const entries = await db.noteTags.where('noteId').equals(noteId).toArray();
-    await db.noteTags.where('noteId').equals(noteId).delete();
+    const entries = await db.noteTags.where("noteId").equals(noteId).toArray();
+    await db.noteTags.where("noteId").equals(noteId).delete();
     for (const entry of entries) {
       await this.updateNoteCount(entry.tagId);
     }
   },
 
   async getTagsForNote(noteId: string): Promise<Tag[]> {
-    const noteTags = await db.noteTags.where('noteId').equals(noteId).toArray();
-    const tags = await db.tags.bulkGet(noteTags.map(nt => nt.tagId));
+    const noteTags = await db.noteTags.where("noteId").equals(noteId).toArray();
+    const tags = await db.tags.bulkGet(noteTags.map((nt) => nt.tagId));
     return tags.filter((t): t is Tag => t !== undefined);
   },
 };

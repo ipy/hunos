@@ -214,9 +214,7 @@ export function createFindInNotePlugin(): Plugin<FindInNotePluginState> {
             replaceText: nextReplaceText,
             replaceMode: prev.replaceMode,
             activeIndex:
-              newMatches.length > 0
-                ? clampFindIndex(0, newMatches.length)
-                : -1,
+              newMatches.length > 0 ? clampFindIndex(0, newMatches.length) : -1,
             matches: newMatches,
             savedSelection: prev.savedSelection,
           });

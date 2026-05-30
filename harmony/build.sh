@@ -24,6 +24,8 @@ sed_inplace() {
 
 echo "=== Building web assets (IIFE for HarmonyOS) ==="
 cd "$PROJECT_ROOT"
+# E2E HAP exposes window.__hunosE2e for Playwright (mobile layout has no Cmd+F/N).
+export HUNOS_E2E="${HUNOS_E2E:-1}"
 npx vite build --config vite.config.harmony.ts
 
 echo "=== Packaging web assets for rawfile ==="

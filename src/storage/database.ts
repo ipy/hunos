@@ -1,6 +1,6 @@
-import Dexie, { type Table } from 'dexie';
-import type { Note } from '@/types/note';
-import type { Link, Tag, NoteTag } from '@/types/graph';
+import Dexie, { type Table } from "dexie";
+import type { Note } from "@/types/note";
+import type { Link, Tag, NoteTag } from "@/types/graph";
 
 interface SettingRecord {
   key: string;
@@ -15,13 +15,14 @@ export class HunosDatabase extends Dexie {
   settings!: Table<SettingRecord, string>;
 
   constructor() {
-    super('hunos');
+    super("hunos");
     this.version(1).stores({
-      notes: 'id, title, status, isPinned, createdAt, modifiedAt',
-      links: 'id, sourceNoteId, targetNoteId, type, createdAt, [sourceNoteId+type], [targetNoteId+type]',
-      tags: 'id, &name, parentId, noteCount',
-      noteTags: '[noteId+tagId], noteId, tagId',
-      settings: 'key',
+      notes: "id, title, status, isPinned, createdAt, modifiedAt",
+      links:
+        "id, sourceNoteId, targetNoteId, type, createdAt, [sourceNoteId+type], [targetNoteId+type]",
+      tags: "id, &name, parentId, noteCount",
+      noteTags: "[noteId+tagId], noteId, tagId",
+      settings: "key",
     });
   }
 }

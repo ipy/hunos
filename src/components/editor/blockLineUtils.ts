@@ -155,10 +155,7 @@ function caretAtBlockTextStart(doc: Node, blockFrom: number): number {
 }
 
 /** Prefer previous sibling textblock; else next; else block start. */
-function selectionTargetAfterDelete(
-  doc: Node,
-  range: LineBlockRange,
-): number {
+function selectionTargetAfterDelete(doc: Node, range: LineBlockRange): number {
   const context = getParentBlockContext(doc, range);
   if (!context) {
     return Math.max(1, Math.min(range.from, doc.content.size - 1));

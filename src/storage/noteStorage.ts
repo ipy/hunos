@@ -29,9 +29,7 @@ async function hydrateNoteFromDb(note: Note): Promise<Note> {
   const derivedPlain = deriveContentPlain(content);
   const needsPlainBackfill = note.contentPlain == null;
   const plainIsStale =
-    !needsPlainBackfill &&
-    contentChanged &&
-    note.contentPlain !== derivedPlain;
+    !needsPlainBackfill && contentChanged && note.contentPlain !== derivedPlain;
   const contentPlain =
     needsPlainBackfill || plainIsStale ? derivedPlain : note.contentPlain;
 

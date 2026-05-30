@@ -81,7 +81,9 @@ describe("useNoteStore.loadNotes", () => {
 
     await useNoteStore.getState().loadNotes({ status: "active" });
 
-    const hydrated = useNoteStore.getState().notes.find((n) => n.id === legacy.id);
+    const hydrated = useNoteStore
+      .getState()
+      .notes.find((n) => n.id === legacy.id);
     expect(hydrated?.content).not.toContain("dataBlockImageFloor");
     const parsed = JSON.parse(hydrated!.content) as {
       content?: Array<{ attrs?: Record<string, unknown> }>;

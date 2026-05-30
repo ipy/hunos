@@ -1,0 +1,73 @@
+import { expect, type Page } from "@playwright/test";
+import { isHarmonyRuntime } from "./e2e-runtime";
+import { resolveE2eAppUrl } from "./e2e-url";
+import { noteListItem, openNoteFromList } from "./notes";
+import { resetHunosDatabase } from "./storage";
+
+export const FORMAT_PLAYGROUND_TITLE = "格式试炼场";
+export const WELCOME_NOTE_TITLE = "欢迎使用 Hunos";
+/** DevLoop autosave debounce is 400ms; testers waited ≥700–800ms. */
+export const AUTOSAVE_WAIT_MS = 800;
+
+export async function gotoApp(page: Page): Promise<void> {
+  await page.goto(resolveE2eAppUrl());
+  await expect(page.getByTestId("note-list")).toBeVisible();
+}
+
+/** Reset app state — web loads Vite; harmony reloads ArkWeb on emulator (no localhost). */
+export async function gotoFreshApp(page: Page): Promise<void> {
+  if (isHarmonyRuntime()) {
+    await expect(page.locator("#root")).toBeAttached({ timeout: 30_000 });
+    try {
+      await resetHunosDatabase(page);
+    } catch {
+      // file:// / resource origins may block IDB delete — continue with reload
+    }
+    await page.reload({ waitUntil: "domcontentloaded" });
+  } else {
+    await page.goto(resolveE2eAppUrl());
+    await resetHunosDatabase(page);
+    await page.reload({ waitUntil: "domcontentloaded" });
+  }
+  await expect(page.getByTestId("note-list")).toBeVisible();
+  await expect(noteListItem(page, FORMAT_PLAYGROUND_TITLE).first()).toBeVisible({
+    timeout: 15_000,
+  });
+}
+
+export async function openFormatPlayground(page: Page): Promise<void> {
+  await openNoteFromList(page, FORMAT_PLAYGROUND_TITLE);
+}
+
+export async function restoreFormatPlayground(page: Page): Promise<void> {
+  const restore = page.getByTestId("restore-playground-button");
+  await expect(restore).toBeVisible();
+  await restore.click();
+  await page.waitForTimeout(AUTOSAVE_WAIT_MS);
+}
+
+/** Open playground and reset to canonical zh seed (DevLoop iter 83+ pattern). */
+export async function openCleanFormatPlayground(page: Page): Promise<void> {
+  await openFormatPlayground(page);
+  await restoreFormatPlayground(page);
+}
+
+export function editorLocator(page: Page) {
+  return page.getByTestId("note-editor").locator(".ProseMirror");
+}
+
+export async function appendEditorLine(
+  page: Page,
+  text: string,
+): Promise<void> {
+  const editor = editorLocator(page);
+  await editor.click();
+  await page.keyboard.press("End");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type(text);
+}
+
+export async function clearTagFilter(page: Page): Promise<void> {
+  await page.getByText("全部笔记", { exact: true }).click();
+  await expect(page.getByTestId("note-list-tag-filter")).toHaveCount(0);
+}

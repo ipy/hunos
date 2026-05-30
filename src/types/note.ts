@@ -1,4 +1,4 @@
-export type NoteStatus = 'active' | 'archived' | 'trashed';
+export type NoteStatus = "active" | "archived" | "trashed";
 
 export interface Note {
   id: string;
@@ -17,8 +17,8 @@ export interface NoteFilter {
   status?: NoteStatus;
   isPinned?: boolean;
   tagId?: string;
-  sortBy?: 'modifiedAt' | 'createdAt' | 'title';
-  sortOrder?: 'asc' | 'desc';
+  sortBy?: "modifiedAt" | "createdAt" | "title";
+  sortOrder?: "asc" | "desc";
   limit?: number;
   offset?: number;
 }

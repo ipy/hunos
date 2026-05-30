@@ -1,8 +1,13 @@
-import type { ResolvedPos } from '@tiptap/pm/model';
-import type { EditorState } from '@tiptap/pm/state';
-import type { Tag } from '@/types/graph';
-import { isValidTagName, TAG_DECORATION_REGEX, TAG_NAME_BODY, TAG_NAME_START } from '@/utils/tagPattern';
-import { isInCodeContext } from './wikiLinkSuggestionUtils';
+import type { ResolvedPos } from "@tiptap/pm/model";
+import type { EditorState } from "@tiptap/pm/state";
+import type { Tag } from "@/types/graph";
+import {
+  isValidTagName,
+  TAG_DECORATION_REGEX,
+  TAG_NAME_BODY,
+  TAG_NAME_START,
+} from "@/utils/tagPattern";
+import { isInCodeContext } from "./wikiLinkSuggestionUtils";
 
 const TAG_QUERY = `${TAG_NAME_START}${TAG_NAME_BODY}`;
 
@@ -27,7 +32,7 @@ export function findCompleteTagsInBlock(blockText: string): TagSpan[] {
   let match: RegExpExecArray | null;
   while ((match = TAG_DECORATION_REGEX.exec(blockText)) !== null) {
     const fullMatch = match[0];
-    const hashOffset = fullMatch.indexOf('#');
+    const hashOffset = fullMatch.indexOf("#");
     const start = match.index + hashOffset;
     spans.push({
       start,
@@ -50,13 +55,16 @@ function findCompleteTagContainingOffset(
   return null;
 }
 
-function isMarkdownHeadingTrigger(textBefore: string, hashIndex: number): boolean {
-  const lineStart = textBefore.lastIndexOf('\n') + 1;
+function isMarkdownHeadingTrigger(
+  textBefore: string,
+  hashIndex: number,
+): boolean {
+  const lineStart = textBefore.lastIndexOf("\n") + 1;
   const beforeHash = textBefore.slice(lineStart, hashIndex);
-  if (beforeHash.trim() !== '') return false;
+  if (beforeHash.trim() !== "") return false;
 
   const afterHash = textBefore.slice(hashIndex + 1);
-  if (afterHash.startsWith(' ')) return true;
+  if (afterHash.startsWith(" ")) return true;
   if (/^#{1,2}(?:\s|$)/.test(afterHash)) return true;
   return false;
 }
@@ -71,11 +79,11 @@ export function findTagSuggestionMatchInBlock(
   const match = TAG_SUGGESTION_TRIGGER_REGEX.exec(textBefore);
   if (!match) return null;
 
-  const hashIndex = textBefore.lastIndexOf('#');
+  const hashIndex = textBefore.lastIndexOf("#");
   if (isMarkdownHeadingTrigger(textBefore, hashIndex)) return null;
 
   let rangeTo = offset;
-  let query = match[1] ?? '';
+  let query = match[1] ?? "";
 
   const completeTag = findCompleteTagContainingOffset(blockText, offset);
   if (completeTag && completeTag.start === hashIndex) {
@@ -100,7 +108,7 @@ export function findTagSuggestionMatch(
 
   const blockStart = $from.start();
   const blockEnd = $from.end();
-  const blockText = state.doc.textBetween(blockStart, blockEnd, '\n', '\n');
+  const blockText = state.doc.textBetween(blockStart, blockEnd, "\n", "\n");
   const caretOffset = $from.pos - blockStart;
   const localMatch = findTagSuggestionMatchInBlock(blockText, caretOffset);
   if (!localMatch) return null;
@@ -121,10 +129,10 @@ export function filterTagCandidates(
 ): Tag[] {
   const q = query.toLowerCase().trim();
 
-  const validTags = tags.filter(t => isValidTagName(t.name));
+  const validTags = tags.filter((t) => isValidTagName(t.name));
 
   const matching = q
-    ? validTags.filter(t => t.name.toLowerCase().includes(q))
+    ? validTags.filter((t) => t.name.toLowerCase().includes(q))
     : validTags;
 
   matching.sort((a, b) => {

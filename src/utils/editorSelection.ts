@@ -1,4 +1,4 @@
-import type { Editor } from '@tiptap/react';
+import type { Editor } from "@tiptap/react";
 
 export function editorHasNonEmptySelection(editor: Editor | null): boolean {
   return editor != null && !editor.state.selection.empty && editor.isFocused;

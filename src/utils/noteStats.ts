@@ -1,4 +1,7 @@
-import { extractFromPlainText, extractPlainTextFromTiptap } from "@/graph/linkExtractor";
+import {
+  extractFromPlainText,
+  extractPlainTextFromTiptap,
+} from "@/graph/linkExtractor";
 import type { Note } from "@/types/note";
 import type { Editor } from "@tiptap/react";
 
@@ -33,10 +36,7 @@ export function deriveNoteStatsFromNote(note: Note): NoteStats {
   return { charCount, wordCount, paragraphCount, readingTimeMinutes };
 }
 
-export function deriveNoteStats(
-  note: Note,
-  editor: Editor | null,
-): NoteStats {
+export function deriveNoteStats(note: Note, editor: Editor | null): NoteStats {
   if (editor) {
     return deriveNoteStatsFromEditor(editor);
   }

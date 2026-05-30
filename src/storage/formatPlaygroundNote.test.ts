@@ -89,16 +89,12 @@ function findTagsParagraphText(content: unknown, locale: "en" | "zh"): string {
   const doc = content as {
     content: Array<{ type: string; content?: Array<{ text?: string }> }>;
   };
-  const heading =
-    locale === "zh" ? "标签与链接" : "Tags & Links";
+  const heading = locale === "zh" ? "标签与链接" : "Tags & Links";
   const tagsSectionIndex = doc.content.findIndex(
-    (node) =>
-      node.type === "heading" && node.content?.[0]?.text === heading,
+    (node) => node.type === "heading" && node.content?.[0]?.text === heading,
   );
   const tagsParagraph = doc.content[tagsSectionIndex + 1];
-  return (tagsParagraph?.content ?? [])
-    .map((node) => node.text ?? "")
-    .join("");
+  return (tagsParagraph?.content ?? []).map((node) => node.text ?? "").join("");
 }
 
 describe("isFormatPlaygroundNote", () => {
@@ -176,10 +172,14 @@ describe("buildPlaygroundContent", () => {
 
   it("keeps the seed wiki link in the tags section", () => {
     expect(
-      findWikiLinkTitlesInText(findTagsParagraphText(buildPlaygroundContent("en"), "en")),
+      findWikiLinkTitlesInText(
+        findTagsParagraphText(buildPlaygroundContent("en"), "en"),
+      ),
     ).toEqual(["Welcome to Hunos"]);
     expect(
-      findWikiLinkTitlesInText(findTagsParagraphText(buildPlaygroundContent("zh"), "zh")),
+      findWikiLinkTitlesInText(
+        findTagsParagraphText(buildPlaygroundContent("zh"), "zh"),
+      ),
     ).toEqual(["欢迎使用 Hunos"]);
   });
 });

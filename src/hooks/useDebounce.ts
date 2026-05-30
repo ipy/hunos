@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback } from "react";
 
 export function useDebounce<T extends (...args: unknown[]) => unknown>(
   fn: T,

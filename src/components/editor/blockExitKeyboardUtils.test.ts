@@ -66,18 +66,16 @@ function buildBlockquoteWithContentOnly() {
 }
 
 function buildCodeBlockWithTrailingEmptyLine() {
-  return doc.create({}, [
-    codeBlock.create({}, textNode('const x = 1;\n')),
-  ]);
+  return doc.create({}, [codeBlock.create({}, textNode("const x = 1;\n"))]);
 }
 
 function buildCodeBlockWithContentAtEnd() {
-  return doc.create({}, [
-    codeBlock.create({}, textNode('const x = 1;')),
-  ]);
+  return doc.create({}, [codeBlock.create({}, textNode("const x = 1;"))]);
 }
 
-function findEmptyParagraphPos(document: ReturnType<typeof buildBlockquoteWithTrailingEmptyLine>) {
+function findEmptyParagraphPos(
+  document: ReturnType<typeof buildBlockquoteWithTrailingEmptyLine>,
+) {
   let targetPos = -1;
   document.descendants((node, pos) => {
     if (node.type === paragraph && node.textContent === "") {
@@ -91,7 +89,9 @@ function findEmptyParagraphPos(document: ReturnType<typeof buildBlockquoteWithTr
   return targetPos;
 }
 
-function findCodeBlockEndPos(document: ReturnType<typeof buildCodeBlockWithTrailingEmptyLine>) {
+function findCodeBlockEndPos(
+  document: ReturnType<typeof buildCodeBlockWithTrailingEmptyLine>,
+) {
   let targetPos = -1;
   document.descendants((node, pos) => {
     if (node.type === codeBlock) {

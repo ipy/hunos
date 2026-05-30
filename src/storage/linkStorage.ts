@@ -1,13 +1,13 @@
-import { db } from './database';
-import type { Link, LinkType } from '@/types/graph';
-import { generateId } from '@/utils/uuid';
+import { db } from "./database";
+import type { Link, LinkType } from "@/types/graph";
+import { generateId } from "@/utils/uuid";
 
 export const linkStorage = {
   async create(
     sourceNoteId: string,
     targetNoteId: string,
     type: LinkType,
-    context: string = '',
+    context: string = "",
     position: number = 0,
   ): Promise<Link> {
     const link: Link = {
@@ -24,20 +24,23 @@ export const linkStorage = {
   },
 
   async getOutgoing(noteId: string): Promise<Link[]> {
-    return db.links.where('sourceNoteId').equals(noteId).toArray();
+    return db.links.where("sourceNoteId").equals(noteId).toArray();
   },
 
   async getIncoming(noteId: string): Promise<Link[]> {
-    return db.links.where('targetNoteId').equals(noteId).toArray();
+    return db.links.where("targetNoteId").equals(noteId).toArray();
   },
 
   async deleteBySource(sourceNoteId: string): Promise<void> {
-    await db.links.where('sourceNoteId').equals(sourceNoteId).delete();
+    await db.links.where("sourceNoteId").equals(sourceNoteId).delete();
   },
 
-  async deleteBySourceAndType(sourceNoteId: string, type: LinkType): Promise<void> {
+  async deleteBySourceAndType(
+    sourceNoteId: string,
+    type: LinkType,
+  ): Promise<void> {
     await db.links
-      .where('[sourceNoteId+type]')
+      .where("[sourceNoteId+type]")
       .equals([sourceNoteId, type])
       .delete();
   },

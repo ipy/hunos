@@ -283,9 +283,7 @@ describe("buildSelectAllTransaction", () => {
   });
 
   it("expands partial selection within scope before selecting whole note (AC9)", () => {
-    const document = doc.create({}, [
-      paragraph.create({}, textNode("abcdef")),
-    ]);
+    const document = doc.create({}, [paragraph.create({}, textNode("abcdef"))]);
     const pos = findTextPos(document, "abcdef");
     const partial = stateWithSelection(document, pos, pos + 3);
     const next = applySelectAll(partial);

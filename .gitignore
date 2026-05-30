@@ -1,4 +1,10 @@
-node_modules/
+node_modules
+.chrome-e2e-profile/
+e2e/.runtime.json
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache//
 dist/
 dist-harmony/
 .vite/

@@ -32,9 +32,7 @@ function textNode(value: string) {
 function buildFlatBulletDoc() {
   return doc.create({}, [
     bulletList.create({}, [
-      listItem.create({}, [
-        paragraph.create({}, textNode("one")),
-      ]),
+      listItem.create({}, [paragraph.create({}, textNode("one"))]),
       listItem.create({}, [paragraph.create()]),
     ]),
   ]);
@@ -45,9 +43,7 @@ function buildNestedEmptyDoc() {
     bulletList.create({}, [
       listItem.create({}, [
         paragraph.create({}, textNode("parent")),
-        bulletList.create({}, [
-          listItem.create({}, [paragraph.create()]),
-        ]),
+        bulletList.create({}, [listItem.create({}, [paragraph.create()])]),
       ]),
     ]),
   ]);
@@ -59,9 +55,7 @@ function buildNestedWithTextDoc() {
       listItem.create({}, [
         paragraph.create({}, textNode("parent")),
         bulletList.create({}, [
-          listItem.create({}, [
-            paragraph.create({}, textNode("nested")),
-          ]),
+          listItem.create({}, [paragraph.create({}, textNode("nested"))]),
         ]),
       ]),
     ]),
@@ -93,12 +87,16 @@ function findTopLevelItemParagraphPos(
   });
 
   if (targetPos < 0) {
-    throw new Error(`Could not find top-level paragraph for item index ${itemIndex}`);
+    throw new Error(
+      `Could not find top-level paragraph for item index ${itemIndex}`,
+    );
   }
   return targetPos;
 }
 
-function findNestedEmptyParagraphPos(document: ReturnType<typeof buildNestedEmptyDoc>) {
+function findNestedEmptyParagraphPos(
+  document: ReturnType<typeof buildNestedEmptyDoc>,
+) {
   let targetPos = -1;
 
   document.descendants((node, pos) => {
@@ -139,11 +137,18 @@ function findNestedTextPos(
   return targetPos;
 }
 
-function selectionAt(document: ReturnType<typeof buildFlatBulletDoc>, pos: number) {
+function selectionAt(
+  document: ReturnType<typeof buildFlatBulletDoc>,
+  pos: number,
+) {
   return TextSelection.create(document, pos);
 }
 
-function mockEditor(activeNodes: string[], document: ReturnType<typeof buildFlatBulletDoc>, pos: number): Editor {
+function mockEditor(
+  activeNodes: string[],
+  document: ReturnType<typeof buildFlatBulletDoc>,
+  pos: number,
+): Editor {
   const state = EditorState.create({
     doc: document,
     schema,

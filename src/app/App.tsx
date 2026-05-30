@@ -11,6 +11,9 @@ import { EditorScreen } from "@/screens/EditorScreen";
 import { SettingsScreen } from "@/screens/SettingsScreen";
 import { ToastContainer } from "@/components/common/Toast";
 import { useTranslation } from "react-i18next";
+import { mountHunosE2eBridge } from "@/testing/hunos-e2e-bridge";
+
+declare const __HUNOS_E2E__: boolean | undefined;
 
 function AppContent() {
   const layout = useAdaptiveLayout();
@@ -26,6 +29,12 @@ function AppContent() {
   useEffect(() => {
     i18n.changeLanguage(locale);
   }, [locale, i18n]);
+
+  useEffect(() => {
+    if (typeof __HUNOS_E2E__ !== "undefined" && __HUNOS_E2E__) {
+      mountHunosE2eBridge();
+    }
+  }, []);
 
   if (layout === "desktop") {
     const panelTransition =

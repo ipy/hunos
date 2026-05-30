@@ -1,4 +1,4 @@
-export type LinkType = 'wiki_link' | 'tag_ref' | 'embed' | 'entity';
+export type LinkType = "wiki_link" | "tag_ref" | "embed" | "entity";
 
 export interface Link {
   id: string;

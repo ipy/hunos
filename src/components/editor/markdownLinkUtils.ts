@@ -1,9 +1,6 @@
 import type { EditorState } from "@tiptap/pm/state";
 import type { Transaction } from "@tiptap/pm/state";
-import {
-  isValidLinkUrl,
-  normalizeLinkUrl,
-} from "./inlineFormatActions";
+import { isValidLinkUrl, normalizeLinkUrl } from "./inlineFormatActions";
 import {
   isInCodeContext,
   isRangeIntersectingWikiLink,
