@@ -41,6 +41,10 @@ import {
   sanitizeBlockImageNoteContent,
   sanitizeEditorStashContent,
 } from "@/utils/migrateBlockImageFloor";
+import {
+  createPlaygroundRestoreSession,
+  shouldStashAutosaveOnEffectCleanup,
+} from "@/screens/playgroundRestoreEditorSync";
 
 interface EditorScreenProps {
   layout?: LayoutMode;
@@ -80,6 +84,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const pendingContentRef = useRef<string | null>(null);
   const lastPlaygroundMigrateKeyRef = useRef<string | null>(null);
+  const playgroundRestoreSessionRef = useRef(createPlaygroundRestoreSession());
 
   const note = notes.find((n) => n.id === activeNoteId);
   const noteContentForEditor = useMemo(() => {
@@ -182,18 +187,24 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   useEffect(() => {
     registerEditorAutosaveFlush(flushPendingAutosave);
     return () => {
-      const json = collectPendingAutosave();
-      if (json && activeNoteId) {
-        const activeNote = notes.find(
-          (candidate) => candidate.id === activeNoteId,
-        );
-        const isPlayground =
-          activeNote != null &&
-          isFormatPlaygroundNote(activeNote.title, activeNote.content);
-        if (isPlayground) {
-          stashEditorAutosaveSnapshot(activeNoteId, json);
-        } else {
-          void saveNoteContent(activeNoteId, json);
+      if (
+        shouldStashAutosaveOnEffectCleanup(
+          playgroundRestoreSessionRef.current.isActive(),
+        )
+      ) {
+        const json = collectPendingAutosave();
+        if (json && activeNoteId) {
+          const activeNote = notes.find(
+            (candidate) => candidate.id === activeNoteId,
+          );
+          const isPlayground =
+            activeNote != null &&
+            isFormatPlaygroundNote(activeNote.title, activeNote.content);
+          if (isPlayground) {
+            stashEditorAutosaveSnapshot(activeNoteId, json);
+          } else {
+            void saveNoteContent(activeNoteId, json);
+          }
         }
       }
       unregisterEditorAutosaveFlush(flushPendingAutosave);
@@ -209,6 +220,12 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
   useEffect(() => {
     if (!note?.id) return;
+
+    if (playgroundRestoreSessionRef.current.isActive()) {
+      clearStashedEditorAutosave();
+      setEditorSeedContent(null);
+      return;
+    }
 
     const snapshot = peekStashedEditorAutosave();
     if (snapshot?.noteId !== note.id) {
@@ -346,6 +363,8 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
   const handleRestorePlayground = async () => {
     if (!note) return;
+    const restoreSession = playgroundRestoreSessionRef.current;
+    restoreSession.begin();
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = undefined;
@@ -354,10 +373,17 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       clearTimeout(titleTimeoutRef.current);
       titleTimeoutRef.current = undefined;
     }
-    await restoreFormatPlayground(note.id, settings.locale);
-    setTitleValue(getFormatPlaygroundTitle(settings.locale));
-    showToast(t("notes.actions.restorePlaygroundDone"));
-    setShowActions(false);
+    pendingContentRef.current = null;
+    clearStashedEditorAutosave();
+    setEditorSeedContent(null);
+    try {
+      await restoreFormatPlayground(note.id, settings.locale);
+      setTitleValue(getFormatPlaygroundTitle(settings.locale));
+      showToast(t("notes.actions.restorePlaygroundDone"));
+      setShowActions(false);
+    } finally {
+      queueMicrotask(() => restoreSession.end());
+    }
   };
 
   if (!note) {
