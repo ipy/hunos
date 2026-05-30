@@ -339,11 +339,41 @@ describe("noteStorage.update", () => {
     expect(dbUpdate).toHaveBeenCalledWith(note.id, {
       content: newContent,
       contentPlain: "New paragraph\n",
+      wordCount: 2,
       modifiedAt: expect.any(Number),
     });
   });
 
-  it("preserves explicit contentPlain when provided with content", async () => {
+  it("derives wordCount from content when wordCount is omitted", async () => {
+    const content = JSON.stringify({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "one two three four five six seven eight nine ten",
+            },
+          ],
+        },
+      ],
+    });
+    const note = await noteStorage.create({ content: "" });
+    dbUpdate.mockClear();
+
+    await noteStorage.update(note.id, { content });
+
+    expect(notesById.get(note.id)?.wordCount).toBe(10);
+    expect(dbUpdate).toHaveBeenCalledWith(note.id, {
+      content,
+      contentPlain: "one two three four five six seven eight nine ten\n",
+      wordCount: 10,
+      modifiedAt: expect.any(Number),
+    });
+  });
+
+  it("preserves explicit contentPlain and wordCount when provided with content", async () => {
     const content = JSON.stringify({
       type: "doc",
       content: [
@@ -359,12 +389,15 @@ describe("noteStorage.update", () => {
     await noteStorage.update(note.id, {
       content,
       contentPlain: "Custom plain",
+      wordCount: 42,
     });
 
     expect(notesById.get(note.id)?.contentPlain).toBe("Custom plain");
+    expect(notesById.get(note.id)?.wordCount).toBe(42);
     expect(dbUpdate).toHaveBeenCalledWith(note.id, {
       content,
       contentPlain: "Custom plain",
+      wordCount: 42,
       modifiedAt: expect.any(Number),
     });
   });

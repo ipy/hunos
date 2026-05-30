@@ -52,11 +52,6 @@ export const graphEngine = {
         );
       }
     }
-
-    await noteStorage.update(noteId, {
-      contentPlain: extraction.plainText,
-      wordCount: extraction.wordCount,
-    });
   },
 
   /** When a note title changes, update [[oldTitle]] wikilinks in every other note. */

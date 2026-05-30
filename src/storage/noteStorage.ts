@@ -1,7 +1,10 @@
 import { db } from "./database";
 import type { Note, NoteFilter, NoteStatus } from "@/types/note";
 import { generateId } from "@/utils/uuid";
-import { extractPlainTextFromTiptap } from "@/graph/linkExtractor";
+import {
+  extractFromPlainText,
+  extractPlainTextFromTiptap,
+} from "@/graph/linkExtractor";
 import { sanitizeBlockImageNoteContent } from "@/utils/migrateBlockImageFloor";
 
 function deriveContentPlain(content: string): string {
@@ -13,6 +16,10 @@ function deriveContentPlain(content: string): string {
   } catch {
     return content;
   }
+}
+
+function deriveWordCount(plainText: string): number {
+  return extractFromPlainText(plainText).wordCount;
 }
 
 async function hydrateNoteFromDb(note: Note): Promise<Note> {
@@ -68,6 +75,9 @@ export const noteStorage = {
       if (partial.contentPlain == null) {
         note.contentPlain = deriveContentPlain(note.content);
       }
+      if (partial.wordCount == null) {
+        note.wordCount = deriveWordCount(note.contentPlain);
+      }
     }
     await db.notes.add(note);
     return note;
@@ -91,8 +101,13 @@ export const noteStorage = {
     };
     if (updates.content !== undefined) {
       payload.content = sanitizeBlockImageNoteContent(updates.content).content;
+      const plainForDerivation =
+        updates.contentPlain ?? deriveContentPlain(payload.content);
       if (updates.contentPlain == null) {
-        payload.contentPlain = deriveContentPlain(payload.content);
+        payload.contentPlain = plainForDerivation;
+      }
+      if (updates.wordCount == null) {
+        payload.wordCount = deriveWordCount(plainForDerivation);
       }
     }
     await db.notes.update(id, payload);
