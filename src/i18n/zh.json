@@ -61,6 +61,7 @@
   "editor": {
     "placeholder": "开始写作...",
     "titlePlaceholder": "标题",
+    "saveFailed": "无法保存更改，编辑内容仍保留在编辑器中。",
     "toolbar": {
       "bold": "粗体",
       "italic": "斜体",

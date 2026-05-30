@@ -61,6 +61,7 @@
   "editor": {
     "placeholder": "Start writing...",
     "titlePlaceholder": "Title",
+    "saveFailed": "Could not save changes. Your edits are still in the editor.",
     "toolbar": {
       "bold": "Bold",
       "italic": "Italic",

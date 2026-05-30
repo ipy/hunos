@@ -59,6 +59,11 @@ import {
   markPendingTitle,
   takePendingTitle,
 } from "@/screens/editorPendingTitleAutosave";
+import {
+  persistNoteContent,
+  persistNoteTitle,
+} from "@/screens/editorNotePersistence";
+import type { EditorAutosaveFlushResult } from "@/store/editorAutosaveRegistry";
 
 interface EditorScreenProps {
   layout?: LayoutMode;
@@ -156,13 +161,37 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     setTitleValue(note.title);
   }, [note?.title]);
 
+  const persistEditorTitle = useCallback(
+    async (noteId: string, title: string): Promise<boolean> => {
+      const saved = await persistNoteTitle(saveNoteTitle, noteId, title);
+      if (!saved) {
+        pendingTitleRef.current = title;
+      }
+      return saved;
+    },
+    [saveNoteTitle],
+  );
+
+  const persistEditorContent = useCallback(
+    async (noteId: string, json: string): Promise<boolean> => {
+      const saved = await persistNoteContent(saveNoteContent, noteId, json);
+      if (saved && pendingContentRef.current === json) {
+        pendingContentRef.current = null;
+      } else if (!saved) {
+        pendingContentRef.current = json;
+      }
+      return saved;
+    },
+    [saveNoteContent],
+  );
+
   const handleTitleChange = (newTitle: string) => {
     setTitleValue(newTitle);
     const noteId = activeNoteId;
     if (!noteId) return;
-    markPendingTitle(pendingTitleRef, titleTimeoutRef, newTitle, () => {
-      void saveNoteTitle(noteId, newTitle);
-    });
+    markPendingTitle(pendingTitleRef, titleTimeoutRef, newTitle, (title) =>
+      persistEditorTitle(noteId, title),
+    );
   };
 
   const handleContentChange = useCallback(
@@ -177,16 +206,14 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       pendingContentRef.current = json;
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       if (flushSave) {
-        void saveNoteContent(activeNoteId, json);
-        pendingContentRef.current = null;
+        void persistEditorContent(activeNoteId, json);
         return;
       }
       saveTimeoutRef.current = setTimeout(() => {
-        void saveNoteContent(activeNoteId, json);
-        pendingContentRef.current = null;
+        void persistEditorContent(activeNoteId, json);
       }, 400);
     },
-    [activeNoteId, noteContentForEditor, saveNoteContent],
+    [activeNoteId, noteContentForEditor, persistEditorContent],
   );
 
   const collectPendingAutosave = useCallback((): string | null => {
@@ -202,43 +229,48 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       (editorInstance ? JSON.stringify(editorInstance.getJSON()) : null);
 
     if (!json) return null;
-    pendingContentRef.current = null;
     return json;
   }, [activeNoteId, editorInstance]);
 
-  const flushPendingTitle = useCallback(async (): Promise<void> => {
+  const flushPendingTitle = useCallback(async (): Promise<boolean> => {
     const noteId = activeNoteId;
-    if (!noteId) return;
+    if (!noteId) return true;
     const pendingTitle = takePendingTitle(pendingTitleRef, titleTimeoutRef);
-    if (pendingTitle == null) return;
-    await saveNoteTitle(noteId, pendingTitle);
-  }, [activeNoteId, saveNoteTitle]);
+    if (pendingTitle == null) return true;
+    return persistEditorTitle(noteId, pendingTitle);
+  }, [activeNoteId, persistEditorTitle]);
 
-  const flushPendingAutosave = useCallback(async (): Promise<string | null> => {
-    await flushPendingTitle();
+  const flushPendingAutosave =
+    useCallback(async (): Promise<EditorAutosaveFlushResult> => {
+      const titleOk = await flushPendingTitle();
 
-    const json = collectPendingAutosave();
-    if (!json || !activeNoteId) return null;
+      const json = collectPendingAutosave();
+      if (!json || !activeNoteId) {
+        return { content: null, persisted: titleOk };
+      }
 
-    const activeNote = notes.find((candidate) => candidate.id === activeNoteId);
-    const isPlayground =
-      activeNote != null &&
-      isFormatPlaygroundNote(activeNote.title, activeNote.content);
+      const activeNote = notes.find(
+        (candidate) => candidate.id === activeNoteId,
+      );
+      const isPlayground =
+        activeNote != null &&
+        isFormatPlaygroundNote(activeNote.title, activeNote.content);
 
-    if (isPlayground) {
-      stashEditorAutosaveSnapshot(activeNoteId, json);
-      return json;
-    }
+      if (isPlayground) {
+        stashEditorAutosaveSnapshot(activeNoteId, json);
+        pendingContentRef.current = null;
+        return { content: json, persisted: titleOk };
+      }
 
-    await saveNoteContent(activeNoteId, json);
-    return json;
-  }, [
-    activeNoteId,
-    collectPendingAutosave,
-    flushPendingTitle,
-    notes,
-    saveNoteContent,
-  ]);
+      const contentOk = await persistEditorContent(activeNoteId, json);
+      return { content: json, persisted: titleOk && contentOk };
+    }, [
+      activeNoteId,
+      collectPendingAutosave,
+      flushPendingTitle,
+      notes,
+      persistEditorContent,
+    ]);
 
   useEffect(() => {
     registerEditorAutosaveFlush(flushPendingAutosave);
@@ -261,14 +293,14 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           if (isPlayground) {
             stashEditorAutosaveSnapshot(activeNoteId, json);
           } else {
-            void saveNoteContent(activeNoteId, json);
+            void persistEditorContent(activeNoteId, json);
           }
         }
       }
       unregisterEditorAutosaveFlush(flushPendingAutosave);
       const pendingTitle = takePendingTitle(pendingTitleRef, titleTimeoutRef);
       if (pendingTitle && activeNoteId) {
-        void saveNoteTitle(activeNoteId, pendingTitle);
+        void persistEditorTitle(activeNoteId, pendingTitle);
       }
     };
   }, [
@@ -276,8 +308,8 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     collectPendingAutosave,
     flushPendingAutosave,
     notes,
-    saveNoteContent,
-    saveNoteTitle,
+    persistEditorContent,
+    persistEditorTitle,
   ]);
 
   useEffect(() => {

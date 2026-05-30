@@ -25,12 +25,27 @@ describe("editorAutosaveRegistry", () => {
 
   it("delegates flush to the registered handler", async () => {
     checkpointStorageAfterFlush.mockClear();
-    const handler = async () => '{"type":"doc"}';
+    const handler = async () => ({
+      content: '{"type":"doc"}',
+      persisted: true,
+    });
     registerEditorAutosaveFlush(handler);
     expect(await flushEditorAutosave()).toBe('{"type":"doc"}');
     expect(checkpointStorageAfterFlush).toHaveBeenCalledOnce();
     unregisterEditorAutosaveFlush(handler);
     expect(await flushEditorAutosave()).toBeNull();
+  });
+
+  it("skips checkpoint when flush handler reports save failure", async () => {
+    checkpointStorageAfterFlush.mockClear();
+    const handler = async () => ({
+      content: '{"type":"doc","pending":true}',
+      persisted: false,
+    });
+    registerEditorAutosaveFlush(handler);
+    expect(await flushEditorAutosave()).toBe('{"type":"doc","pending":true}');
+    expect(checkpointStorageAfterFlush).not.toHaveBeenCalled();
+    unregisterEditorAutosaveFlush(handler);
   });
 
   it("returns stashed snapshot after handler unregisters", async () => {

@@ -12,7 +12,7 @@ vi.mock("@/storage/database", () => ({
       },
       get: async (id: string) => notesById.get(id),
       update: async (id: string, updates: Partial<Note>) => {
-        dbUpdate(id, updates);
+        await dbUpdate(id, updates);
         const existing = notesById.get(id);
         if (existing) {
           notesById.set(id, { ...existing, ...updates });
@@ -132,5 +132,15 @@ describe("useNoteStore.saveNoteContent", () => {
     expect(stored?.contentPlain).toContain("DistinctiveSnippetLine");
     expect(stored?.wordCount).toBe(1);
     expect(stored?.content).toBe(content);
+  });
+
+  it("propagates storage errors from saveNoteContent", async () => {
+    const note = await noteStorage.create({ title: "Fail path" });
+    useNoteStore.setState({ notes: [note] });
+    dbUpdate.mockRejectedValueOnce(new Error("disk full"));
+
+    await expect(
+      useNoteStore.getState().saveNoteContent(note.id, '{"type":"doc"}'),
+    ).rejects.toThrow("disk full");
   });
 });

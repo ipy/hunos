@@ -61,6 +61,7 @@
   "editor": {
     "placeholder": "Empieza a escribir...",
     "titlePlaceholder": "Título",
+    "saveFailed": "No se pudieron guardar los cambios. Tus ediciones siguen en el editor.",
     "toolbar": {
       "bold": "Negrita",
       "italic": "Cursiva",

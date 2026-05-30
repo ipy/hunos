@@ -22,8 +22,8 @@ describe("editorPendingTitleAutosave", () => {
     vi.useRealTimers();
   });
 
-  it("debounces save until TITLE_AUTOSAVE_DEBOUNCE_MS", () => {
-    const onSave = vi.fn();
+  it("debounces save until TITLE_AUTOSAVE_DEBOUNCE_MS", async () => {
+    const onSave = vi.fn().mockResolvedValue(true);
     markPendingTitle(pendingTitleRef, timerRef, "New Title", onSave);
 
     expect(pendingTitleRef.current).toBe("New Title");
@@ -33,18 +33,33 @@ describe("editorPendingTitleAutosave", () => {
     expect(onSave).not.toHaveBeenCalled();
 
     vi.advanceTimersByTime(1);
+    await Promise.resolve();
     expect(onSave).toHaveBeenCalledOnce();
+    expect(onSave).toHaveBeenCalledWith("New Title");
     expect(pendingTitleRef.current).toBeNull();
   });
 
-  it("replaces pending title and resets debounce on rapid edits", () => {
-    const onSave = vi.fn();
+  it("retains pending title when debounced save fails", async () => {
+    const onSave = vi.fn().mockResolvedValue(false);
+    markPendingTitle(pendingTitleRef, timerRef, "Retry Title", onSave);
+
+    vi.advanceTimersByTime(TITLE_AUTOSAVE_DEBOUNCE_MS);
+    await Promise.resolve();
+
+    expect(onSave).toHaveBeenCalledOnce();
+    expect(pendingTitleRef.current).toBe("Retry Title");
+  });
+
+  it("replaces pending title and resets debounce on rapid edits", async () => {
+    const onSave = vi.fn().mockResolvedValue(true);
     markPendingTitle(pendingTitleRef, timerRef, "First", onSave);
     vi.advanceTimersByTime(200);
     markPendingTitle(pendingTitleRef, timerRef, "Second", onSave);
 
     vi.advanceTimersByTime(TITLE_AUTOSAVE_DEBOUNCE_MS);
+    await Promise.resolve();
     expect(onSave).toHaveBeenCalledOnce();
+    expect(onSave).toHaveBeenCalledWith("Second");
     expect(pendingTitleRef.current).toBeNull();
   });
 

@@ -20,13 +20,18 @@ export function markPendingTitle(
   pendingTitleRef: PendingTitleRef,
   timerRef: PendingTitleTimerRef,
   title: string,
-  onDebouncedSave: () => void,
+  onDebouncedSave: (title: string) => boolean | Promise<boolean>,
 ): void {
   pendingTitleRef.current = title;
   clearPendingTitleTimer(timerRef);
   timerRef.current = setTimeout(() => {
-    pendingTitleRef.current = null;
-    onDebouncedSave();
+    const pending = pendingTitleRef.current;
+    if (pending == null) return;
+    void Promise.resolve(onDebouncedSave(pending)).then((saved) => {
+      if (saved) {
+        pendingTitleRef.current = null;
+      }
+    });
   }, TITLE_AUTOSAVE_DEBOUNCE_MS);
 }
 
