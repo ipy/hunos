@@ -5,6 +5,9 @@ import { useTheme } from "@/theme/ThemeContext";
 import { Icon } from "@/components/common/Icon";
 import { getFindInNoteState, findInNotePluginKey } from "./FindInNoteExtension";
 
+export const EDITOR_REPLACE_ONE_TESTID = "editor-replace-one";
+export const EDITOR_REPLACE_ALL_TESTID = "editor-replace-all";
+
 interface EditorFindBarProps {
   editor: Editor;
   showReplace: boolean;
@@ -276,6 +279,7 @@ export function EditorFindBar({
           />
           <button
             type="button"
+            data-testid={EDITOR_REPLACE_ONE_TESTID}
             disabled={!canReplace}
             onClick={handleReplaceOne}
             aria-label={t("editor.find.replace")}
@@ -286,6 +290,7 @@ export function EditorFindBar({
           </button>
           <button
             type="button"
+            data-testid={EDITOR_REPLACE_ALL_TESTID}
             disabled={!canReplace}
             onClick={handleReplaceAll}
             aria-label={t("editor.find.replaceAll")}

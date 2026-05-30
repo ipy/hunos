@@ -9,6 +9,8 @@ import { shouldNavigateWikiLinkClick } from "./wikiLinkClickUtils";
 const WIKI_LINK_REGEX = /\[\[([^\]]+)\]\]/g;
 const wikiLinkKey = new PluginKey("wikiLinkDecoration");
 
+export const WIKI_LINK_TARGET_TESTID = "wiki-link-target";
+
 export interface WikiLinkDecorationOptions {
   onWikiLinkClick: (title: string) => void;
 }
@@ -57,6 +59,7 @@ export function buildWikiLinkDecorations(state: EditorState): DecorationSet {
       }),
       Decoration.inline(wl.contentStart, wl.contentEnd, {
         class: "wiki-link-content",
+        "data-testid": WIKI_LINK_TARGET_TESTID,
         "data-wiki-title": wl.title,
       }),
       Decoration.inline(wl.contentEnd, wl.end, {

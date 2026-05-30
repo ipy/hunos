@@ -1,7 +1,17 @@
 import { Schema } from "@tiptap/pm/model";
 import { EditorState, TextSelection } from "@tiptap/pm/state";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildWikiLinkDecorations } from "./WikiLinkDecoration";
+import {
+  WIKI_LINK_TARGET_TESTID,
+  buildWikiLinkDecorations,
+} from "./WikiLinkDecoration";
+
+const wikiLinkSource = readFileSync(
+  join(process.cwd(), "src/components/editor/WikiLinkDecoration.ts"),
+  "utf-8",
+);
 
 const schema = new Schema({
   nodes: {
@@ -25,6 +35,18 @@ function inlineDecorationClasses(state: EditorState): string[] {
     });
 }
 
+function wikiLinkContentDecoration(state: EditorState) {
+  const decos = buildWikiLinkDecorations(state);
+  const found = decos.find(0, state.doc.content.size);
+  return found
+    .filter((deco) => deco.inline)
+    .map(
+      (deco) =>
+        (deco as { type?: { attrs?: Record<string, string> } }).type?.attrs,
+    )
+    .find((attrs) => attrs?.class === "wiki-link-content");
+}
+
 function stateWithWikiCaret(caretOffsetInParagraph: number) {
   const prefix = "用 ";
   const label = "欢迎使用 Hunos";
@@ -44,6 +66,24 @@ function stateWithWikiCaret(caretOffsetInParagraph: number) {
 }
 
 describe("buildWikiLinkDecorations", () => {
+  it("exports stable wiki-link target testid", () => {
+    expect(WIKI_LINK_TARGET_TESTID).toBe("wiki-link-target");
+  });
+
+  it("tags wiki-link content with data-testid and data-wiki-title", () => {
+    const state = stateWithWikiCaret(4);
+    const attrs = wikiLinkContentDecoration(state);
+
+    expect(attrs?.["data-testid"]).toBe(WIKI_LINK_TARGET_TESTID);
+    expect(attrs?.["data-wiki-title"]).toBe("欢迎使用 Hunos");
+  });
+
+  it("wires wiki-link target testid on content decoration", () => {
+    expect(wikiLinkSource).toContain(`export const WIKI_LINK_TARGET_TESTID`);
+    expect(wikiLinkSource).toContain(`"data-testid": WIKI_LINK_TARGET_TESTID`);
+    expect(wikiLinkSource).toContain(`"data-wiki-title": wl.title`);
+  });
+
   it("always hides bracket characters instead of wiki-link-bracket-visible", () => {
     const caretPositions = [
       2, // first [
