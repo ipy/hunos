@@ -49,7 +49,10 @@ import {
   unregisterEditorAutosaveFlush,
 } from "@/store/editorAutosaveRegistry";
 import { bindEditorLifecycleAutosaveFlush } from "@/store/editorLifecycleAutosave";
-import { getPlaygroundWriteEpoch } from "@/store/noteStorePlaygroundWriteEpoch";
+import {
+  bumpPlaygroundWriteEpoch,
+  getPlaygroundWriteEpoch,
+} from "@/store/noteStorePlaygroundWriteEpoch";
 import {
   clearUnloadBackup,
   registerUnloadDraftCollector,
@@ -122,6 +125,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const lastPlaygroundMigrateKeyRef = useRef<string | null>(null);
   const playgroundRestoreSessionRef = useRef(createPlaygroundRestoreSession());
   const pendingRestoreToastRef = useRef(false);
+  const suppressRestoreChipRef = useRef(false);
 
   const note = notes.find((n) => n.id === activeNoteId);
   const noteContentForEditor = useMemo(() => {
@@ -163,6 +167,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       clearPendingTitleTimer(titleTimeoutRef);
       pendingTitleRef.current = null;
     }
+    suppressRestoreChipRef.current = false;
     pendingContentRef.current = null;
     setTitleValue(note?.title ?? "");
     if (note?.id) {
@@ -185,8 +190,17 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   }, [note?.title]);
 
   const persistEditorTitle = useCallback(
-    async (noteId: string, title: string): Promise<boolean> => {
-      const saved = await persistNoteTitle(saveNoteTitle, noteId, title);
+    async (
+      noteId: string,
+      title: string,
+      writeEpoch = contentWriteEpochRef.current,
+    ): Promise<boolean> => {
+      const saved = await persistNoteTitle(
+        saveNoteTitle,
+        noteId,
+        title,
+        writeEpoch,
+      );
       if (!saved) {
         pendingTitleRef.current = title;
       }
@@ -218,11 +232,16 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   );
 
   const handleTitleChange = (newTitle: string) => {
+    suppressRestoreChipRef.current = false;
     setTitleValue(newTitle);
     const noteId = activeNoteId;
     if (!noteId) return;
-    markPendingTitle(pendingTitleRef, titleTimeoutRef, newTitle, (title) =>
-      persistEditorTitle(noteId, title),
+    markPendingTitle(
+      pendingTitleRef,
+      titleTimeoutRef,
+      newTitle,
+      (title, writeEpoch) => persistEditorTitle(noteId, title, writeEpoch),
+      contentWriteEpochRef.current,
     );
   };
 
@@ -279,6 +298,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       }
 
       const hadNoPending = pendingContentRef.current == null;
+      suppressRestoreChipRef.current = false;
       pendingContentRef.current = json;
       if (
         hadNoPending &&
@@ -661,6 +681,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const handleRestorePlayground = async () => {
     if (!note) return;
     const restoreSession = playgroundRestoreSessionRef.current;
+    contentWriteEpochRef.current = bumpPlaygroundWriteEpoch(note.id);
     restoreSession.begin(note.id);
     pendingRestoreToastRef.current = true;
     if (saveTimeoutRef.current) {
@@ -700,8 +721,11 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       } else if (applied || !restoredContent) {
         restoreSession.end();
       }
+      const restoredTitle =
+        restoredNote?.title ?? getFormatPlaygroundTitle(seedLocale);
+      suppressRestoreChipRef.current = true;
       setRestoreEditorSyncTick((tick) => tick + 1);
-      setTitleValue(getFormatPlaygroundTitle(seedLocale));
+      setTitleValue(restoredTitle);
       if (!restoreSession.isActive()) {
         showToast(t("notes.actions.restorePlaygroundDone"));
         pendingRestoreToastRef.current = false;
@@ -715,6 +739,9 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
   const showRestorePlayground = useMemo(() => {
     if (!note) return false;
+    if (suppressRestoreChipRef.current) {
+      return false;
+    }
     return shouldShowPlaygroundRestoreButton({
       displayTitle: titleValue.trim() || note.title,
       storedTitle: note.title,

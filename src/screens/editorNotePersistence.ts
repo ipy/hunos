@@ -17,12 +17,13 @@ export async function persistNoteContent(
 }
 
 export async function persistNoteTitle(
-  save: (id: string, title: string) => Promise<void>,
+  save: (id: string, title: string, writeEpoch?: number) => Promise<void>,
   noteId: string,
   title: string,
+  writeEpoch?: number,
 ): Promise<boolean> {
   try {
-    await save(noteId, title);
+    await save(noteId, title, writeEpoch);
     return true;
   } catch {
     useUIStore.getState().showToast(i18n.t("editor.saveFailed"), "error");

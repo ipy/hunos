@@ -37,7 +37,11 @@ interface NoteStore {
     content: string,
     writeEpoch?: number,
   ) => Promise<void>;
-  saveNoteTitle: (id: string, title: string) => Promise<void>;
+  saveNoteTitle: (
+    id: string,
+    title: string,
+    writeEpoch?: number,
+  ) => Promise<void>;
   pinNote: (id: string, pinned: boolean) => Promise<void>;
   archiveNote: (id: string) => Promise<void>;
   trashNote: (id: string) => Promise<void>;
@@ -105,7 +109,10 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     }
   },
 
-  saveNoteTitle: async (id, title) => {
+  saveNoteTitle: async (id, title, writeEpoch) => {
+    if (isStalePlaygroundWrite(id, writeEpoch)) {
+      return;
+    }
     const existing =
       get().notes.find((n) => n.id === id) ?? (await noteStorage.get(id));
     const oldTitle = existing?.title ?? "";
