@@ -13,4 +13,15 @@ describe("uiStore focusNewNoteTitle", () => {
     useUIStore.getState().requestFocusNewNoteTitle();
     expect(useUIStore.getState().focusNewNoteTitleSignal).toBe(2);
   });
+
+  it("clears focusNewNoteTitleSignal so subsequent editor opens do not refocus title", () => {
+    useUIStore.getState().requestFocusNewNoteTitle();
+    expect(useUIStore.getState().focusNewNoteTitleSignal).toBe(1);
+
+    useUIStore.getState().clearFocusNewNoteTitle();
+    expect(useUIStore.getState().focusNewNoteTitleSignal).toBe(0);
+
+    // Simulates opening another note after FAB create consumed the one-shot signal.
+    expect(useUIStore.getState().focusNewNoteTitleSignal).toBe(0);
+  });
 });

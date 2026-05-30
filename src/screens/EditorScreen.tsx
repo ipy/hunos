@@ -79,6 +79,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     findInNoteReplaceMode,
     requestFindInNote,
     focusNewNoteTitleSignal,
+    clearFocusNewNoteTitle,
   } = useUIStore();
   const settings = useSettingsStore();
   const { hideCompletedTasks, setHideCompletedTasks } = settings;
@@ -382,10 +383,11 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   useEffect(() => {
     if (focusNewNoteTitleSignal === 0) return;
     if (layout !== "mobile") return;
+    clearFocusNewNoteTitle();
     requestAnimationFrame(() => {
       titleInputRef.current?.focus();
     });
-  }, [focusNewNoteTitleSignal, layout]);
+  }, [focusNewNoteTitleSignal, layout, clearFocusNewNoteTitle]);
 
   useEffect(() => {
     if (layout !== "mobile" || !focusMode) return;
