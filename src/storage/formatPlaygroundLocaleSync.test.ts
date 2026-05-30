@@ -10,16 +10,21 @@ import {
 const mockNoteStoreState = vi.hoisted(() => {
   const saveNoteContent = vi.fn().mockResolvedValue(undefined);
   const saveNoteTitle = vi.fn().mockResolvedValue(undefined);
+  const setActiveNote = vi.fn((id: string | null) => {
+    mockNoteStoreState.activeNoteId = id;
+  });
   return {
     activeNoteId: "pg-1" as string | null,
     notes: [] as Array<{ id: string; title: string; content: string }>,
     saveNoteContent,
     saveNoteTitle,
+    setActiveNote,
   };
 });
 
 const saveNoteContent = mockNoteStoreState.saveNoteContent;
 const saveNoteTitle = mockNoteStoreState.saveNoteTitle;
+const setActiveNote = mockNoteStoreState.setActiveNote;
 
 const noteStorageList = vi.fn();
 
@@ -74,6 +79,7 @@ describe("syncFormatPlaygroundOnLocaleChange", () => {
   beforeEach(() => {
     saveNoteContent.mockClear();
     saveNoteTitle.mockClear();
+    setActiveNote.mockClear();
     noteStorageList.mockReset();
     mockNoteStoreState.activeNoteId = "pg-1";
     mockNoteStoreState.notes = [
@@ -363,6 +369,63 @@ describe("syncFormatPlaygroundOnLocaleChange", () => {
       "pg-v18",
       expect.anything(),
     );
+  });
+
+  it("focuses locale-canonical playground when wrong duplicate is open", async () => {
+    mockNoteStoreState.activeNoteId = "pg-en";
+    mockNoteStoreState.notes = duplicatePlaygroundPair();
+
+    const result = await syncFormatPlaygroundOnLocaleChange("zh", null, {
+      focusCanonical: true,
+    });
+
+    expect(setActiveNote).toHaveBeenCalledWith("pg-zh");
+    expect(result.switchedFromNoteId).toBe("pg-en");
+    expect(result.canonicalNoteId).toBe("pg-zh");
+  });
+
+  it("does not switch focus when focusCanonical is false", async () => {
+    mockNoteStoreState.activeNoteId = "pg-en";
+    mockNoteStoreState.notes = duplicatePlaygroundPair();
+
+    const result = await syncFormatPlaygroundOnLocaleChange("zh", null, {
+      focusCanonical: false,
+    });
+
+    expect(setActiveNote).not.toHaveBeenCalled();
+    expect(result.switchedFromNoteId).toBeNull();
+  });
+
+  it("reports flushDropped when flushed JSON is on the wrong duplicate", async () => {
+    const flushed = JSON.stringify(buildPlaygroundContent("en"));
+    mockNoteStoreState.activeNoteId = "pg-en";
+    mockNoteStoreState.notes = duplicatePlaygroundPair();
+
+    const result = await syncFormatPlaygroundOnLocaleChange("zh", flushed, {
+      focusCanonical: true,
+    });
+
+    expect(result.flushDropped).toBe(true);
+    expect(setActiveNote).toHaveBeenCalledWith("pg-zh");
+  });
+
+  it("does not switch focus when active note is not a playground", async () => {
+    mockNoteStoreState.activeNoteId = "note-1";
+    mockNoteStoreState.notes = [
+      {
+        id: "note-1",
+        title: "Meeting Notes",
+        content: '{"type":"doc","content":[]}',
+      },
+      ...duplicatePlaygroundPair(),
+    ];
+
+    const result = await syncFormatPlaygroundOnLocaleChange("zh", null, {
+      focusCanonical: true,
+    });
+
+    expect(setActiveNote).not.toHaveBeenCalled();
+    expect(result.switchedFromNoteId).toBeNull();
   });
 });
 

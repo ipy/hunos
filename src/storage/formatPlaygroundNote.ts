@@ -801,18 +801,47 @@ async function findFormatPlaygroundNoteForSync(locale: Locale) {
   return pickFormatPlaygroundNote(storedNotes, locale);
 }
 
+export type FormatPlaygroundLocaleSyncResult = {
+  canonicalNoteId: string | null;
+  switchedFromNoteId: string | null;
+  flushDropped: boolean;
+};
+
+export type FormatPlaygroundLocaleSyncOptions = {
+  /** When true, move editor focus to the locale-canonical playground duplicate. */
+  focusCanonical?: boolean;
+};
+
+const EMPTY_LOCALE_SYNC_RESULT: FormatPlaygroundLocaleSyncResult = {
+  canonicalNoteId: null,
+  switchedFromNoteId: null,
+  flushDropped: false,
+};
+
 /** Flush-aware playground sync when settings locale changes (Settings or URL bootstrap). */
 export async function syncFormatPlaygroundOnLocaleChange(
   locale: Locale,
   flushedContent?: string | null,
-): Promise<void> {
+  options?: FormatPlaygroundLocaleSyncOptions,
+): Promise<FormatPlaygroundLocaleSyncResult> {
   const note = await findFormatPlaygroundNoteForSync(locale);
-  if (!note) return;
+  if (!note) return EMPTY_LOCALE_SYNC_RESULT;
 
-  const { activeNoteId, saveNoteContent, saveNoteTitle } =
+  const { activeNoteId, notes, saveNoteContent, saveNoteTitle, setActiveNote } =
     useNoteStore.getState();
-  const sourceContent =
-    flushedContent && activeNoteId === note.id ? flushedContent : note.content;
+
+  const activeNote =
+    activeNoteId != null
+      ? notes.find((candidate) => candidate.id === activeNoteId)
+      : undefined;
+  const activeIsPlayground =
+    activeNote != null &&
+    isFormatPlaygroundNote(activeNote.title, activeNote.content);
+  const flushApplied = Boolean(flushedContent && activeNoteId === note.id);
+  const flushDropped =
+    Boolean(flushedContent) && activeIsPlayground && !flushApplied;
+
+  const sourceContent = flushApplied ? flushedContent! : note.content;
   const migrated = migratePlaygroundContentIfStale(sourceContent, locale);
   const expectedTitle = getFormatPlaygroundTitle(locale);
   const titleNeedsUpdate =
@@ -825,4 +854,21 @@ export async function syncFormatPlaygroundOnLocaleChange(
   if (titleNeedsUpdate) {
     await saveNoteTitle(note.id, expectedTitle);
   }
+
+  let switchedFromNoteId: string | null = null;
+  if (
+    options?.focusCanonical &&
+    activeIsPlayground &&
+    activeNoteId != null &&
+    activeNoteId !== note.id
+  ) {
+    setActiveNote(note.id);
+    switchedFromNoteId = activeNoteId;
+  }
+
+  return {
+    canonicalNoteId: note.id,
+    switchedFromNoteId,
+    flushDropped,
+  };
 }

@@ -148,7 +148,8 @@
       "title": "语言",
       "en": "English",
       "es": "Español",
-      "zh": "中文"
+      "zh": "中文",
+      "playgroundFlushDropped": "另一份格式试炼场上的未保存修改未同步。"
     },
     "editor": {
       "title": "编辑器",

@@ -12,7 +12,9 @@ import { settingsStorage } from "@/storage/settingsStorage";
 import { bootstrapAppData } from "@/app/bootstrapAppData";
 import { syncFormatPlaygroundOnLocaleChange } from "@/storage/formatPlaygroundNote";
 import { flushEditorAutosave } from "@/store/editorAutosaveRegistry";
+import { useUIStore } from "@/store/uiStore";
 import { readLocaleFromUrl, writeLocaleToUrl } from "@/utils/localeBootstrap";
+import i18n from "@/i18n";
 
 interface SettingsStore extends AppSettings {
   isLoaded: boolean;
@@ -62,11 +64,23 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     if (current === locale) return;
 
     const flushedContent = await flushEditorAutosave();
-    await syncFormatPlaygroundOnLocaleChange(locale, flushedContent);
+    const syncResult = await syncFormatPlaygroundOnLocaleChange(
+      locale,
+      flushedContent,
+      { focusCanonical: true },
+    );
 
     await settingsStorage.set("locale", locale);
     writeLocaleToUrl(locale);
     set({ locale });
+
+    if (syncResult.flushDropped) {
+      useUIStore
+        .getState()
+        .showToast(
+          i18n.t("settings.language.playgroundFlushDropped", { lng: locale }),
+        );
+    }
   },
 
   setEditorFont: async (editorFont) => {

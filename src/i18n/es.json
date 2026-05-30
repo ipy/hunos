@@ -145,7 +145,8 @@
       "title": "Idioma",
       "en": "English",
       "es": "Español",
-      "zh": "中文"
+      "zh": "中文",
+      "playgroundFlushDropped": "Los cambios no guardados en la otra copia del patio de formatos no se aplicaron."
     },
     "editor": {
       "title": "Editor",

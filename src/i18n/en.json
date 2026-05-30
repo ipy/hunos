@@ -148,7 +148,8 @@
       "title": "Language",
       "en": "English",
       "es": "Español",
-      "zh": "中文"
+      "zh": "中文",
+      "playgroundFlushDropped": "Unsaved edits on the other Format Playground copy were not applied."
     },
     "editor": {
       "title": "Editor",
