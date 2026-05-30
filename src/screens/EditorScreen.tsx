@@ -1,4 +1,10 @@
-import React, { useEffect, useCallback, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/theme/ThemeContext";
 import { useNoteStore } from "@/store/noteStore";
@@ -31,6 +37,7 @@ import {
   takeStashedEditorAutosave,
   unregisterEditorAutosaveFlush,
 } from "@/store/editorAutosaveRegistry";
+import { migrateLegacyBlockImageFloor } from "@/utils/migrateBlockImageFloor";
 
 interface EditorScreenProps {
   layout?: LayoutMode;
@@ -72,6 +79,13 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const lastPlaygroundMigrateKeyRef = useRef<string | null>(null);
 
   const note = notes.find((n) => n.id === activeNoteId);
+  const noteContentForEditor = useMemo(
+    () =>
+      note?.content
+        ? (migrateLegacyBlockImageFloor(note.content) ?? note.content)
+        : "",
+    [note?.content],
+  );
   const showBackButton = layout === "mobile";
   const isCompactChrome = focusMode && layout === "tablet";
   const prevFocusModeRef = useRef(focusMode);
@@ -219,13 +233,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
     setEditorSeedContent(null);
     void saveNoteContent(note.id, taken.content);
-  }, [
-    note?.id,
-    note?.title,
-    note?.content,
-    saveNoteContent,
-    settings.locale,
-  ]);
+  }, [note?.id, note?.title, note?.content, saveNoteContent, settings.locale]);
 
   useEffect(() => {
     if (!note?.id) return;
@@ -233,6 +241,15 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     clearStashedEditorAutosave();
     setEditorSeedContent(null);
   }, [settings.locale, note?.id]);
+
+  useEffect(() => {
+    if (!note?.id || !note.content) return;
+
+    const migrated = migrateLegacyBlockImageFloor(note.content);
+    if (migrated) {
+      void saveNoteContent(note.id, migrated);
+    }
+  }, [note?.id, note?.content, saveNoteContent]);
 
   useEffect(() => {
     if (!note?.id || !isFormatPlaygroundNote(note.title, note.content)) return;
@@ -894,7 +911,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         <TiptapEditor
           key={isPlaygroundNote ? `${note.id}:${settings.locale}` : note.id}
           noteId={note.id}
-          initialContent={editorSeedContent ?? note.content}
+          initialContent={editorSeedContent ?? noteContentForEditor}
           onChange={handleContentChange}
           onEditorReady={setEditorInstance}
           fontFamily={settings.editorFont}

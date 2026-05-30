@@ -5,6 +5,7 @@ import { noteStorage } from "@/storage/noteStorage";
 import { graphEngine } from "@/graph/graphEngine";
 import { restoreFormatPlaygroundContent } from "@/storage/formatPlaygroundNote";
 import { useTagStore } from "@/store/tagStore";
+import { sanitizeBlockImageNoteContent } from "@/utils/migrateBlockImageFloor";
 
 function sortByModifiedDesc(notes: Note[]): Note[] {
   return [...notes].sort((a, b) => b.modifiedAt - a.modifiedAt);
@@ -54,8 +55,9 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   },
 
   saveNoteContent: async (id, content) => {
-    await noteStorage.update(id, { content });
-    await graphEngine.syncNoteLinks(id, content);
+    const { content: sanitized } = sanitizeBlockImageNoteContent(content);
+    await noteStorage.update(id, { content: sanitized });
+    await graphEngine.syncNoteLinks(id, sanitized);
     await useTagStore.getState().loadTags();
     const updated = await noteStorage.get(id);
     if (updated) {
