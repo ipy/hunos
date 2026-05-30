@@ -108,4 +108,34 @@ describe("tagStore tree dedup", () => {
 
     expect(cleanOrphaned).toHaveBeenCalledOnce();
   });
+
+  it("auto-expands parents on paths to noted leaf tags", async () => {
+    const parent: Tag = {
+      id: "format-test",
+      name: "format-test",
+      displayName: "format-test",
+      parentId: null,
+      noteCount: 0,
+      createdAt: 1,
+    };
+    const child: Tag = {
+      id: "welcome",
+      name: "format-test/welcome",
+      displayName: "welcome",
+      parentId: "format-test",
+      noteCount: 1,
+      createdAt: 2,
+    };
+
+    listAll.mockResolvedValue([parent, child]);
+
+    const { useTagStore } = await import("./tagStore");
+    await useTagStore.getState().loadTags();
+
+    const formatTest = useTagStore
+      .getState()
+      .tagTree.find((node) => node.id === "format-test");
+    expect(formatTest?.isExpanded).toBe(true);
+    expect(formatTest?.children[0]?.displayName).toBe("welcome");
+  });
 });

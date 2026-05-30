@@ -98,18 +98,20 @@ function TagItem({
         >
           {node.displayName}
         </span>
-        <span
-          style={{
-            fontSize: 11,
-            color: theme.colors.textTertiary,
-            minWidth: 18,
-            textAlign: "right",
-            fontWeight: theme.fontWeight.medium,
-            opacity: 0.7,
-          }}
-        >
-          {node.noteCount}
-        </span>
+        {node.noteCount > 1 && (
+          <span
+            style={{
+              fontSize: 11,
+              color: theme.colors.textTertiary,
+              minWidth: 18,
+              textAlign: "right",
+              fontWeight: theme.fontWeight.medium,
+              opacity: 0.7,
+            }}
+          >
+            {node.noteCount}
+          </span>
+        )}
       </div>
       {hasChildren &&
         node.isExpanded &&

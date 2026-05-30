@@ -839,10 +839,9 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   }
 
   const restorePlaygroundLabel = t("notes.actions.restorePlayground");
-  const restorePlaygroundVisibleText =
-    layout === "mobile"
-      ? t("notes.actions.restorePlaygroundShort")
-      : restorePlaygroundLabel;
+  const restorePlaygroundVisibleText = t(
+    "notes.actions.restorePlaygroundShort",
+  );
   const isMobileRestoreChip = layout === "mobile";
 
   return (

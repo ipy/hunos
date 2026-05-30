@@ -32,12 +32,12 @@ describe("reconcileBootstrapTags", () => {
     cleanOrphaned.mockResolvedValue(0);
   });
 
-  it("re-syncs welcome and playground seed notes then prunes orphans for en", async () => {
+  it("re-syncs welcome and playground from locale seed content for en", async () => {
     const notes: Note[] = [
       {
         id: "welcome",
         title: "Welcome to Hunos",
-        content: '{"type":"doc","content":[]}',
+        content: '{"type":"doc","content":[{"type":"paragraph","content":[]}]}',
         contentPlain: "",
         status: "active",
         isPinned: false,
@@ -69,15 +69,27 @@ describe("reconcileBootstrapTags", () => {
     list.mockResolvedValue(notes);
 
     const { reconcileBootstrapTags } = await import("./bootstrapTagReconcile");
+    const {
+      getBootstrapPlaygroundSeedContent,
+      getBootstrapWelcomeSeedContent,
+    } = await import("./bootstrapTagSeeds");
+
     await reconcileBootstrapTags("en");
 
     expect(syncNoteLinks).toHaveBeenCalledTimes(2);
-    expect(syncNoteLinks).toHaveBeenCalledWith("welcome", notes[0].content);
-    expect(syncNoteLinks).toHaveBeenCalledWith("playground", notes[1].content);
+    expect(syncNoteLinks).toHaveBeenCalledWith(
+      "welcome",
+      getBootstrapWelcomeSeedContent("en"),
+    );
+    expect(syncNoteLinks).toHaveBeenCalledWith(
+      "playground",
+      getBootstrapPlaygroundSeedContent("en"),
+    );
+    expect(syncNoteLinks).not.toHaveBeenCalledWith("other", expect.anything());
     expect(cleanOrphaned).toHaveBeenCalledOnce();
   });
 
-  it("re-syncs zh seed notes by locale title", async () => {
+  it("re-syncs zh seed notes from locale seed content", async () => {
     list.mockResolvedValue([
       {
         id: "welcome-zh",
@@ -103,9 +115,22 @@ describe("reconcileBootstrapTags", () => {
     ]);
 
     const { reconcileBootstrapTags } = await import("./bootstrapTagReconcile");
+    const {
+      getBootstrapPlaygroundSeedContent,
+      getBootstrapWelcomeSeedContent,
+    } = await import("./bootstrapTagSeeds");
+
     await reconcileBootstrapTags("zh");
 
     expect(syncNoteLinks).toHaveBeenCalledTimes(2);
+    expect(syncNoteLinks).toHaveBeenCalledWith(
+      "welcome-zh",
+      getBootstrapWelcomeSeedContent("zh"),
+    );
+    expect(syncNoteLinks).toHaveBeenCalledWith(
+      "playground-zh",
+      getBootstrapPlaygroundSeedContent("zh"),
+    );
     expect(cleanOrphaned).toHaveBeenCalledOnce();
   });
 });

@@ -1,30 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { buildPlaygroundContent } from "@/storage/formatPlaygroundNote";
-import { getWelcomeSeed } from "@/storage/welcomeNotes";
-import {
-  extractFromPlainText,
-  extractPlainTextFromTiptap,
-} from "@/graph/linkExtractor";
+import { getBootstrapSeedTagNames } from "@/storage/bootstrapTagSeeds";
 import { getTagDisplayName } from "@/utils/tagPattern";
 import type { Tag } from "@/types/graph";
 
 function tagsFromBootstrap(locale: "en" | "zh"): Tag[] {
-  const welcome = getWelcomeSeed(locale);
-  const playground = buildPlaygroundContent(locale);
-  const names = new Set<string>();
-  for (const source of [welcome.content, playground]) {
-    for (const tag of extractFromPlainText(extractPlainTextFromTiptap(source))
-      .tags) {
-      names.add(tag.name);
-      if (tag.name.includes("/")) {
-        names.add(tag.name.split("/").slice(0, -1).join("/"));
-      }
-    }
-  }
-
+  const names = getBootstrapSeedTagNames(locale);
   const tags: Tag[] = [];
   let createdAt = 1;
-  for (const name of [...names].sort()) {
+  for (const name of names) {
     let parentId: string | null = null;
     if (name.includes("/")) {
       const parentName = name.split("/").slice(0, -1).join("/");
@@ -89,11 +72,13 @@ describe("bootstrap tag tree", () => {
     expect(formatTest?.children.map((child) => child.displayName)).toEqual([
       "welcome",
     ]);
+    expect(formatTest?.isExpanded).toBe(true);
 
     const hunos = tree.find((node) => node.name === "hunos");
     expect(hunos?.children.map((child) => child.displayName)).toEqual([
       "getting-started",
     ]);
+    expect(hunos?.isExpanded).toBe(true);
   });
 
   it("creates one 欢迎 path under 格式测试 for zh fresh boot seeds", async () => {
@@ -114,10 +99,58 @@ describe("bootstrap tag tree", () => {
     expect(formatTest?.children.map((child) => child.displayName)).toEqual([
       "欢迎",
     ]);
+    expect(formatTest?.isExpanded).toBe(true);
 
     const hunos = tree.find((node) => node.name === "hunos");
     expect(hunos?.children.map((child) => child.displayName)).toEqual([
       "入门指南",
     ]);
+    expect(hunos?.isExpanded).toBe(true);
+  });
+
+  it("nests 入门指南 under hunos when parentId is missing", async () => {
+    const tags: Tag[] = [
+      {
+        id: "hunos",
+        name: "hunos",
+        displayName: "hunos",
+        parentId: null,
+        noteCount: 0,
+        createdAt: 1,
+      },
+      {
+        id: "guide",
+        name: "hunos/入门指南",
+        displayName: "入门指南",
+        parentId: null,
+        noteCount: 1,
+        createdAt: 2,
+      },
+      {
+        id: "format",
+        name: "格式测试",
+        displayName: "格式测试",
+        parentId: null,
+        noteCount: 0,
+        createdAt: 3,
+      },
+      {
+        id: "welcome",
+        name: "格式测试/欢迎",
+        displayName: "欢迎",
+        parentId: "format",
+        noteCount: 1,
+        createdAt: 4,
+      },
+    ];
+
+    const { buildTree } = await import("./tagStore");
+    const tree = buildTree(tags);
+
+    expect(tree.map((node) => node.name).sort()).toEqual(["hunos", "格式测试"]);
+    expect(countDisplayNameInTree(tree, "入门指南")).toBe(1);
+    expect(
+      tree.find((node) => node.name === "hunos")?.children[0]?.displayName,
+    ).toBe("入门指南");
   });
 });
