@@ -30,6 +30,7 @@ import {
   isEditorSuggestionMenuOpen,
   isLinkEditorOpen,
 } from "@/utils/editorSuggestionMenu";
+import { tryTrimUnclosedSingleStarOnSpace } from "./markdownStarDebrisUtils";
 import { findWrapping } from "@tiptap/pm/transform";
 import type { Node, NodeType, ResolvedPos } from "@tiptap/pm/model";
 import type { Transaction } from "@tiptap/pm/state";
@@ -219,7 +220,9 @@ export const MarkdownItalic = Italic.extend({
   },
 
   addKeyboardShortcuts() {
-    return {};
+    return {
+      Space: () => tryTrimUnclosedSingleStarOnSpace(this.editor),
+    };
   },
 });
 

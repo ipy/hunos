@@ -360,6 +360,51 @@ describe("playground restore visibility", () => {
     ).toBe(true);
   });
 
+  it("hides restore when edits stay in 自由试炼 sandbox (iter 32)", () => {
+    const parsed = JSON.parse(seedContent) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          type?: string;
+          content?: Array<{ type?: string; text?: string; marks?: unknown[] }>;
+        }>;
+      }>;
+    };
+    const tryIndex = parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "自由试炼",
+    );
+    const sandboxParagraph = parsed.content[tryIndex + 2];
+    if (sandboxParagraph?.type === "paragraph") {
+      sandboxParagraph.content = [
+        { type: "text", text: "斜体", marks: [{ type: "italic" }] },
+      ];
+    }
+    const pendingDraft = JSON.stringify(parsed);
+
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seedContent,
+        pendingDraftContent: pendingDraft,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
+
+  it("shows restore when title renames to T32-Drift (iter 32)", () => {
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "T32-Drift",
+        storedTitle: "格式试炼场",
+        storedContent: seedContent,
+        pendingDraftContent: null,
+        pendingTitleDraft: "T32-Drift",
+        fallbackLocale: "zh",
+      }),
+    ).toBe(true);
+  });
+
   it("hides restore after autosave when persisted row only adds inline marks", () => {
     const parsed = JSON.parse(seedContent) as {
       content: Array<{

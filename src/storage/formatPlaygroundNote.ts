@@ -792,6 +792,87 @@ function playgroundContentMatchesQaTailAppend(
   );
 }
 
+function findPlaygroundTrySectionStartIndex(
+  nodes: PlaygroundDocNode[],
+  seedLocale: PlaygroundLocale,
+): number {
+  const sectionTry = STRINGS[seedLocale].sectionTry;
+  return nodes.findIndex(
+    (node) =>
+      node.type === "heading" &&
+      collectPlaygroundNodeText(node) === sectionTry,
+  );
+}
+
+/** True when structural drift is confined to the Try Your Own / 自由试炼 sandbox (heading onward). */
+export function playgroundDriftConfinedToTrySandbox(
+  liveContent: string,
+  fallbackLocale: Locale,
+): boolean {
+  const liveRow = playgroundPersistedContentForRow(liveContent);
+  if (!liveRow) return false;
+
+  try {
+    const parsed = JSON.parse(liveRow) as PlaygroundDoc;
+    if (parsed.type !== "doc" || !Array.isArray(parsed.content)) {
+      return false;
+    }
+
+    const seedLocale = resolvePlaygroundSeedLocale(liveRow, fallbackLocale);
+    const tryStart = findPlaygroundTrySectionStartIndex(
+      parsed.content,
+      seedLocale,
+    );
+    if (tryStart < 0) return false;
+
+    const sandboxText = parsed.content
+      .slice(tryStart)
+      .map(collectPlaygroundNodeText)
+      .join("\n");
+    if (
+      PLAYGROUND_MIXED_MARKER_RE.test(sandboxText) ||
+      PLAYGROUND_QA_TAIL_APPEND_RE.test(sandboxText) ||
+      PLAYGROUND_QA_AC2_TAIL_RE.test(sandboxText)
+    ) {
+      return false;
+    }
+
+    const canonical = buildPlaygroundContent(seedLocale) as PlaygroundDoc;
+    const livePrefix = parsed.content.slice(0, tryStart);
+    const canonicalPrefix = canonical.content.slice(0, tryStart);
+
+    const livePrefixDoc: PlaygroundDoc = {
+      type: "doc",
+      attrs: {
+        playgroundContentVersion: PLAYGROUND_CONTENT_VERSION,
+        playgroundContentLocale: seedLocale,
+      },
+      content: livePrefix,
+    };
+    const canonicalPrefixDoc: PlaygroundDoc = {
+      type: "doc",
+      attrs: {
+        playgroundContentVersion: PLAYGROUND_CONTENT_VERSION,
+        playgroundContentLocale: seedLocale,
+      },
+      content: canonicalPrefix,
+    };
+
+    return (
+      normalizePlaygroundNodeTreeSnapshot(
+        JSON.stringify(livePrefixDoc),
+        seedLocale,
+      ) ===
+      normalizePlaygroundNodeTreeSnapshot(
+        JSON.stringify(canonicalPrefixDoc),
+        seedLocale,
+      )
+    );
+  } catch {
+    return false;
+  }
+}
+
 function findPlaygroundSeedTable(
   parsed: PlaygroundDoc,
   seedLocale: PlaygroundLocale,
@@ -1498,6 +1579,8 @@ export function playgroundFormatQaDraftHidesRestoreChip(
   storedContent: string,
   fallbackLocale: Locale,
 ): boolean {
+  const storedRow = playgroundPersistedContentForRow(storedContent);
+  const bodyForSandbox = liveContent || storedRow;
   const kind = classifyPlaygroundDrift({
     displayTitle: storedTitle,
     storedTitle,
@@ -1511,7 +1594,10 @@ export function playgroundFormatQaDraftHidesRestoreChip(
     kind === "qaTailAppend" ||
     kind === "qaAc2Prep" ||
     kind === "qaTableAppend" ||
-    kind === "qaTableColumnRoundTrip"
+    kind === "qaTableColumnRoundTrip" ||
+    (kind === "structural" &&
+      !playgroundListsSectionHasMixedMarker(bodyForSandbox, fallbackLocale) &&
+      playgroundDriftConfinedToTrySandbox(bodyForSandbox, fallbackLocale))
   );
 }
 
@@ -1604,6 +1690,10 @@ export function playgroundWriteRegressesCanonicalStored(
       stored.seedLocale,
     )
   ) {
+    return false;
+  }
+
+  if (playgroundDriftConfinedToTrySandbox(candidateRow, fallbackLocale)) {
     return false;
   }
 
@@ -1858,7 +1948,21 @@ export function shouldShowPlaygroundRestoreButton(options: {
     fallbackLocale,
   });
 
-  return kind === "titleDrift" || kind === "structural";
+  if (kind === "titleDrift") {
+    return true;
+  }
+  if (kind !== "structural") {
+    return false;
+  }
+
+  const bodyForChip =
+    liveContent ?? playgroundPersistedContentForRow(storedContent);
+  return !playgroundFormatQaDraftHidesRestoreChip(
+    bodyForChip,
+    storedTitle,
+    storedContent,
+    fallbackLocale,
+  );
 }
 
 export async function createFormatPlaygroundNote(

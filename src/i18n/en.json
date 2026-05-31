@@ -51,8 +51,8 @@
       "restore": "Restore",
       "deletePermanently": "Delete Permanently",
       "export": "Export",
-      "restorePlayground": "Restore Format Playground",
-      "restorePlaygroundShort": "Restore",
+      "restorePlayground": "Restore format template (Format Playground seed, not whole-note undo)",
+      "restorePlaygroundShort": "Restore template",
       "restorePlaygroundDone": "Format Playground restored",
       "createNote": "Create new note"
     },

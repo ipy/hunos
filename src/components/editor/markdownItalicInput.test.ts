@@ -3,6 +3,7 @@ import { starInputRegex, underscoreInputRegex } from "@tiptap/extension-italic";
 import { Schema } from "@tiptap/pm/model";
 import { EditorState, TextSelection } from "@tiptap/pm/state";
 import { describe, expect, it } from "vitest";
+import { tryTrimUnclosedSingleStarOnSpace } from "./markdownStarDebrisUtils";
 
 const schema = new Schema({
   nodes: {
@@ -84,5 +85,44 @@ describe("italic markdown input", () => {
 
     const italicMark = tr.doc.resolve(1).marks();
     expect(italicMark.some((mark) => mark.type.name === "italic")).toBe(true);
+  });
+});
+
+describe("unclosed star markdown debris (AC32-markdown-debris)", () => {
+  function editorFixture(markdown: string) {
+    const document = doc.create({}, [
+      paragraph.create({}, schema.text(markdown)),
+    ]);
+    const cursorPos = 1 + markdown.length;
+    const state = EditorState.create({
+      doc: document,
+      schema,
+      selection: TextSelection.create(document, cursorPos),
+    });
+    let dispatched: import("@tiptap/pm/state").Transaction | null = null;
+    return {
+      editor: {
+        state,
+        view: {
+          dispatch: (tr: import("@tiptap/pm/state").Transaction) => {
+            dispatched = tr;
+          },
+        },
+      },
+      getDispatched: () => dispatched,
+    };
+  }
+
+  it("strips a dangling opener on Space (AC32-markdown-debris)", () => {
+    const fixture = editorFixture("*未闭合");
+    expect(tryTrimUnclosedSingleStarOnSpace(fixture.editor)).toBe(true);
+    const tr = fixture.getDispatched();
+    expect(tr?.doc.textContent).toBe("未闭合 ");
+    expect(tr?.doc.textContent).not.toContain("*");
+  });
+
+  it("does not strip when italic star pair is complete", () => {
+    const fixture = editorFixture("*斜体*");
+    expect(tryTrimUnclosedSingleStarOnSpace(fixture.editor)).toBe(false);
   });
 });

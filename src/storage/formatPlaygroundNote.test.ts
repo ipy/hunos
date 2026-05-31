@@ -23,6 +23,7 @@ import {
   playgroundEditorContentMatchesStored,
   playgroundEditorMarkOnlyDriftFromStored,
   playgroundFormatQaDraftHidesRestoreChip,
+  playgroundDriftConfinedToTrySandbox,
   playgroundContentMatchesQaTableRowAppend,
   playgroundContentMatchesQaTableColumnRoundTrip,
   playgroundPersistCompareContentsEqual,
@@ -3506,6 +3507,140 @@ describe("iter 30 playground table column QA drift", () => {
     expect(playgroundContentMatchesQaTableColumnRoundTrip(edited, "zh")).toBe(
       false,
     );
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        pendingDraftContent: edited,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(true);
+  });
+});
+
+describe("iter 32 try sandbox restore chip and labels", () => {
+  const seed = JSON.stringify(buildPlaygroundContent("zh"));
+
+  function trySandboxParagraphIndex(parsed: {
+    content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+  }) {
+    return parsed.content.findIndex(
+      (node) =>
+        node.type === "heading" && node.content?.[0]?.text === "自由试炼",
+    );
+  }
+
+  function editTrySandboxParagraph(
+    mutate: (paragraph: {
+      type: string;
+      content?: Array<{ type?: string; text?: string; marks?: unknown[] }>;
+    }) => void,
+  ) {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          type?: string;
+          content?: Array<{ type?: string; text?: string; marks?: unknown[] }>;
+        }>;
+      }>;
+    };
+    const tryIndex = trySandboxParagraphIndex(parsed);
+    const sandboxParagraph = parsed.content[tryIndex + 2];
+    if (sandboxParagraph?.type === "paragraph") {
+      mutate(sandboxParagraph);
+    }
+    return JSON.stringify(parsed);
+  }
+
+  it("hides restore chip for italic typed in 自由试炼 sandbox (AC32-free-section-no-chip)", () => {
+    const edited = editTrySandboxParagraph((paragraph) => {
+      paragraph.content = [
+        { type: "text", text: "斜体", marks: [{ type: "italic" }] },
+      ];
+    });
+
+    expect(playgroundDriftConfinedToTrySandbox(edited, "zh")).toBe(true);
+    expect(
+      playgroundFormatQaDraftHidesRestoreChip(edited, "格式试炼场", seed, "zh"),
+    ).toBe(true);
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        pendingDraftContent: edited,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
+
+  it("hides restore chip after reload when only 自由试炼 sandbox drift is persisted", () => {
+    const stored = editTrySandboxParagraph((paragraph) => {
+      paragraph.content = [
+        { type: "text", text: "混排 **粗体** 与 *斜体* 以及 `代码`" },
+      ];
+    });
+
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: stored,
+        pendingDraftContent: null,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
+
+  it("allows persisting 自由试炼 sandbox edits over canonical stored seed", () => {
+    const edited = editTrySandboxParagraph((paragraph) => {
+      paragraph.content = [{ type: "text", text: "试炼草稿" }];
+    });
+
+    expect(
+      playgroundWriteRegressesCanonicalStored("格式试炼场", seed, edited, "zh"),
+    ).toBe(false);
+  });
+
+  it("shows restore chip within one update when title drifts to T32-Drift (AC32-structural-drift-guard)", () => {
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "T32-Drift",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        pendingDraftContent: seed,
+        pendingTitleDraft: "T32-Drift",
+        fallbackLocale: "zh",
+      }),
+    ).toBe(true);
+    expect(
+      classifyPlaygroundDrift({
+        displayTitle: "T32-Drift",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        liveContent: seed,
+        pendingTitleDraft: "T32-Drift",
+        fallbackLocale: "zh",
+      }),
+    ).toBe("titleDrift");
+  });
+
+  it("still shows restore chip when Lists section drifts outside sandbox", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    const listsIndex = parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
+    );
+    parsed.content.splice(listsIndex + 1, 0, {
+      type: "paragraph",
+      content: [{ type: "text", text: "T32-MIXED-lists" }],
+    });
+    const edited = JSON.stringify(parsed);
+
+    expect(playgroundDriftConfinedToTrySandbox(edited, "zh")).toBe(false);
     expect(
       shouldShowPlaygroundRestoreButton({
         displayTitle: "格式试炼场",

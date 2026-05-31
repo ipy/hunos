@@ -51,8 +51,8 @@
       "restore": "恢复",
       "deletePermanently": "永久删除",
       "export": "导出",
-      "restorePlayground": "恢复格式试炼场",
-      "restorePlaygroundShort": "恢复",
+      "restorePlayground": "恢复格式试炼场模板（仅格式种子，非整篇撤销）",
+      "restorePlaygroundShort": "恢复格式模板",
       "restorePlaygroundDone": "格式试炼场已恢复",
       "createNote": "创建新笔记"
     },

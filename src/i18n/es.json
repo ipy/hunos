@@ -51,8 +51,8 @@
       "restore": "Restaurar",
       "deletePermanently": "Eliminar Permanentemente",
       "export": "Exportar",
-      "restorePlayground": "Restaurar patio de formatos",
-      "restorePlaygroundShort": "Restaurar",
+      "restorePlayground": "Restaurar plantilla de formatos (solo semilla, no deshacer toda la nota)",
+      "restorePlaygroundShort": "Restaurar plantilla",
       "restorePlaygroundDone": "Patio de formatos restaurado",
       "createNote": "Crear nueva nota"
     },
