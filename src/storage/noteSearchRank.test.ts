@@ -91,4 +91,11 @@ describe("noteSearchRank", () => {
     expect(merged).toHaveLength(1);
     expect(merged[0]?.title).toBe("格式试炼场");
   });
+
+  it("keeps active pinned note visible when search has no matches (AC39-search-restore-ghost)", () => {
+    const merged = mergePinnedNotesForSearchDisplay([], [playground, welcome], {
+      activeNoteId: playground.id,
+    });
+    expect(merged.map((n) => n.title)).toEqual(["格式试炼场"]);
+  });
 });

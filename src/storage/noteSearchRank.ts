@@ -68,10 +68,6 @@ export function mergePinnedNotesForSearchDisplay<
   allNotes: T[],
   options: MergePinnedNotesForSearchOptions = {},
 ): T[] {
-  if (searchResults.length === 0) {
-    return searchResults;
-  }
-
   const activeNoteId = options.activeNoteId?.trim();
   if (!activeNoteId) {
     return searchResults;
