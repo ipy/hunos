@@ -24,6 +24,12 @@ describe("EditorScreen note-switch autosave cleanup", () => {
     expect(editorSource).toContain("resolveEditorAutosaveContentJson");
   });
 
+  it("syncs pending ref from live editor before switch flush persist", () => {
+    expect(editorSource).toMatch(
+      /resolveEditorAutosaveContentJson\([\s\S]*pendingContentRef\.current = json/,
+    );
+  });
+
   it("uses silent debounced autosave during editing", () => {
     expect(editorSource).toContain("scheduleContentPersist");
     expect(editorSource).toContain("notifyOnError: false");
