@@ -9,13 +9,19 @@ import { Schema } from "@tiptap/pm/model";
 import { EditorState, TextSelection } from "@tiptap/pm/state";
 import {
   addColumnAfter,
+  addColumnBefore,
   deleteColumn,
   selectedRect,
   tableNodes,
 } from "@tiptap/pm/tables";
 import { describe, expect, it, vi } from "vitest";
 import { HunosTable } from "./HunosTable";
-import { withHeaderRowFix } from "./tableColumnCommandUtils";
+import {
+  createColumnCommandContext,
+  markColumnInsertPending,
+  withHeaderRowFix,
+  type ColumnCommandContext,
+} from "./tableColumnCommandUtils";
 
 const pmTablesSchema = new Schema({
   nodes: {
@@ -85,8 +91,16 @@ function runColumnCommand(
   state: EditorState,
   command: typeof addColumnAfter,
   moveSelection: 1 | -1 | null,
+  context?: ColumnCommandContext,
 ): EditorState {
-  const run = withHeaderRowFix(command, moveSelection);
+  if (context) {
+    if (command === addColumnAfter) {
+      markColumnInsertPending(context, state, "after");
+    } else if (command === addColumnBefore) {
+      markColumnInsertPending(context, state, "before");
+    }
+  }
+  const run = withHeaderRowFix(command, moveSelection, context);
   let next = state;
   run(state, (tr) => {
     next = state.apply(tr);
@@ -281,6 +295,68 @@ describe("HunosTable column commands (TipTap tableHeader schema)", () => {
     state = runColumnCommand(state, deleteColumn, null);
     expect(headerColumnCount(state)).toBe(3);
     expect(headerTexts(state)).toEqual(["名称", "类型", "状态"]);
+  });
+
+  it("AC4-table-header-strip: first delete keeps 类型 header and middle-column body", () => {
+    const context = createColumnCommandContext();
+    let state = buildPlaygroundTableState(
+      tiptapTableSchema,
+      "tableHeader",
+      "tableCell",
+      "tableRow",
+      "类型",
+    );
+
+    state = runColumnCommand(state, addColumnAfter, 1, context);
+    state = runColumnCommand(state, deleteColumn, null, context);
+
+    expect(headerTexts(state)).toEqual(["名称", "类型", "状态"]);
+    expect(headerTexts(state)[1]).toBe("类型");
+    const bodyRow = state.doc.firstChild?.child(1);
+    expect(bodyRow?.child(1).textContent).toBe("样式");
+  });
+
+  it("AC4-header-round-trip (keyboard): insert then delete twice preserves seed headers", () => {
+    const context = createColumnCommandContext();
+    let state = buildPlaygroundTableState(
+      tiptapTableSchema,
+      "tableHeader",
+      "tableCell",
+      "tableRow",
+      "类型",
+    );
+
+    state = runColumnCommand(state, addColumnAfter, 1, context);
+    expect(headerTexts(state)).toEqual(["名称", "类型", "", "状态"]);
+    expect(selectedColumnIndex(state)).toBe(2);
+
+    state = runColumnCommand(state, deleteColumn, null, context);
+    expect(headerTexts(state)).toEqual(["名称", "类型", "状态"]);
+    expect(selectedColumnIndex(state)).toBe(1);
+
+    state = runColumnCommand(state, deleteColumn, null, context);
+
+    expect(headerTexts(state)).toEqual(["名称", "类型", "状态"]);
+    expect(headerColumnCount(state)).toBe(3);
+  });
+
+  it("AC4 double-delete guard: second delete after insert-delete cycle is a no-op", () => {
+    const context = createColumnCommandContext();
+    let state = buildPlaygroundTableState(
+      tiptapTableSchema,
+      "tableHeader",
+      "tableCell",
+      "tableRow",
+      "类型",
+    );
+
+    state = runColumnCommand(state, addColumnAfter, 1, context);
+    state = runColumnCommand(state, deleteColumn, null, context);
+    expect(headerTexts(state)).toEqual(["名称", "类型", "状态"]);
+
+    state = runColumnCommand(state, deleteColumn, null, context);
+    expect(headerTexts(state)).toEqual(["名称", "类型", "状态"]);
+    expect(headerColumnCount(state)).toBe(3);
   });
 
   it("deleteColumn alone removes focused column without blanking sibling headers", () => {
