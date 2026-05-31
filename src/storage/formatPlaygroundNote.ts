@@ -130,6 +130,7 @@ const STRINGS: Record<PlaygroundLocale, PlaygroundStrings> = {
     tagsWikiLinkEnd: ".",
     tagsExternalPrefix: " See ",
     tagsExternalLabel: "project docs",
+    tagsExternalMid: " and ",
     tagsExternalSuffix: " for more.",
     tryHintBullets: [
       "Type **bold**, _italic_, __underline__, ~~strike~~, `code`, or ==highlight== for inline marks.",
@@ -194,6 +195,7 @@ const STRINGS: Record<PlaygroundLocale, PlaygroundStrings> = {
     tagsWikiLinkEnd: "。",
     tagsExternalPrefix: " 详见 ",
     tagsExternalLabel: "项目文档",
+    tagsExternalMid: " 与 ",
     tagsExternalSuffix: "。",
     tryHintBullets: [
       "输入 **粗体**、_斜体_、__下划线__、~~删除线~~、`代码` 或 ==高亮== 等行内样式。",
@@ -387,6 +389,8 @@ export function buildPlaygroundContent(locale: Locale) {
         text(s.wikiLink),
         text(s.tagsWikiLinkEnd),
         text(s.tagsExternalPrefix),
+        text(`[[${s.tagsExternalLabel}]]`),
+        text(s.tagsExternalMid),
         text(`[[${s.tagsExternalLabel}]]`),
         text(s.tagsExternalSuffix),
       ),
@@ -2304,6 +2308,8 @@ export function migratePlaygroundContentIfStale(
           text(s.wikiLink),
           text(s.tagsWikiLinkEnd),
           text(s.tagsExternalPrefix),
+          text(`[[${s.tagsExternalLabel}]]`),
+          text(s.tagsExternalMid),
           text(`[[${s.tagsExternalLabel}]]`),
           text(s.tagsExternalSuffix),
         );

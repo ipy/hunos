@@ -3,7 +3,7 @@ import { tagStorage } from "@/storage/tagStorage";
 import { noteStorage } from "@/storage/noteStorage";
 import {
   extractFromPlainText,
-  extractPlainTextFromTiptap,
+  extractPlainTextForGraphSync,
 } from "./linkExtractor";
 import { isValidTagName } from "@/utils/tagPattern";
 import { replaceWikiLinkTitleInContent } from "@/utils/wikiLink";
@@ -27,7 +27,7 @@ export const graphEngine = {
     let plainText: string;
     try {
       const json = JSON.parse(content);
-      plainText = extractPlainTextFromTiptap(json);
+      plainText = extractPlainTextForGraphSync(json);
     } catch {
       plainText = content;
     }

@@ -83,6 +83,80 @@ export function plainTextFromTiptapTextNode(
   return text.replace(/\[\[[^\]]+\]\]/g, " ");
 }
 
+/** Plain text for graph link extraction — keeps [[title]] literals for wiki-link indexing. */
+export function extractPlainTextForGraphSync(json: unknown): string {
+  if (!json || typeof json !== "object") return "";
+
+  const doc = json as {
+    type?: string;
+    content?: unknown[];
+    text?: string;
+    marks?: unknown[];
+  };
+  if (doc.type === "text" && doc.text) {
+    if (isWikiLinkMark(doc.marks)) {
+      const title = (doc.marks ?? []).find(
+        (mark) => (mark as { type?: string }).type === "wikiLink",
+      ) as { attrs?: { title?: string } } | undefined;
+      return title?.attrs?.title ? `[[${title.attrs.title}]]` : " ";
+    }
+    return doc.text;
+  }
+
+  if (!Array.isArray(doc.content)) return "";
+
+  return doc.content
+    .map((node: unknown) => {
+      const n = node as {
+        type?: string;
+        content?: unknown[];
+        text?: string;
+        marks?: unknown[];
+      };
+      if (n.type === "text") {
+        if (isWikiLinkMark(n.marks)) {
+          const title = (n.marks ?? []).find(
+            (mark) => (mark as { type?: string }).type === "wikiLink",
+          ) as { attrs?: { title?: string } } | undefined;
+          return title?.attrs?.title ? `[[${title.attrs.title}]]` : " ";
+        }
+        return n.text || "";
+      }
+      if (n.type === "paragraph" || n.type === "heading") {
+        return extractPlainTextForGraphSync(n) + "\n";
+      }
+      if (
+        n.type === "taskItem" ||
+        n.type === "listItem" ||
+        n.type === "blockquote"
+      ) {
+        return extractPlainTextForGraphSync(n) + "\n";
+      }
+      if (
+        n.type === "bulletList" ||
+        n.type === "orderedList" ||
+        n.type === "taskList"
+      ) {
+        return extractPlainTextForGraphSync(n);
+      }
+      if (n.type === "codeBlock") {
+        return extractPlainTextForGraphSync(n) + "\n";
+      }
+      if (n.type === "table") {
+        return extractPlainTextForGraphSync(n) + "\n";
+      }
+      if (n.type === "tableRow") {
+        const rowText = extractPlainTextForGraphSync(n).trim();
+        return rowText ? rowText + "\n" : "";
+      }
+      if (n.type === "tableCell" || n.type === "tableHeader") {
+        return extractPlainTextForGraphSync(n) + "\t";
+      }
+      return extractPlainTextForGraphSync(n);
+    })
+    .join("");
+}
+
 export function extractPlainTextFromTiptap(json: unknown): string {
   if (!json || typeof json !== "object") return "";
 

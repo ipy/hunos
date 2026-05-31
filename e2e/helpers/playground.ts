@@ -86,6 +86,34 @@ export function wikiLinkByTitle(page: Page, title: string) {
   return page.locator(`.wiki-link-content[data-wiki-title="${title}"]`);
 }
 
+export function wikiLinkByLinkKey(page: Page, linkKey: string) {
+  return page.locator(`.wiki-link-content[data-link-key="${linkKey}"]`);
+}
+
+/** Assert location.hash matches a resolved wiki-link target (AC42 hash navigation). */
+export async function expectWikiLinkHashNavigation(
+  page: Page,
+  title: string,
+  index = 0,
+): Promise<void> {
+  const noteId = await page.evaluate(
+    ({ wikiTitle, linkIndex }) => {
+      const links = Array.from(
+        document.querySelectorAll(
+          `.wiki-link-content[data-wiki-title="${CSS.escape(wikiTitle)}"]`,
+        ),
+      );
+      return links[linkIndex]?.getAttribute("data-note-id") ?? null;
+    },
+    { wikiTitle: title, linkIndex: index },
+  );
+  expect(noteId).toBeTruthy();
+  const expectedHash = `#note/${encodeURIComponent(noteId!)}`;
+  await expect
+    .poll(() => page.evaluate(() => window.location.hash))
+    .toBe(expectedHash);
+}
+
 /** Click a wiki-link at viewport coordinates without scrollIntoView (AC42 offscreen). */
 export async function clickWikiLinkWithoutScroll(
   page: Page,

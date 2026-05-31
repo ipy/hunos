@@ -59,6 +59,13 @@ vi.mock("@/storage/noteStorage", async (importOriginal) => {
       ...actual.noteStorage,
       list: vi.fn(async () => [...storedNotes]),
       get: vi.fn(async (id: string) => storedNotes.find((n) => n.id === id)),
+      findActiveByTitle: vi.fn(async (title: string) =>
+        storedNotes.find(
+          (n) =>
+            n.status === "active" &&
+            n.title.toLowerCase() === title.trim().toLowerCase(),
+        ),
+      ),
       search: vi.fn(async () => []),
     },
   };

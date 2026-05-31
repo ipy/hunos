@@ -32,6 +32,13 @@ vi.mock("@/storage/database", () => ({
 
 const deleteBySourceAndType = vi.fn();
 const linkCreate = vi.fn();
+const findActiveByTitle = vi.fn();
+
+vi.mock("@/storage/noteStorage", () => ({
+  noteStorage: {
+    findActiveByTitle: (...args: unknown[]) => findActiveByTitle(...args),
+  },
+}));
 
 vi.mock("@/storage/linkStorage", () => ({
   linkStorage: {
@@ -64,7 +71,24 @@ describe("graphEngine.syncNoteLinks", () => {
     removeAllForNote.mockClear();
     getOrCreate.mockClear();
     addNoteTag.mockClear();
+    findActiveByTitle.mockClear();
     getOrCreate.mockResolvedValue({ id: "tag-1", name: "demo" });
+    findActiveByTitle.mockImplementation(async (title: string) =>
+      title === "Target"
+        ? {
+            id: "target-1",
+            title: "Target",
+            content: "",
+            contentPlain: "",
+            isPinned: false,
+            status: "active",
+            trashedAt: null,
+            createdAt: 1,
+            modifiedAt: 1,
+            wordCount: 0,
+          }
+        : undefined,
+    );
   });
 
   it("does not rewrite contentPlain or wordCount on the note", async () => {
@@ -94,6 +118,13 @@ describe("graphEngine.syncNoteLinks", () => {
 
     expect(deleteBySourceAndType).toHaveBeenCalled();
     expect(removeAllForNote).toHaveBeenCalledWith("note-1");
+    expect(linkCreate).toHaveBeenCalledWith(
+      "note-1",
+      "target-1",
+      "wiki_link",
+      expect.stringContaining("[[Target]]"),
+      expect.any(Number),
+    );
     expect(dbUpdate).not.toHaveBeenCalled();
     expect(notesById.get("note-1")?.contentPlain).toBe("stale plain");
     expect(notesById.get("note-1")?.wordCount).toBe(1);

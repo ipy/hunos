@@ -202,12 +202,12 @@ describe("buildPlaygroundContent", () => {
       findWikiLinkTitlesInText(
         findTagsParagraphText(buildPlaygroundContent("en"), "en"),
       ),
-    ).toEqual(["Welcome to Hunos", "project docs"]);
+    ).toEqual(["Welcome to Hunos", "project docs", "project docs"]);
     expect(
       findWikiLinkTitlesInText(
         findTagsParagraphText(buildPlaygroundContent("zh"), "zh"),
       ),
-    ).toEqual(["欢迎使用 Hunos", "项目文档"]);
+    ).toEqual(["欢迎使用 Hunos", "项目文档", "项目文档"]);
   });
 });
 
@@ -629,10 +629,10 @@ describe("migratePlaygroundContentIfStale", () => {
         node.type === "heading" && node.content?.[0]?.text === "Tags & Links",
     );
     const tagsParagraph = content.content[tagsSectionIndex + 1];
-    const wikiLinkNode = tagsParagraph?.content?.find((node) =>
+    const wikiLinkNodes = tagsParagraph?.content?.filter((node) =>
       node.text?.includes("[[project docs]]"),
     );
-    expect(wikiLinkNode?.text).toBe("[[project docs]]");
+    expect(wikiLinkNodes?.length).toBe(2);
   });
 
   it("includes 项目文档 wiki link in zh tags section", () => {
@@ -647,10 +647,10 @@ describe("migratePlaygroundContentIfStale", () => {
         node.type === "heading" && node.content?.[0]?.text === "标签与链接",
     );
     const tagsParagraph = content.content[tagsSectionIndex + 1];
-    const wikiLinkNode = tagsParagraph?.content?.find((node) =>
+    const wikiLinkNodes = tagsParagraph?.content?.filter((node) =>
       node.text?.includes("[[项目文档]]"),
     );
-    expect(wikiLinkNode?.text).toBe("[[项目文档]]");
+    expect(wikiLinkNodes?.length).toBe(2);
   });
 
   it("updates tryHint and tags section for stale playground notes", () => {
