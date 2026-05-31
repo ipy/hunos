@@ -6,9 +6,11 @@ import {
   BACKLINKS_OUTGOING_SECTION_TESTID,
   BACKLINKS_PANEL_TESTID,
   BACKLINKS_PANEL_TOGGLE_TESTID,
+  assertUniqueBacklinkRowKeys,
   backlinksItemTestId,
   backlinksRowKey,
 } from "./BacklinksPanel";
+import { dedupeBacklinkResults } from "@/graph/graphEngine";
 
 const panelSource = readFileSync(
   join(process.cwd(), "src/components/backlinks/BacklinksPanel.tsx"),
@@ -29,6 +31,19 @@ describe("BacklinksPanel automation testids", () => {
 
   it("derives per-note item testids from note id", () => {
     expect(backlinksItemTestId("pg-zh")).toBe("backlinks-item-pg-zh");
+  });
+
+  it("keeps row keys unique after render-time dedupe of duplicate link ids", () => {
+    const duplicate = {
+      linkId: "mppmosoy-004-nqniss1y",
+      noteId: "pg-zh",
+      noteTitle: "格式试炼场",
+      context: "[[Welcome]]",
+      type: "wiki_link" as const,
+    };
+    const rows = dedupeBacklinkResults([duplicate, duplicate]);
+    expect(rows).toHaveLength(1);
+    expect(() => assertUniqueBacklinkRowKeys("incoming", rows)).not.toThrow();
   });
 
   it("derives stable row keys from section, link id, note id, and list index", () => {
@@ -60,6 +75,8 @@ describe("BacklinksPanel automation testids", () => {
     );
     expect(panelSource).toContain("key={backlinksRowKey(section, bl, index)}");
     expect(panelSource).toContain("let cancelled = false");
+    expect(panelSource).toContain("noteLinkRevision");
+    expect(panelSource).toContain("dedupeBacklinkResults");
     expect(panelSource).toContain(
       "data-testid={backlinksItemTestId(bl.noteId)}",
     );

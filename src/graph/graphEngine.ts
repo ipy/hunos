@@ -10,7 +10,8 @@ import { replaceWikiLinkTitleInContent } from "@/utils/wikiLink";
 import type { BacklinkResult } from "@/types/graph";
 import type { Note } from "@/types/note";
 
-function dedupeBacklinksByLinkId(results: BacklinkResult[]): BacklinkResult[] {
+/** Drop duplicate link rows defensively before UI render (React keys use linkId). */
+export function dedupeBacklinkResults(results: BacklinkResult[]): BacklinkResult[] {
   const seen = new Set<string>();
   return results.filter((row) => {
     if (seen.has(row.linkId)) return false;
@@ -112,7 +113,7 @@ export const graphEngine = {
       }
     }
 
-    return dedupeBacklinksByLinkId(results);
+    return dedupeBacklinkResults(results);
   },
 
   async getOutgoingLinks(noteId: string): Promise<BacklinkResult[]> {
@@ -133,6 +134,6 @@ export const graphEngine = {
       }
     }
 
-    return dedupeBacklinksByLinkId(results);
+    return dedupeBacklinkResults(results);
   },
 };

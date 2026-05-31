@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/theme/ThemeContext";
-import { graphEngine } from "@/graph/graphEngine";
+import { dedupeBacklinkResults, graphEngine } from "@/graph/graphEngine";
 import { useNoteStore } from "@/store/noteStore";
 import { Icon } from "@/components/common/Icon";
 import type { BacklinkResult } from "@/types/graph";
@@ -24,6 +24,21 @@ export function backlinksRowKey(
   return `${section}:${bl.linkId}:${bl.noteId}:${index}`;
 }
 
+/** @internal Ensures React list keys stay unique for a rendered backlink section. */
+export function assertUniqueBacklinkRowKeys(
+  section: "incoming" | "outgoing",
+  rows: BacklinkResult[],
+): void {
+  const keys = new Set<string>();
+  rows.forEach((row, index) => {
+    const key = backlinksRowKey(section, row, index);
+    if (keys.has(key)) {
+      throw new Error(`duplicate backlink row key: ${key}`);
+    }
+    keys.add(key);
+  });
+}
+
 interface BacklinksPanelProps {
   noteId: string;
 }
@@ -35,6 +50,18 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
   const [backlinks, setBacklinks] = useState<BacklinkResult[]>([]);
   const [outgoing, setOutgoing] = useState<BacklinkResult[]>([]);
   const [isExpanded, setIsExpanded] = useState(true);
+  const noteLinkRevision = useMemo(
+    () => notes.find((n) => n.id === noteId)?.modifiedAt ?? 0,
+    [notes, noteId],
+  );
+  const incomingRows = useMemo(
+    () => dedupeBacklinkResults(backlinks),
+    [backlinks],
+  );
+  const outgoingRows = useMemo(
+    () => dedupeBacklinkResults(outgoing),
+    [outgoing],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -51,9 +78,9 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
     return () => {
       cancelled = true;
     };
-  }, [noteId, notes]);
+  }, [noteId, noteLinkRevision]);
 
-  if (backlinks.length === 0 && outgoing.length === 0) return null;
+  if (incomingRows.length === 0 && outgoingRows.length === 0) return null;
 
   const renderLink = (
     section: "incoming" | "outgoing",
@@ -150,13 +177,13 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
           }}
         >
           {t("editor.backlinks.title", { defaultValue: "Links" })} (
-          {backlinks.length + outgoing.length})
+          {incomingRows.length + outgoingRows.length})
         </span>
       </button>
 
       {isExpanded && (
         <>
-          {outgoing.length > 0 && (
+          {outgoingRows.length > 0 && (
             <div
               data-testid={BACKLINKS_OUTGOING_SECTION_TESTID}
               style={{ marginBottom: 12 }}
@@ -172,12 +199,14 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
                 }}
               >
                 {t("editor.backlinks.outgoing", { defaultValue: "Links to" })} (
-                {outgoing.length})
+                {outgoingRows.length})
               </div>
-              {outgoing.map((bl, index) => renderLink("outgoing", bl, index))}
+              {outgoingRows.map((bl, index) =>
+                renderLink("outgoing", bl, index),
+              )}
             </div>
           )}
-          {backlinks.length > 0 && (
+          {incomingRows.length > 0 && (
             <div data-testid={BACKLINKS_INCOMING_SECTION_TESTID}>
               <div
                 style={{
@@ -192,9 +221,11 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
                 {t("editor.backlinks.incoming", {
                   defaultValue: "Linked from",
                 })}{" "}
-                ({backlinks.length})
+                ({incomingRows.length})
               </div>
-              {backlinks.map((bl, index) => renderLink("incoming", bl, index))}
+              {incomingRows.map((bl, index) =>
+                renderLink("incoming", bl, index),
+              )}
             </div>
           )}
         </>

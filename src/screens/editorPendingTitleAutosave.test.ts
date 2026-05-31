@@ -79,6 +79,24 @@ describe("editorPendingTitleAutosave", () => {
     expect(takePendingTitle(pendingTitleRef, timerRef)).toBeNull();
   });
 
+  it("skips debounced save when the note is no longer active", async () => {
+    const onSave = vi.fn().mockResolvedValue(true);
+    markPendingTitle(
+      pendingTitleRef,
+      timerRef,
+      "After switch",
+      onSave,
+      0,
+      () => false,
+    );
+
+    vi.advanceTimersByTime(TITLE_AUTOSAVE_DEBOUNCE_MS);
+    await Promise.resolve();
+
+    expect(onSave).not.toHaveBeenCalled();
+    expect(pendingTitleRef.current).toBe("After switch");
+  });
+
   it("clearPendingTitleTimer is idempotent", () => {
     markPendingTitle(pendingTitleRef, timerRef, "Title", vi.fn(), 0);
     clearPendingTitleTimer(timerRef);

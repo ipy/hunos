@@ -25,6 +25,7 @@ export function markPendingTitle(
     writeEpoch: number,
   ) => boolean | Promise<boolean>,
   writeEpoch: number,
+  isStillCurrent?: () => boolean,
 ): void {
   pendingTitleRef.current = title;
   clearPendingTitleTimer(timerRef);
@@ -32,6 +33,7 @@ export function markPendingTitle(
   timerRef.current = setTimeout(() => {
     const pending = pendingTitleRef.current;
     if (pending == null) return;
+    if (isStillCurrent && !isStillCurrent()) return;
     void Promise.resolve(onDebouncedSave(pending, scheduledEpoch)).then(
       (saved) => {
         if (saved) {

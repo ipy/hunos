@@ -19,7 +19,7 @@ vi.mock("@/storage/linkStorage", () => ({
   },
 }));
 
-import { graphEngine } from "./graphEngine";
+import { dedupeBacklinkResults, graphEngine } from "./graphEngine";
 
 function seedNote(id: string, title: string): Note {
   const note: Note = {
@@ -61,6 +61,19 @@ function seedWikiLink(
   linksBySource.set(sourceNoteId, outgoing);
   return link;
 }
+
+describe("dedupeBacklinkResults", () => {
+  it("drops rows that share the same link id", () => {
+    const row = {
+      linkId: "dup-link",
+      noteId: "source",
+      noteTitle: "格式试炼场",
+      context: "ctx",
+      type: "wiki_link" as const,
+    };
+    expect(dedupeBacklinkResults([row, row])).toEqual([row]);
+  });
+});
 
 describe("graphEngine backlink keys", () => {
   beforeEach(() => {

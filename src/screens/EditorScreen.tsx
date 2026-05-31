@@ -339,6 +339,11 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       newTitle,
       (title, writeEpoch) => persistEditorTitle(noteId, title, writeEpoch),
       contentWriteEpochRef.current,
+      () =>
+        isDebouncedAutosaveStillCurrent(
+          noteId,
+          useNoteStore.getState().activeNoteId,
+        ),
     );
   };
 
