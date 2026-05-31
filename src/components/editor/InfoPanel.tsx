@@ -14,6 +14,7 @@ import type { Editor } from "@tiptap/react";
 import {
   handleInfoPanelTocTap,
   panelTocEntryFromPointerY,
+  panelTocEntryIndex,
   requestPinPanelTocListScrollTop,
   resolvePanelTocScrollContainer,
   scrollPanelTocEntryIntoView,
@@ -206,7 +207,6 @@ export function InfoPanel({
       ) {
         return;
       }
-      event.preventDefault();
       if (panelScrollEl) {
         panelScrollEl.scrollTop = 0;
         panelScrollEl.scrollTo?.({ top: 0, left: 0 });
@@ -287,14 +287,42 @@ export function InfoPanel({
 
   const handleTocListClickCapture = (event: React.MouseEvent) => {
     if (activeTab !== "toc" || event.button !== 0) return;
-    activateTocAtClientY(event.clientY, event.currentTarget as HTMLElement);
+    const listEl = event.currentTarget as HTMLElement;
+    const directEntry =
+      event.target instanceof Element
+        ? event.target.closest<HTMLElement>(
+            '[data-testid^="info-panel-toc-entry-"]',
+          )
+        : null;
+    if (directEntry) {
+      const index = panelTocEntryIndex(directEntry);
+      if (index >= 0 && index < toc.length) {
+        activateTocEntry(index, toc[index]?.docPos, directEntry);
+        return;
+      }
+    }
+    activateTocAtClientY(event.clientY, listEl);
   };
 
   const handleTocListTouchEndCapture = (event: React.TouchEvent) => {
     if (activeTab !== "toc") return;
     const touch = event.changedTouches[0];
     if (!touch) return;
-    activateTocAtClientY(touch.clientY, event.currentTarget as HTMLElement);
+    const listEl = event.currentTarget as HTMLElement;
+    const directEntry =
+      event.target instanceof Element
+        ? event.target.closest<HTMLElement>(
+            '[data-testid^="info-panel-toc-entry-"]',
+          )
+        : null;
+    if (directEntry) {
+      const index = panelTocEntryIndex(directEntry);
+      if (index >= 0 && index < toc.length) {
+        activateTocEntry(index, toc[index]?.docPos, directEntry);
+        return;
+      }
+    }
+    activateTocAtClientY(touch.clientY, listEl);
   };
 
   const tabs: { id: InfoPanelTab; icon: string }[] = [

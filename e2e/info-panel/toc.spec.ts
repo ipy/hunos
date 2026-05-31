@@ -86,18 +86,7 @@ test.describe("info panel TOC — iter 49 gate", () => {
     });
     expect(editorScrollBefore).toBe(0);
 
-    const list = page.getByTestId("info-panel-toc-list");
-    const listBox = await list.boundingBox();
-    const entry = page.getByTestId("info-panel-toc-entry-11");
-    const box = await entry.boundingBox();
-    expect(box).not.toBeNull();
-    expect(listBox).not.toBeNull();
-    // Entry-11 sits below the TOC fold; tap the visible list bottom edge (not off-screen bbox).
-    const clickY =
-      box!.y + box!.height > listBox!.y + listBox!.height
-        ? listBox!.y + listBox!.height - 1
-        : box!.y + 4;
-    await page.mouse.click(box!.x + 16, clickY);
+    await page.getByTestId("info-panel-toc-entry-11").click();
 
     await expect
       .poll(async () =>
@@ -122,6 +111,53 @@ test.describe("info panel TOC — iter 49 gate", () => {
       .toBeGreaterThan(0);
 
     await expect(editorLocator(page)).toContainText("自由试炼");
+  });
+
+  test("AC44-edge-intent: bottom-edge tap scrolls to 自由试炼 not 表格", async ({
+    page,
+  }) => {
+    await page.evaluate(() => {
+      const editorPane = document.querySelector(
+        '[data-testid="editor-scroll-pane"]',
+      );
+      if (editorPane instanceof HTMLElement) editorPane.scrollTop = 0;
+      const tocList = document.querySelector(
+        '[data-testid="info-panel-toc-list"]',
+      );
+      if (tocList instanceof HTMLElement) tocList.scrollTop = 0;
+    });
+
+    const list = page.getByTestId("info-panel-toc-list");
+    const listBox = await list.boundingBox();
+    expect(listBox).not.toBeNull();
+    await page.mouse.click(listBox!.x + 16, listBox!.y + listBox!.height - 1);
+
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          const tocList = document.querySelector(
+            '[data-testid="info-panel-toc-list"]',
+          );
+          return tocList instanceof HTMLElement ? tocList.scrollTop : 0;
+        }),
+      )
+      .toBeLessThan(1);
+
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          const editorPane = document.querySelector(
+            '[data-testid="editor-scroll-pane"]',
+          );
+          return editorPane instanceof HTMLElement ? editorPane.scrollTop : 0;
+        }),
+      )
+      .toBeGreaterThan(0);
+
+    await expect(editorLocator(page)).toContainText("自由试炼");
+    await expect(
+      editorLocator(page).getByRole("heading", { name: "自由试炼" }),
+    ).toBeVisible();
   });
 
   test("AC46-toc-click-activation: 标签与链接 scrolls editor and reveals wiki link", async ({

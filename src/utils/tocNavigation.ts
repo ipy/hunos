@@ -217,19 +217,18 @@ export function findPanelTocEntryAtPointerY(
     clientY <= scrollRect.bottom + PANEL_TOC_EDGE_SLOP_PX;
 
   if (scrollRect && inScrollBottomEdge) {
-    let belowFoldPick: HTMLElement | null = null;
-    let belowFoldIndex = -1;
+    let firstBelowFold: HTMLElement | null = null;
+    let firstBelowFoldTop = Infinity;
     for (let i = 0; i < entries.length; i++) {
       const entry = entries[i]!;
       const rect = entry.getBoundingClientRect();
       if (rect.bottom <= scrollRect.bottom + 1) continue;
-      if (!panelTocEntryWithinSlop(clientY, rect)) continue;
-      if (i >= belowFoldIndex) {
-        belowFoldPick = entry;
-        belowFoldIndex = i;
+      if (rect.top < firstBelowFoldTop) {
+        firstBelowFold = entry;
+        firstBelowFoldTop = rect.top;
       }
     }
-    if (belowFoldPick) return belowFoldPick;
+    if (firstBelowFold) return firstBelowFold;
   }
 
   let best: HTMLElement | null = null;
@@ -273,15 +272,18 @@ export function findPanelTocEntryAtPointerY(
 
   if (!scrollRect || !inScrollBottomEdge) return null;
 
-  for (let i = entries.length - 1; i >= 0; i--) {
+  let lipEntry: HTMLElement | null = null;
+  let lipTop = -Infinity;
+  for (let i = 0; i < entries.length; i++) {
     const entry = entries[i]!;
     const rect = entry.getBoundingClientRect();
-    if (rect.top < scrollRect.bottom + PANEL_TOC_EDGE_SLOP_PX) {
-      return entry;
+    if (rect.top > scrollRect.bottom + PANEL_TOC_EDGE_SLOP_PX) continue;
+    if (rect.top >= lipTop) {
+      lipEntry = entry;
+      lipTop = rect.top;
     }
   }
-
-  return null;
+  return lipEntry;
 }
 
 export function panelTocEntryIndex(entryEl: HTMLElement): number {

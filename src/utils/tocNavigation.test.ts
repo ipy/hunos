@@ -535,6 +535,74 @@ describe("panel TOC pointer helpers", () => {
     expect(findPanelTocEntryAtPointerY(list, 842, scrollEl)).toBe(tryEntry);
   });
 
+  it("resolves fully below-fold entry on bottom-edge tap without slop overlap", () => {
+    const scrollRect = {
+      top: 432,
+      bottom: 844,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 412,
+      x: 0,
+      y: 432,
+      toJSON: () => ({}),
+    };
+    const scrollEl = {
+      getBoundingClientRect: () => scrollRect,
+    } as unknown as HTMLElement;
+    const tableEntry = {
+      getAttribute: () => "info-panel-toc-entry-9",
+      getBoundingClientRect: () => ({
+        top: 765,
+        bottom: 802,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 37,
+        x: 0,
+        y: 765,
+        toJSON: () => ({}),
+      }),
+    } as unknown as HTMLElement;
+    const tagsEntry = {
+      getAttribute: () => "info-panel-toc-entry-10",
+      getBoundingClientRect: () => ({
+        top: 804,
+        bottom: 841,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 37,
+        x: 0,
+        y: 804,
+        toJSON: () => ({}),
+      }),
+    } as unknown as HTMLElement;
+    const tryEntry = {
+      getAttribute: () => "info-panel-toc-entry-11",
+      getBoundingClientRect: () => ({
+        top: 878,
+        bottom: 915,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 37,
+        x: 0,
+        y: 878,
+        toJSON: () => ({}),
+      }),
+    } as unknown as HTMLElement;
+    const list = {
+      querySelectorAll: () => [tableEntry, tagsEntry, tryEntry],
+      scrollHeight: 926,
+      clientHeight: 412,
+      closest: () => scrollEl,
+      getBoundingClientRect: () => scrollRect,
+    } as unknown as HTMLElement;
+
+    expect(findPanelTocEntryAtPointerY(list, 843, scrollEl)).toBe(tryEntry);
+  });
+
   it("falls back to the last visible row in scroll bottom padding", () => {
     const scrollRect = {
       top: 432,
