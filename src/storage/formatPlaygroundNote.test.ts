@@ -1504,7 +1504,7 @@ describe("playgroundWriteRegressesCanonicalStored", () => {
     const markerCell =
       table.content[3]?.content?.[0]?.content?.[0]?.content?.[0];
     if (markerCell && "text" in markerCell) {
-      markerCell.text = "AC26-ROW-marker";
+      markerCell.text = "AC27-ROW-marker";
     }
     const edited = JSON.stringify(parsed);
 
@@ -2892,7 +2892,7 @@ describe("playgroundRestoreChipOverridesSuppress", () => {
   });
 });
 
-describe("iter 25 playground table QA drift", () => {
+describe("iter 27 playground table QA drift", () => {
   const seed = JSON.stringify(buildPlaygroundContent("zh"));
 
   function tableSectionIndex(parsed: {
@@ -3046,6 +3046,55 @@ describe("iter 25 playground table QA drift", () => {
         fallbackLocale: "zh",
       }),
     ).toBe(false);
+  });
+
+  it("shows restore chip when title renamed to T27-Drift after table row append (AC5-no-false-restore)", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          type: string;
+          content?: Array<{ type: string; content?: unknown[] }>;
+        }>;
+      }>;
+    };
+    const tableIndex = tableSectionIndex(parsed) + 1;
+    const table = parsed.content[tableIndex];
+    const templateRow = table?.content?.[1];
+    if (!table?.content || !templateRow) throw new Error("seed table missing");
+    table.content.push(
+      JSON.parse(JSON.stringify(templateRow)) as (typeof table.content)[number],
+    );
+    const stored = JSON.stringify(parsed);
+
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: stored,
+        pendingDraftContent: stored,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+
+    expect(
+      classifyPlaygroundDrift({
+        displayTitle: "T27-Drift",
+        storedTitle: "T27-Drift",
+        storedContent: stored,
+        liveContent: stored,
+        fallbackLocale: "zh",
+      }),
+    ).toBe("titleDrift");
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "T27-Drift",
+        storedTitle: "T27-Drift",
+        storedContent: stored,
+        pendingDraftContent: stored,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(true);
   });
 
   it("hides restore chip when persisted stored row was sanitized like IDB write (AC5-spurious-restore-chip)", () => {

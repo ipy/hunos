@@ -337,7 +337,7 @@ describe("useNoteStore.saveNoteContent", () => {
     const markerCell =
       table.content[3]?.content?.[0]?.content?.[0]?.content?.[0];
     if (markerCell && "text" in markerCell) {
-      markerCell.text = "AC26-ROW-persist";
+      markerCell.text = "AC27-ROW-persist";
     }
 
     const saved = await useNoteStore
@@ -346,7 +346,7 @@ describe("useNoteStore.saveNoteContent", () => {
 
     expect(saved).toBe(true);
     expect(dbUpdate).toHaveBeenCalledOnce();
-    expect(notesById.get(note.id)?.content).toContain("AC26-ROW-persist");
+    expect(notesById.get(note.id)?.content).toContain("AC27-ROW-persist");
   });
 
   it("returns false when storage update fails", async () => {
