@@ -82,6 +82,9 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
 
   if (incomingRows.length === 0 && outgoingRows.length === 0) return null;
 
+  assertUniqueBacklinkRowKeys("incoming", incomingRows);
+  assertUniqueBacklinkRowKeys("outgoing", outgoingRows);
+
   const renderLink = (
     section: "incoming" | "outgoing",
     bl: BacklinkResult,

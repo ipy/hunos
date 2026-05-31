@@ -77,6 +77,8 @@ describe("BacklinksPanel automation testids", () => {
     expect(panelSource).toContain("let cancelled = false");
     expect(panelSource).toContain("noteLinkRevision");
     expect(panelSource).toContain("dedupeBacklinkResults");
+    expect(panelSource).toContain('assertUniqueBacklinkRowKeys("incoming"');
+    expect(panelSource).toContain('assertUniqueBacklinkRowKeys("outgoing"');
     expect(panelSource).toContain(
       "data-testid={backlinksItemTestId(bl.noteId)}",
     );

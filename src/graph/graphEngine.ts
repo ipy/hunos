@@ -10,7 +10,7 @@ import { replaceWikiLinkTitleInContent } from "@/utils/wikiLink";
 import type { BacklinkResult } from "@/types/graph";
 import type { Note } from "@/types/note";
 
-/** Drop duplicate link rows defensively before UI render (React keys use linkId). */
+/** Drop duplicate link rows defensively before UI render. */
 export function dedupeBacklinkResults(results: BacklinkResult[]): BacklinkResult[] {
   const seen = new Set<string>();
   return results.filter((row) => {

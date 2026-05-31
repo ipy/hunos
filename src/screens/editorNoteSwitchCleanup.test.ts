@@ -35,6 +35,12 @@ describe("EditorScreen note-switch autosave cleanup", () => {
     expect(editorSource).toContain("notifyOnError: false");
   });
 
+  it("remounts BacklinksPanel on note switch to drop stale link rows", () => {
+    expect(editorSource).toContain(
+      '<BacklinksPanel key={note.id} noteId={note.id} />',
+    );
+  });
+
   it("hides restore chip for mark-only playground format QA drafts", () => {
     expect(editorSource).toContain("playgroundFormatQaDraftHidesRestoreChip");
     expect(editorSource).toMatch(
