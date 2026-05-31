@@ -16,6 +16,10 @@ const infoPanelSource = readFileSync(
   join(process.cwd(), "src/components/editor/InfoPanel.tsx"),
   "utf-8",
 );
+const playgroundHelperSource = readFileSync(
+  join(process.cwd(), "e2e/helpers/playground.ts"),
+  "utf-8",
+);
 
 const PANEL_TOC_CLIENT_HEIGHT_PX = 412;
 const TOC_ROW_HEIGHT_PX = 37;
@@ -24,6 +28,17 @@ const TOC_LIST_BOTTOM_PADDING_PX = 48;
 describe("iteration 50 — TOC list capture and e2e open path", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it("e2e sets gate viewport before opening playground to avoid chrome detach", () => {
+    const openBlock = playgroundHelperSource.slice(
+      playgroundHelperSource.indexOf("openFormatPlaygroundInfoPanelToc"),
+      playgroundHelperSource.indexOf("export function editorLocator"),
+    );
+    expect(openBlock.indexOf("setViewportSize")).toBeLessThan(
+      openBlock.indexOf("openFormatPlaygroundToc"),
+    );
+    expect(openBlock).toContain('getByTestId("info-panel-toggle").first()');
   });
 
   it("opens playground TOC without restore chip on canonical fresh seed", () => {
@@ -48,13 +63,19 @@ describe("iteration 50 — TOC list capture and e2e open path", () => {
     ).toBe("none");
   });
 
-  it("registers pointer, click, and touch capture on the TOC list scrollport", () => {
+  it("pins TOC list scroll on pointerdown but activates on click/touch capture", () => {
     expect(infoPanelSource).toContain("handleTocListPointerDownCapture");
     expect(infoPanelSource).toContain("handleTocListClickCapture");
     expect(infoPanelSource).toContain("handleTocListTouchEndCapture");
     expect(infoPanelSource).toMatch(
       /data-testid="info-panel-toc-list"[\s\S]*onPointerDownCapture=\{handleTocListPointerDownCapture\}/,
     );
+    const pointerDownBlock = infoPanelSource.slice(
+      infoPanelSource.indexOf("handleTocListPointerDownCapture"),
+      infoPanelSource.indexOf("handleTocListClickCapture"),
+    );
+    expect(pointerDownBlock).not.toContain("activateTocAtClientY");
+    expect(pointerDownBlock).toContain("requestPinPanelTocListScrollTop");
     expect(infoPanelSource).not.toContain("handleTocPointerDownCapture");
     const contentScrollBlock = infoPanelSource.slice(
       infoPanelSource.indexOf('data-testid="info-panel-content-scroll"'),

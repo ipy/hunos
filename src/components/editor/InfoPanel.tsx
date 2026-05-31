@@ -262,7 +262,27 @@ export function InfoPanel({
 
   const handleTocListPointerDownCapture = (event: React.PointerEvent) => {
     if (activeTab !== "toc" || event.button !== 0) return;
-    activateTocAtClientY(event.clientY, event.currentTarget as HTMLElement);
+    const listEl = event.currentTarget as HTMLElement;
+    const panelScrollEl = resolvePanelTocScrollContainer(
+      listEl,
+      contentScrollRef.current,
+    );
+    const resolved = panelTocEntryFromPointerY(
+      listEl,
+      event.clientY,
+      panelScrollEl,
+    );
+    if (
+      !resolved ||
+      !shouldDeferPanelTocScrollIntoView(resolved.entry, listEl)
+    ) {
+      return;
+    }
+    requestPinPanelTocListScrollTop();
+    if (panelScrollEl) {
+      panelScrollEl.scrollTop = 0;
+      panelScrollEl.scrollTo?.({ top: 0, left: 0 });
+    }
   };
 
   const handleTocListClickCapture = (event: React.MouseEvent) => {

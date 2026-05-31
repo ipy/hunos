@@ -6,6 +6,8 @@ import { resetHunosDatabase } from "./storage";
 
 export const FORMAT_PLAYGROUND_TITLE = "格式试炼场";
 export const WELCOME_NOTE_TITLE = "欢迎使用 Hunos";
+/** DevLoop gate / AC44 — mobile panel TOC layout (606×844). */
+export const GATE_VIEWPORT = { width: 606, height: 844 } as const;
 /** DevLoop autosave debounce is 400ms; testers waited ≥700–800ms. */
 export const AUTOSAVE_WAIT_MS = 800;
 
@@ -60,6 +62,22 @@ export async function openFormatPlaygroundToc(page: Page): Promise<void> {
   await expect(page.getByTestId("restore-playground-button")).toHaveCount(0);
 }
 
+/** Open 格式试炼场 with info panel on 目录 (viewport before editor to avoid chrome detach). */
+export async function openFormatPlaygroundInfoPanelToc(
+  page: Page,
+  viewport: { width: number; height: number } = GATE_VIEWPORT,
+): Promise<void> {
+  await page.setViewportSize(viewport);
+  await openFormatPlaygroundToc(page);
+  await expect(page.getByTestId("note-editor")).toBeVisible();
+  const toggle = page.getByTestId("info-panel-toggle").first();
+  await expect(toggle).toBeVisible();
+  await toggle.click();
+  await expect(page.getByTestId("info-panel")).toBeVisible();
+  await page.getByTestId("info-panel-tab-toc").click();
+  await expect(page.getByTestId("info-panel-toc-list")).toBeVisible();
+}
+
 export function editorLocator(page: Page) {
   return page.getByTestId("note-editor").locator(".ProseMirror");
 }
@@ -69,7 +87,20 @@ export async function appendEditorLine(
   text: string,
 ): Promise<void> {
   const editor = editorLocator(page);
-  await editor.click();
+  const panelOpen = await page
+    .getByTestId("info-panel")
+    .isVisible()
+    .catch(() => false);
+  if (panelOpen) {
+    await page.evaluate(() => {
+      const el = document.querySelector(
+        '[data-testid="note-editor"] .ProseMirror',
+      ) as HTMLElement | null;
+      el?.focus();
+    });
+  } else {
+    await editor.click();
+  }
   await page.keyboard.press("End");
   await page.keyboard.press("Enter");
   const delay = isHarmonyRuntime() ? 30 : 0;

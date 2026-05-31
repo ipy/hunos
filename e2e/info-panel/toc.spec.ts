@@ -2,23 +2,15 @@ import { test, expect } from "../fixtures/app";
 import {
   appendEditorHeading,
   editorLocator,
-  openFormatPlaygroundToc,
+  GATE_VIEWPORT,
+  openFormatPlaygroundInfoPanelToc,
 } from "../helpers/playground";
 
-const GATE_VIEWPORT = { width: 606, height: 844 };
-
-async function openPlaygroundToc(page: import("@playwright/test").Page) {
-  await openFormatPlaygroundToc(page);
-  await page.setViewportSize(GATE_VIEWPORT);
-  await page.getByTestId("info-panel-toggle").click();
-  await expect(page.getByTestId("info-panel")).toBeVisible();
-  await page.getByTestId("info-panel-tab-toc").click();
-  await expect(page.getByTestId("info-panel-toc-list")).toBeVisible();
-}
-
 test.describe("info panel TOC", () => {
+  test.use({ viewport: GATE_VIEWPORT });
+
   test.beforeEach(async ({ page }) => {
-    await openPlaygroundToc(page);
+    await openFormatPlaygroundInfoPanelToc(page);
   });
 
   test("live heading appears in TOC without closing panel", async ({
@@ -48,7 +40,7 @@ test.describe("info panel TOC — iter 49 gate", () => {
   test.use({ viewport: GATE_VIEWPORT });
 
   test.beforeEach(async ({ page }) => {
-    await openPlaygroundToc(page);
+    await openFormatPlaygroundInfoPanelToc(page);
   });
 
   test("AC46-toc-bottom-padding: last rows scroll inside list with bottom inset", async ({
