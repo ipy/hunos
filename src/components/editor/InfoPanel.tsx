@@ -12,6 +12,7 @@ import { SettingToggle } from "@/components/settings/SettingToggle";
 import type { Note } from "@/types/note";
 import type { Editor } from "@tiptap/react";
 import {
+  findPanelTocEntryAtLayoutPoint,
   handleInfoPanelTocTap,
   panelTocEntryFromPointerY,
   panelTocEntryIndex,
@@ -247,6 +248,42 @@ export function InfoPanel({
       list.removeEventListener("click", pinListScrollTop, { capture: true });
     };
   }, [activeTab, editor, toc.length]);
+
+  useEffect(() => {
+    const list = tocListRef.current;
+    if (!list || activeTab !== "toc" || !editor) return;
+
+    const onDocumentClickCapture = (event: MouseEvent) => {
+      if (event.button !== 0) return;
+      const target = event.target;
+      if (
+        target instanceof Element &&
+        target.closest('[data-testid="info-panel-toc-list"]')
+      ) {
+        return;
+      }
+      const entry = findPanelTocEntryAtLayoutPoint(
+        list,
+        event.clientX,
+        event.clientY,
+      );
+      if (!entry) return;
+      const index = panelTocEntryIndex(entry);
+      if (index < 0 || index >= toc.length) return;
+      event.preventDefault();
+      event.stopPropagation();
+      activateTocEntry(index, toc[index]?.docPos, entry);
+    };
+
+    document.addEventListener("click", onDocumentClickCapture, {
+      capture: true,
+    });
+    return () => {
+      document.removeEventListener("click", onDocumentClickCapture, {
+        capture: true,
+      });
+    };
+  }, [activeTab, editor, toc]);
 
   const activateTocAtClientY = (clientY: number, listEl: HTMLElement) => {
     const resolved = panelTocEntryFromPointerY(

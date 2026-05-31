@@ -296,6 +296,41 @@ export function panelTocEntryIndex(entryEl: HTMLElement): number {
   return match ? Number.parseInt(match[1], 10) : -1;
 }
 
+/**
+ * Hit-test a clipped TOC row from layout bounds when pointer events miss the
+ * button (AC44: agent-browser testid clicks land on html below the panel fold).
+ */
+export function findPanelTocEntryAtLayoutPoint(
+  listEl: HTMLElement,
+  clientX: number,
+  clientY: number,
+): HTMLElement | null {
+  const listRect = listEl.getBoundingClientRect();
+  if (
+    clientX < listRect.left ||
+    clientX > listRect.right ||
+    clientY < listRect.top
+  ) {
+    return null;
+  }
+  const entries = listEl.querySelectorAll<HTMLElement>(
+    '[data-testid^="info-panel-toc-entry-"]',
+  );
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const entry = entries[i]!;
+    const rect = entry.getBoundingClientRect();
+    if (
+      clientX >= rect.left &&
+      clientX <= rect.right &&
+      clientY >= rect.top &&
+      clientY <= rect.bottom
+    ) {
+      return entry;
+    }
+  }
+  return null;
+}
+
 /** Resolve a panel TOC row from viewport Y (pointer, touch, or mouse). */
 export function panelTocEntryFromPointerY(
   listEl: HTMLElement,

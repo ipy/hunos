@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   findPanelTocEntryAtPointerY,
+  findPanelTocEntryAtLayoutPoint,
   panelTocEntryIndex,
 } from "@/utils/tocNavigation";
 
@@ -103,5 +104,40 @@ describe("iteration 51 — unified off-screen TOC activation", () => {
   it("uses first-below-fold edge resolution in tocNavigation", () => {
     expect(tocSource).toContain("firstBelowFoldTop");
     expect(tocSource).not.toMatch(/belowFoldIndex/);
+  });
+
+  it("activates clipped TOC rows from document capture when testid click misses list", () => {
+    expect(infoPanelSource).toContain("findPanelTocEntryAtLayoutPoint");
+    expect(infoPanelSource).toContain("onDocumentClickCapture");
+    const tryEntry = {
+      getAttribute: () => "info-panel-toc-entry-11",
+      getBoundingClientRect: () => ({
+        top: 886,
+        bottom: 927,
+        left: 0,
+        right: 606,
+        width: 606,
+        height: 41,
+        x: 0,
+        y: 886,
+        toJSON: () => ({}),
+      }),
+    } as unknown as HTMLElement;
+    const list = {
+      querySelectorAll: () => [tryEntry],
+      getBoundingClientRect: () => ({
+        top: 433,
+        bottom: 844,
+        left: 0,
+        right: 606,
+        width: 606,
+        height: 411,
+        x: 0,
+        y: 433,
+        toJSON: () => ({}),
+      }),
+    } as unknown as HTMLElement;
+
+    expect(findPanelTocEntryAtLayoutPoint(list, 301, 906)).toBe(tryEntry);
   });
 });

@@ -8,6 +8,7 @@ import {
   scrollToTocDocPos,
   handleInfoPanelTocTap,
   findPanelTocEntryAtPointerY,
+  findPanelTocEntryAtLayoutPoint,
   resolvePanelTocScrollContainer,
   scrollPanelTocEntryIntoView,
   shouldDeferPanelTocScrollIntoView,
@@ -641,6 +642,55 @@ describe("panel TOC pointer helpers", () => {
     } as unknown as HTMLElement;
 
     expect(findPanelTocEntryAtPointerY(list, 843, scrollEl)).toBe(tryEntry);
+  });
+
+  it("resolves clipped entry-11 from layout bounds when click lands below panel fold", () => {
+    const scrollRect = {
+      top: 432,
+      bottom: 844,
+      left: 0,
+      right: 606,
+      width: 606,
+      height: 412,
+      x: 0,
+      y: 432,
+      toJSON: () => ({}),
+    };
+    const tableEntry = {
+      getAttribute: () => "info-panel-toc-entry-9",
+      getBoundingClientRect: () => ({
+        top: 765,
+        bottom: 802,
+        left: 0,
+        right: 606,
+        width: 606,
+        height: 37,
+        x: 0,
+        y: 765,
+        toJSON: () => ({}),
+      }),
+    } as unknown as HTMLElement;
+    const tryEntry = {
+      getAttribute: () => "info-panel-toc-entry-11",
+      getBoundingClientRect: () => ({
+        top: 886,
+        bottom: 927,
+        left: 0,
+        right: 606,
+        width: 606,
+        height: 41,
+        x: 0,
+        y: 886,
+        toJSON: () => ({}),
+      }),
+    } as unknown as HTMLElement;
+    const list = {
+      querySelectorAll: () => [tableEntry, tryEntry],
+      getBoundingClientRect: () => scrollRect,
+    } as unknown as HTMLElement;
+
+    expect(findPanelTocEntryAtLayoutPoint(list, 301, 906)).toBe(tryEntry);
+    expect(findPanelTocEntryAtLayoutPoint(list, 301, 843)).toBeNull();
   });
 
   it("defers panel scroll when row is below fold and list scrollTop is 0", () => {
