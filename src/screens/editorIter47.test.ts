@@ -43,7 +43,7 @@ describe("iteration 47 — TOC bottom padding and scroll", () => {
     expect(infoPanelSource).toMatch(
       /flex:\s*"1 1 0"[\s\S]*minHeight:\s*0[\s\S]*overflowY:\s*"auto"/,
     );
-    expect(infoPanelSource).toContain("boxSizing: \"border-box\"");
+    expect(infoPanelSource).toContain('boxSizing: "border-box"');
   });
 });
 
@@ -73,6 +73,8 @@ describe("iteration 47 — TOC click activation", () => {
 
   it("expands bottom-edge slop for first-click hits", () => {
     expect(tocSource).toMatch(/PANEL_TOC_EDGE_SLOP_PX = 12/);
+    expect(tocSource).toContain("inScrollBottomEdge");
+    expect(tocSource).toContain("extendsBelowScroll");
   });
 });
 

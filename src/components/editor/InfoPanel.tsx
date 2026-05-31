@@ -170,6 +170,7 @@ export function InfoPanel({
     const entry = findPanelTocEntryAtPointerY(
       list as HTMLElement,
       event.clientY,
+      event.currentTarget as HTMLElement,
     );
     if (!entry) return;
     const index = panelTocEntryIndex(entry);

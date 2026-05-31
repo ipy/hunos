@@ -83,38 +83,89 @@ export function scrollPanelTocEntryIntoView(entryEl: HTMLElement): void {
   }
 }
 
+function panelTocEntryDistance(clientY: number, rect: DOMRect): number {
+  if (clientY < rect.top) return rect.top - clientY;
+  if (clientY > rect.bottom) return clientY - rect.bottom;
+  return 0;
+}
+
+function panelTocEntryWithinSlop(clientY: number, rect: DOMRect): boolean {
+  return (
+    clientY >= rect.top - PANEL_TOC_EDGE_SLOP_PX &&
+    clientY <= rect.bottom + PANEL_TOC_EDGE_SLOP_PX
+  );
+}
+
 /** Resolve a TOC entry from a pointer Y, including bottom-edge slop. */
 export function findPanelTocEntryAtPointerY(
   listEl: HTMLElement,
   clientY: number,
+  scrollEl?: HTMLElement | null,
 ): HTMLElement | null {
-  const entries = listEl.querySelectorAll<HTMLElement>(
-    '[data-testid^="info-panel-toc-entry-"]',
-  );
+  const entries = [
+    ...listEl.querySelectorAll<HTMLElement>(
+      '[data-testid^="info-panel-toc-entry-"]',
+    ),
+  ];
+  const scroll =
+    scrollEl ??
+    listEl.closest<HTMLElement>('[data-testid="info-panel-content-scroll"]');
+  const scrollRect = scroll?.getBoundingClientRect();
+  const inScrollBottomEdge =
+    scrollRect != null &&
+    clientY >= scrollRect.bottom - PANEL_TOC_EDGE_SLOP_PX &&
+    clientY <= scrollRect.bottom + PANEL_TOC_EDGE_SLOP_PX;
+
   let best: HTMLElement | null = null;
   let bestDistance = Infinity;
+  let bestIndex = -1;
 
-  for (const entry of entries) {
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i]!;
     const rect = entry.getBoundingClientRect();
-    if (
-      clientY < rect.top - PANEL_TOC_EDGE_SLOP_PX ||
-      clientY > rect.bottom + PANEL_TOC_EDGE_SLOP_PX
-    ) {
-      continue;
-    }
-    const distance =
-      clientY < rect.top
-        ? rect.top - clientY
-        : clientY > rect.bottom
-          ? clientY - rect.bottom
-          : 0;
+    if (!panelTocEntryWithinSlop(clientY, rect)) continue;
+
+    const distance = panelTocEntryDistance(clientY, rect);
+    if (distance > bestDistance) continue;
+
     if (distance < bestDistance) {
       bestDistance = distance;
       best = entry;
+      bestIndex = i;
+      continue;
+    }
+
+    if (!inScrollBottomEdge || best == null) continue;
+
+    const bestRect = best.getBoundingClientRect();
+    const extendsBelowScroll =
+      scrollRect != null && rect.bottom > scrollRect.bottom + 1;
+    const bestExtendsBelowScroll =
+      scrollRect != null && bestRect.bottom > scrollRect.bottom + 1;
+
+    if (
+      (extendsBelowScroll && !bestExtendsBelowScroll) ||
+      (extendsBelowScroll === bestExtendsBelowScroll &&
+        (i > bestIndex || rect.bottom > bestRect.bottom))
+    ) {
+      best = entry;
+      bestIndex = i;
     }
   }
 
-  return best;
+  if (best) return best;
+
+  if (!scrollRect || !inScrollBottomEdge) return null;
+
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const entry = entries[i]!;
+    const rect = entry.getBoundingClientRect();
+    if (rect.top < scrollRect.bottom + PANEL_TOC_EDGE_SLOP_PX) {
+      return entry;
+    }
+  }
+
+  return null;
 }
 
 export function panelTocEntryIndex(entryEl: HTMLElement): number {

@@ -343,11 +343,99 @@ describe("panel TOC pointer helpers", () => {
     } as unknown as HTMLElement;
     const list = {
       querySelectorAll: () => [entry],
+      closest: () => null,
     } as unknown as HTMLElement;
 
     expect(findPanelTocEntryAtPointerY(list, 838)).toBe(entry);
     expect(findPanelTocEntryAtPointerY(list, 850)).toBeNull();
     expect(panelTocEntryIndex(entry)).toBe(3);
+  });
+
+  it("prefers the last clipped row on bottom-edge taps", () => {
+    const scrollEl = {
+      getBoundingClientRect: () => ({
+        top: 432,
+        bottom: 844,
+        left: 0,
+        right: 400,
+        width: 400,
+        height: 412,
+        x: 0,
+        y: 432,
+        toJSON: () => ({}),
+      }),
+    } as unknown as HTMLElement;
+    const tagsEntry = {
+      getAttribute: () => "info-panel-toc-entry-10",
+      getBoundingClientRect: () => ({
+        top: 804,
+        bottom: 841,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 37,
+        x: 0,
+        y: 804,
+        toJSON: () => ({}),
+      }),
+    } as unknown as HTMLElement;
+    const tryEntry = {
+      getAttribute: () => "info-panel-toc-entry-11",
+      getBoundingClientRect: () => ({
+        top: 841,
+        bottom: 878,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 37,
+        x: 0,
+        y: 841,
+        toJSON: () => ({}),
+      }),
+    } as unknown as HTMLElement;
+    const list = {
+      querySelectorAll: () => [tagsEntry, tryEntry],
+      closest: () => scrollEl,
+    } as unknown as HTMLElement;
+
+    expect(findPanelTocEntryAtPointerY(list, 841, scrollEl)).toBe(tryEntry);
+    expect(findPanelTocEntryAtPointerY(list, 842, scrollEl)).toBe(tryEntry);
+  });
+
+  it("falls back to the last visible row in scroll bottom padding", () => {
+    const scrollEl = {
+      getBoundingClientRect: () => ({
+        top: 432,
+        bottom: 844,
+        left: 0,
+        right: 400,
+        width: 400,
+        height: 412,
+        x: 0,
+        y: 432,
+        toJSON: () => ({}),
+      }),
+    } as unknown as HTMLElement;
+    const tryEntry = {
+      getAttribute: () => "info-panel-toc-entry-11",
+      getBoundingClientRect: () => ({
+        top: 841,
+        bottom: 878,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 37,
+        x: 0,
+        y: 841,
+        toJSON: () => ({}),
+      }),
+    } as unknown as HTMLElement;
+    const list = {
+      querySelectorAll: () => [tryEntry],
+      closest: () => scrollEl,
+    } as unknown as HTMLElement;
+
+    expect(findPanelTocEntryAtPointerY(list, 843, scrollEl)).toBe(tryEntry);
   });
 
   it("scrolls a clipped entry into the panel viewport", () => {
