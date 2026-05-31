@@ -36,7 +36,7 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
 
   const renderLink = (bl: BacklinkResult) => (
     <div
-      key={bl.noteId}
+      key={bl.linkId}
       data-testid={backlinksItemTestId(bl.noteId)}
       data-note-title={bl.noteTitle}
       onClick={() => setActiveNote(bl.noteId)}

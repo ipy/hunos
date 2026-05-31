@@ -31,6 +31,7 @@ export interface TagTreeNode extends Tag {
 }
 
 export interface BacklinkResult {
+  linkId: string;
   noteId: string;
   noteTitle: string;
   context: string;

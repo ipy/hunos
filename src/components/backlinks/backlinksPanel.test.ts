@@ -41,6 +41,7 @@ describe("BacklinksPanel automation testids", () => {
     expect(panelSource).toContain(
       `data-testid={BACKLINKS_INCOMING_SECTION_TESTID}`,
     );
+    expect(panelSource).toContain("key={bl.linkId}");
     expect(panelSource).toContain(
       "data-testid={backlinksItemTestId(bl.noteId)}",
     );

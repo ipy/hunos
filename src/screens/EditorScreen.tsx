@@ -86,6 +86,10 @@ import {
   persistNoteContent,
   persistNoteTitle,
 } from "@/screens/editorNotePersistence";
+import {
+  isDebouncedAutosaveStillCurrent,
+  shouldPersistAutosaveOnEditorEffectCleanup,
+} from "@/screens/editorAutosaveEffectCleanup";
 import type { EditorAutosaveFlushResult } from "@/store/editorAutosaveRegistry";
 
 declare const __HUNOS_E2E__: boolean | undefined;
@@ -349,12 +353,21 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           pendingContentRef.current = json;
           setRestoreEditorSyncTick((tick) => tick + 1);
           const writeEpoch = contentWriteEpochRef.current;
+          const scheduledNoteId = activeNoteId;
           if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
           if (flushSave) {
-            void persistEditorContent(activeNoteId, json, writeEpoch);
+            void persistEditorContent(scheduledNoteId, json, writeEpoch);
           } else {
             saveTimeoutRef.current = setTimeout(() => {
-              void persistEditorContent(activeNoteId, json, writeEpoch);
+              if (
+                !isDebouncedAutosaveStillCurrent(
+                  scheduledNoteId,
+                  useNoteStore.getState().activeNoteId,
+                )
+              ) {
+                return;
+              }
+              void persistEditorContent(scheduledNoteId, json, writeEpoch);
             }, 400);
           }
           return;
@@ -419,13 +432,22 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         setRestoreEditorSyncTick((tick) => tick + 1);
       }
       const writeEpoch = contentWriteEpochRef.current;
+      const scheduledNoteId = activeNoteId;
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       if (flushSave) {
-        void persistEditorContent(activeNoteId, json, writeEpoch);
+        void persistEditorContent(scheduledNoteId, json, writeEpoch);
         return;
       }
       saveTimeoutRef.current = setTimeout(() => {
-        void persistEditorContent(activeNoteId, json, writeEpoch);
+        if (
+          !isDebouncedAutosaveStillCurrent(
+            scheduledNoteId,
+            useNoteStore.getState().activeNoteId,
+          )
+        ) {
+          return;
+        }
+        void persistEditorContent(scheduledNoteId, json, writeEpoch);
       }, 400);
     },
     [
@@ -523,27 +545,34 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     ]);
 
   useEffect(() => {
+    const boundNoteId = activeNoteId;
     registerEditorAutosaveFlush(flushPendingAutosave);
     registerUnloadDraftCollector(collectUnloadDraft);
     const unbindLifecycle = bindEditorLifecycleAutosaveFlush();
     return () => {
       persistUnloadDraftSync();
       unbindLifecycle();
+      const currentActiveNoteId = useNoteStore.getState().activeNoteId;
+      const mayPersistCleanup = shouldPersistAutosaveOnEditorEffectCleanup(
+        boundNoteId,
+        currentActiveNoteId,
+      );
       if (
+        mayPersistCleanup &&
         shouldStashAutosaveOnEffectCleanup(
           playgroundRestoreSessionRef.current.isActive(),
         )
       ) {
         const json = collectPendingAutosave();
-        if (json && activeNoteId) {
-          void persistEditorContent(activeNoteId, json);
+        if (json && boundNoteId) {
+          void persistEditorContent(boundNoteId, json);
         }
       }
       unregisterEditorAutosaveFlush(flushPendingAutosave);
       unregisterUnloadDraftCollector(collectUnloadDraft);
       const pendingTitle = takePendingTitle(pendingTitleRef, titleTimeoutRef);
-      if (pendingTitle && activeNoteId) {
-        void persistEditorTitle(activeNoteId, pendingTitle);
+      if (pendingTitle && boundNoteId && mayPersistCleanup) {
+        void persistEditorTitle(boundNoteId, pendingTitle);
       }
     };
   }, [

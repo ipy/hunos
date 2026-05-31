@@ -94,6 +94,7 @@ export const graphEngine = {
       const note = await noteStorage.get(link.sourceNoteId);
       if (note && note.status === "active") {
         results.push({
+          linkId: link.id,
           noteId: note.id,
           noteTitle: note.title,
           context: link.context,
@@ -114,6 +115,7 @@ export const graphEngine = {
       const note = await noteStorage.get(link.targetNoteId);
       if (note && note.status === "active") {
         results.push({
+          linkId: link.id,
           noteId: note.id,
           noteTitle: note.title,
           context: link.context,
