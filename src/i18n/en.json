@@ -72,6 +72,7 @@
     "titlePlaceholder": "Title",
     "saveFailed": "Could not save changes. Your edits are still in the editor.",
     "toolbar": {
+      "inlineFormatting": "Text formatting",
       "bold": "Bold",
       "italic": "Italic",
       "underline": "Underline",

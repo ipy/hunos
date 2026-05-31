@@ -16,28 +16,7 @@ import {
   runToolbarActionWithOverlaySelection,
   runToolbarChain,
 } from "@/utils/editorOverlaySelection";
-
-const TOOLBAR_I18N_KEYS: Record<string, string> = {
-  bold: "editor.toolbar.bold",
-  italic: "editor.toolbar.italic",
-  underline: "editor.toolbar.underline",
-  strikethrough: "editor.toolbar.strikethrough",
-  highlight: "editor.toolbar.highlight",
-  link: "editor.toolbar.link",
-  heading1: "editor.toolbar.heading1",
-  heading2: "editor.toolbar.heading2",
-  heading3: "editor.toolbar.heading3",
-  list: "editor.toolbar.bulletList",
-  orderedList: "editor.toolbar.orderedList",
-  taskList: "editor.toolbar.taskList",
-  quote: "editor.toolbar.blockquote",
-  code: "editor.toolbar.codeBlock",
-  divider: "editor.toolbar.horizontalRule",
-  image: "editor.toolbar.image",
-  camera: "editor.toolbar.camera",
-  table: "editor.toolbar.table",
-  pencil: "editor.toolbar.sketch",
-};
+import { getToolbarItemLabel } from "./toolbarItemLabels";
 
 interface EditorToolbarProps {
   editor: Editor | null;
@@ -278,12 +257,16 @@ export function EditorToolbar({
   const isMobile = layout === "mobile";
   const canUndo = editor.can().undo();
   const canRedo = editor.can().redo();
-  const items = isMobile
-    ? activeTab === "format"
+  const mobileTabItems =
+    activeTab === "format"
       ? INLINE_FORMAT_ITEMS
       : activeTab === "blocks"
         ? BLOCK_ITEMS
-        : INSERT_ITEMS
+        : INSERT_ITEMS;
+  const items = isMobile
+    ? formatOverlayOpen && activeTab !== "format"
+      ? [...INLINE_FORMAT_ITEMS, ...mobileTabItems]
+      : mobileTabItems
     : [...INLINE_FORMAT_ITEMS, ...BLOCK_ITEMS, ...INSERT_ITEMS];
 
   return (
@@ -524,9 +507,7 @@ export function EditorToolbar({
           )}
           {items.map((item, idx) => {
             const active = item.isActive?.(editor) ?? false;
-            const ariaLabel = t(TOOLBAR_I18N_KEYS[item.icon] ?? item.label, {
-              defaultValue: item.label,
-            });
+            const ariaLabel = getToolbarItemLabel(t, item.icon, item.label);
             return (
               <button
                 key={`${item.icon}-${idx}`}

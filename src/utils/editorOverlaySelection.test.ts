@@ -10,6 +10,7 @@ import {
   runToolbarActionWithOverlaySelection,
   getOverlayToolbarAnchorPos,
   runToolbarChain,
+  setEditorFormatOverlayPanelOpen,
   shouldUseSavedToolbarSelection,
   syncEditorOverlaySelectionBeforeToolbarCommand,
 } from "./editorOverlaySelection";
@@ -132,8 +133,9 @@ describe("editorOverlaySelection", () => {
     });
   });
 
-  it("captures non-empty selections via selectionUpdate listener", () => {
+  it("captures non-empty selections via selectionUpdate only while overlay panel is open", () => {
     clearEditorOverlaySelection();
+    setEditorFormatOverlayPanelOpen(false);
     const handlers: Record<string, () => void> = {};
     const editor = {
       isDestroyed: false,
@@ -150,17 +152,48 @@ describe("editorOverlaySelection", () => {
     const detach = attachEditorOverlaySelectionSync(editor as never);
     editor.state.selection = { from: 20, to: 35 };
     handlers.selectionUpdate();
+    expect(getSavedEditorOverlaySelection()).toBeNull();
 
+    setEditorFormatOverlayPanelOpen(true);
+    handlers.selectionUpdate();
     expect(getSavedEditorOverlaySelection()).toEqual({ from: 20, to: 35 });
+
     detach();
+    setEditorFormatOverlayPanelOpen(false);
     expect(editor.off).toHaveBeenCalledWith(
       "selectionUpdate",
       handlers.selectionUpdate,
     );
   });
 
-  it("syncs before toolbar actions even when format overlay is closed", () => {
+  it("clears a post-dismiss bookmark when the user makes a new non-empty selection", () => {
     clearEditorOverlaySelection();
+    setEditorFormatOverlayPanelOpen(false);
+    captureEditorOverlaySelection(mockEditor({ from: 10, to: 20 }) as never);
+
+    const handlers: Record<string, () => void> = {};
+    const editor = {
+      isDestroyed: false,
+      state: {
+        selection: { from: 1, to: 1 },
+        doc: { content: { size: 100 } },
+      },
+      on: vi.fn((event: string, handler: () => void) => {
+        handlers[event] = handler;
+      }),
+      off: vi.fn(),
+    };
+
+    attachEditorOverlaySelectionSync(editor as never);
+    editor.state.selection = { from: 50, to: 60 };
+    handlers.selectionUpdate();
+
+    expect(getSavedEditorOverlaySelection()).toBeNull();
+  });
+
+  it("syncs live ranges before toolbar actions when format overlay is closed", () => {
+    clearEditorOverlaySelection();
+    setEditorFormatOverlayPanelOpen(false);
     const editor = mockEditor({ from: 1, to: 2 });
     captureEditorOverlaySelection(editor as never);
     editor.state.selection = { from: 40, to: 55 };
@@ -170,6 +203,16 @@ describe("editorOverlaySelection", () => {
 
     expect(getSavedEditorOverlaySelection()).toEqual({ from: 40, to: 55 });
     expect(action).toHaveBeenCalled();
+  });
+
+  it("does not seed an empty bookmark before toolbar actions when overlay panel is closed", () => {
+    clearEditorOverlaySelection();
+    setEditorFormatOverlayPanelOpen(false);
+    const editor = mockEditor({ from: 3, to: 3 });
+
+    syncEditorOverlaySelectionBeforeToolbarCommand(editor as never);
+
+    expect(getSavedEditorOverlaySelection()).toBeNull();
   });
 
   it("returns saved overlay anchor while toolbar overlay context is open", () => {

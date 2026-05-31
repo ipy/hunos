@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { isTextSelection } from "@tiptap/core";
 import { BubbleMenuPlugin } from "@tiptap/extension-bubble-menu";
 import type { Editor } from "@tiptap/react";
@@ -7,10 +8,12 @@ import type { EditorView } from "@tiptap/pm/view";
 import { useTheme } from "@/theme/ThemeContext";
 import { Icon } from "@/components/common/Icon";
 import { INLINE_FORMAT_ITEMS } from "./inlineFormatActions";
+import { getToolbarItemLabel } from "./toolbarItemLabels";
 import {
   isEditorSuggestionMenuOpen,
   isLinkEditorOpen,
 } from "@/utils/editorSuggestionMenu";
+import { isEditorFormatOverlayPanelOpen } from "@/utils/editorOverlaySelection";
 import { useUIStore } from "@/store/uiStore";
 import { reparentBubbleMenuElement } from "./bubbleMenuHostUtils";
 
@@ -44,6 +47,7 @@ function shouldShowSelectionBubbleMenu({
   }
   if (isEditorSuggestionMenuOpen()) return false;
   if (isLinkEditorOpen()) return false;
+  if (isEditorFormatOverlayPanelOpen()) return false;
   if (editor.isActive("codeBlock")) return false;
 
   return true;
@@ -54,6 +58,7 @@ interface SelectionBubbleMenuProps {
 }
 
 export function SelectionBubbleMenu({ editor }: SelectionBubbleMenuProps) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const linkEditorOpen = useUIStore((s) => s.linkEditorOpen);
   const [, setTick] = useState(0);
@@ -139,7 +144,9 @@ export function SelectionBubbleMenu({ editor }: SelectionBubbleMenuProps) {
       <div ref={menuRef} style={{ visibility: "hidden" }}>
         <div
           role="toolbar"
-          aria-label="Text formatting"
+          aria-label={t("editor.toolbar.inlineFormatting", {
+            defaultValue: "Text formatting",
+          })}
           style={{
             display: "flex",
             gap: 4,
@@ -162,7 +169,7 @@ export function SelectionBubbleMenu({ editor }: SelectionBubbleMenuProps) {
               <button
                 key={item.icon}
                 type="button"
-                aria-label={item.label}
+                aria-label={getToolbarItemLabel(t, item.icon, item.label)}
                 aria-pressed={active}
                 onMouseDown={(e) => {
                   e.preventDefault();

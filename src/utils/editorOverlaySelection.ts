@@ -7,6 +7,16 @@ export interface SavedEditorSelection {
 
 let savedSelection: SavedEditorSelection | null = null;
 let toolbarFormatOverlayOpen = false;
+let editorFormatOverlayPanelOpen = false;
+
+/** Stats / more-actions panel open — drives bookmark sync and bubble-menu suppression. */
+export function setEditorFormatOverlayPanelOpen(open: boolean): void {
+  editorFormatOverlayPanelOpen = open;
+}
+
+export function isEditorFormatOverlayPanelOpen(): boolean {
+  return editorFormatOverlayPanelOpen;
+}
 
 export function captureEditorOverlaySelection(editor: Editor): void {
   const { from, to } = editor.state.selection;
@@ -30,8 +40,15 @@ export function shouldUseSavedToolbarSelection(editor: Editor): boolean {
 export function attachEditorOverlaySelectionSync(editor: Editor): () => void {
   const onSelectionUpdate = () => {
     const { from, to } = editor.state.selection;
-    if (from !== to) {
+    if (from === to) return;
+
+    if (editorFormatOverlayPanelOpen) {
       savedSelection = { from, to };
+      return;
+    }
+
+    if (hasNonEmptySavedEditorOverlaySelection()) {
+      clearEditorOverlaySelection();
     }
   };
   editor.on("selectionUpdate", onSelectionUpdate);
@@ -52,7 +69,10 @@ export function syncEditorOverlaySelectionBeforeToolbarCommand(
     return;
   }
 
-  if (!hasSavedEditorOverlaySelection()) {
+  if (
+    !hasSavedEditorOverlaySelection() &&
+    editorFormatOverlayPanelOpen
+  ) {
     captureEditorOverlaySelection(editor);
   }
 }

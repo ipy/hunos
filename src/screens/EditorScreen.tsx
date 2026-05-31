@@ -28,6 +28,7 @@ import {
   attachEditorOverlaySelectionSync,
   captureEditorOverlaySelection,
   clearEditorOverlaySelection,
+  setEditorFormatOverlayPanelOpen,
   restoreEditorSelectionOnOverlayDismiss,
 } from "@/utils/editorOverlaySelection";
 import { shouldSuppressFocusModeEscape } from "@/utils/editorSuggestionMenu";
@@ -175,7 +176,9 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   }, []);
 
   useEffect(() => {
-    if (!showActions && !showStats) {
+    const overlayOpen = showActions || showStats;
+    setEditorFormatOverlayPanelOpen(overlayOpen);
+    if (!overlayOpen) {
       return;
     }
     const editor = editorInstanceRef.current;
