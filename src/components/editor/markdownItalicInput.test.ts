@@ -1,5 +1,5 @@
 import { markInputRule } from "@tiptap/core";
-import { underscoreInputRegex } from "@tiptap/extension-italic";
+import { starInputRegex, underscoreInputRegex } from "@tiptap/extension-italic";
 import { Schema } from "@tiptap/pm/model";
 import { EditorState, TextSelection } from "@tiptap/pm/state";
 import { describe, expect, it } from "vitest";
@@ -17,13 +17,15 @@ const schema = new Schema({
 
 const { doc, paragraph } = schema.nodes;
 
-const italicInputRule = markInputRule({
-  find: underscoreInputRegex,
-  type: schema.marks.italic,
-});
+function italicInputRuleFor(regex: RegExp) {
+  return markInputRule({
+    find: regex,
+    type: schema.marks.italic,
+  });
+}
 
-function applyItalicInputRule(markdown: string) {
-  const match = underscoreInputRegex.exec(markdown);
+function applyItalicInputRule(markdown: string, regex = underscoreInputRegex) {
+  const match = regex.exec(markdown);
   expect(match).not.toBeNull();
 
   const document = doc.create({}, [
@@ -40,6 +42,7 @@ function applyItalicInputRule(markdown: string) {
     selection: TextSelection.create(document, cursorPos),
   });
   const tr = state.tr;
+  const italicInputRule = italicInputRuleFor(regex);
 
   (
     italicInputRule.handler as (args: {
@@ -65,6 +68,19 @@ describe("italic markdown input", () => {
   it("converts _text_ to an italic mark", () => {
     const tr = applyItalicInputRule("_ItalicIter91_");
     expect(tr.doc.textContent).toBe("ItalicIter91");
+
+    const italicMark = tr.doc.resolve(1).marks();
+    expect(italicMark.some((mark) => mark.type.name === "italic")).toBe(true);
+  });
+
+  it("matches *text* at end of input (AC31-star-italic)", () => {
+    const match = starInputRegex.exec("*斜体*");
+    expect(match?.[2]).toBe("斜体");
+  });
+
+  it("converts *text* to an italic mark on space trigger (AC31-star-italic)", () => {
+    const tr = applyItalicInputRule("*斜体*", starInputRegex);
+    expect(tr.doc.textContent).toBe("斜体");
 
     const italicMark = tr.doc.resolve(1).marks();
     expect(italicMark.some((mark) => mark.type.name === "italic")).toBe(true);

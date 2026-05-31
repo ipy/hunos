@@ -4,6 +4,8 @@ import { TextSelection } from "@tiptap/pm/state";
 import {
   deleteColumn as pmDeleteColumn,
   goToNextCell,
+  isInTable,
+  removeColumn,
   selectedRect,
 } from "@tiptap/pm/tables";
 import { fixTableHeaderRowInTransaction } from "./tableHeaderPreserve";
@@ -118,6 +120,32 @@ function finalizeDeleteColumn(
   context.insertGuard = null;
 }
 
+/** Delete the pending inserted column even when selection moved back to the anchor (AC31-delete-trap). */
+function deleteGuardedInsertColumn(
+  state: EditorState,
+  dispatch: ((tr: Transaction) => void) | undefined,
+  context: ColumnCommandContext,
+): boolean {
+  if (!isInTable(state)) {
+    return false;
+  }
+  const rect = selectedRect(state);
+  if (rect.map.width <= 1) {
+    return false;
+  }
+  if (!dispatch) {
+    return true;
+  }
+
+  const deletedCol = context.insertedCol;
+  const tr = state.tr;
+  removeColumn(tr, rect, deletedCol);
+  fixTableHeaderRowInTransaction(tr, state);
+  finalizeDeleteColumn(tr, state, context, deletedCol);
+  dispatch(tr);
+  return true;
+}
+
 /** Run a prosemirror-tables column command, normalize header row types, then move selection into inserted columns. */
 export function withHeaderRowFix(
   command: (
@@ -128,15 +156,16 @@ export function withHeaderRowFix(
   context?: ColumnCommandContext,
 ) {
   return (state: EditorState, dispatch?: (tr: Transaction) => void) => {
-    if (
-      command === pmDeleteColumn &&
-      context?.insertGuard === "deleted-once"
-    ) {
+    if (command === pmDeleteColumn && context?.insertGuard === "deleted-once") {
       if (!dispatch) {
         return false;
       }
       context.insertGuard = null;
       return true;
+    }
+
+    if (command === pmDeleteColumn && context?.insertGuard === "inserted") {
+      return deleteGuardedInsertColumn(state, dispatch, context);
     }
 
     if (!dispatch) {

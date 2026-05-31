@@ -5,7 +5,10 @@ import {
   wrappingInputRule,
 } from "@tiptap/core";
 import Bold, { starInputRegex } from "@tiptap/extension-bold";
-import Italic, { underscoreInputRegex } from "@tiptap/extension-italic";
+import Italic, {
+  starInputRegex as italicStarInputRegex,
+  underscoreInputRegex,
+} from "@tiptap/extension-italic";
 import Code, { inputRegex as codeInputRegex } from "@tiptap/extension-code";
 import Highlight, {
   inputRegex as highlightInputRegex,
@@ -200,10 +203,14 @@ export const MarkdownBold = Bold.extend({
   },
 });
 
-/** Italic via `_` (Bear / GFM parity). */
+/** Italic via `_` or `*` (Bear / GFM parity). */
 export const MarkdownItalic = Italic.extend({
   addInputRules() {
     return [
+      markInputRule({
+        find: italicStarInputRegex,
+        type: this.type,
+      }),
       markInputRule({
         find: underscoreInputRegex,
         type: this.type,

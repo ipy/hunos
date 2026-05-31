@@ -382,6 +382,38 @@ describe("HunosTable column commands (TipTap tableHeader schema)", () => {
     expect(headerColumnCount(state)).toBe(3);
   });
 
+  it("AC31-delete-trap: refocus anchor header before delete removes inserted column", () => {
+    const context = createColumnCommandContext();
+    let state = buildPlaygroundTableState(
+      tiptapTableSchema,
+      "tableHeader",
+      "tableCell",
+      "tableRow",
+      "类型",
+    );
+
+    state = runColumnCommand(state, addColumnAfter, 1, context);
+    expect(headerTexts(state)).toEqual(["名称", "类型", "", "状态"]);
+    expect(selectedColumnIndex(state)).toBe(2);
+
+    state = state.apply(
+      state.tr.setSelection(
+        TextSelection.create(state.doc, findTextPos(state.doc, "类型")),
+      ),
+    );
+    expect(selectedColumnIndex(state)).toBe(1);
+
+    state = runColumnCommand(state, deleteColumn, null, context);
+
+    expect(headerTexts(state)).toEqual(["名称", "类型", "状态"]);
+    expect(headerColumnCount(state)).toBe(3);
+    const bodyRow = state.doc.firstChild?.child(1);
+    expect(bodyRow?.child(0).textContent).toBe("粗体");
+    expect(bodyRow?.child(1).textContent).toBe("样式");
+    expect(bodyRow?.child(2).textContent).toBe("就绪");
+    expect(context.insertGuard).toBe("deleted-once");
+  });
+
   it("AC30-keyboard-delete-parity: delete at seed width after round-trip is a no-op", () => {
     const context = createColumnCommandContext();
     let state = buildPlaygroundTableState(
