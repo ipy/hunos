@@ -1,72 +1,53 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { isTextSelection } from "@tiptap/core";
 import { BubbleMenuPlugin } from "@tiptap/extension-bubble-menu";
 import type { Editor } from "@tiptap/react";
 import type { EditorState } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 import { useTheme } from "@/theme/ThemeContext";
 import { Icon } from "@/components/common/Icon";
-import { INLINE_FORMAT_ITEMS } from "./inlineFormatActions";
-import { getToolbarItemLabel } from "./toolbarItemLabels";
 import {
   isEditorSuggestionMenuOpen,
   isLinkEditorOpen,
 } from "@/utils/editorSuggestionMenu";
 import { isEditorFormatOverlayPanelOpen } from "@/utils/editorOverlaySelection";
-import { useUIStore } from "@/store/uiStore";
 import { reparentBubbleMenuElement } from "./bubbleMenuHostUtils";
 import {
-  isFloatingSelectionToolbarVisible,
-  useAdaptiveLayout,
-} from "@/hooks/useAdaptiveLayout";
+  isTableControlContext,
+  TABLE_CONTROL_ITEMS,
+} from "./tableControlActions";
 
-const SELECTION_BUBBLE_MENU_KEY = "selectionBubbleMenu";
+const TABLE_BUBBLE_MENU_KEY = "tableBubbleMenu";
 
-function shouldShowSelectionBubbleMenu({
+function shouldShowTableBubbleMenu({
   editor,
   element,
   view,
-  state,
-  from,
-  to,
 }: {
   editor: Editor;
   element: HTMLElement;
   view: EditorView;
   state: EditorState;
-  from: number;
-  to: number;
 }): boolean {
-  const { doc, selection } = state;
-  const { empty } = selection;
-
-  const isEmptyTextBlock =
-    !doc.textBetween(from, to).length && isTextSelection(state.selection);
   const isChildOfMenu = element.contains(document.activeElement);
   const hasEditorFocus = view.hasFocus() || isChildOfMenu;
 
-  if (!hasEditorFocus || empty || isEmptyTextBlock || !editor.isEditable) {
-    return false;
-  }
+  if (!hasEditorFocus || !editor.isEditable) return false;
+  if (!isTableControlContext(editor)) return false;
   if (isEditorSuggestionMenuOpen()) return false;
   if (isLinkEditorOpen()) return false;
   if (isEditorFormatOverlayPanelOpen()) return false;
-  if (editor.isActive("codeBlock")) return false;
 
   return true;
 }
 
-interface SelectionBubbleMenuProps {
+interface TableBubbleMenuProps {
   editor: Editor | null;
 }
 
-export function SelectionBubbleMenu({ editor }: SelectionBubbleMenuProps) {
+export function TableBubbleMenu({ editor }: TableBubbleMenuProps) {
   const { t } = useTranslation();
   const theme = useTheme();
-  const layout = useAdaptiveLayout();
-  const linkEditorOpen = useUIStore((s) => s.linkEditorOpen);
-  const showFloatingToolbar = isFloatingSelectionToolbarVisible();
   const [, setTick] = useState(0);
   const rafRef = useRef<number>(0);
   const touchHandledRef = useRef(false);
@@ -76,15 +57,14 @@ export function SelectionBubbleMenu({ editor }: SelectionBubbleMenuProps) {
   useEffect(() => {
     const element = menuRef.current;
     const host = hostRef.current;
-    if (!editor || !element || editor.isDestroyed || !showFloatingToolbar)
-      return;
+    if (!editor || !element || editor.isDestroyed) return;
 
     const plugin = BubbleMenuPlugin({
-      pluginKey: SELECTION_BUBBLE_MENU_KEY,
+      pluginKey: TABLE_BUBBLE_MENU_KEY,
       editor,
       element,
       updateDelay: 100,
-      shouldShow: shouldShowSelectionBubbleMenu,
+      shouldShow: shouldShowTableBubbleMenu,
       tippyOptions: {
         duration: 150,
         placement: "top",
@@ -112,17 +92,17 @@ export function SelectionBubbleMenu({ editor }: SelectionBubbleMenuProps) {
     editor.registerPlugin(plugin);
     return () => {
       if (!editor.isDestroyed) {
-        editor.unregisterPlugin(SELECTION_BUBBLE_MENU_KEY);
+        editor.unregisterPlugin(TABLE_BUBBLE_MENU_KEY);
       }
       reparentBubbleMenuElement(host, element);
     };
-  }, [editor, showFloatingToolbar, layout]);
+  }, [editor]);
 
   useEffect(() => {
     if (!editor) return;
     const onUpdate = () => {
       cancelAnimationFrame(rafRef.current);
-      rafRef.current = requestAnimationFrame(() => setTick((t) => t + 1));
+      rafRef.current = requestAnimationFrame(() => setTick((n) => n + 1));
     };
     editor.on("transaction", onUpdate);
     editor.on("selectionUpdate", onUpdate);
@@ -134,26 +114,25 @@ export function SelectionBubbleMenu({ editor }: SelectionBubbleMenuProps) {
   }, [editor]);
 
   const handleAction = useCallback(
-    (action: (e: Editor) => void) => {
+    (action: (e: Editor) => boolean) => {
       if (!editor) return;
       action(editor);
-      setTick((t) => t + 1);
+      setTick((n) => n + 1);
     },
     [editor],
   );
 
-  if (!editor || !showFloatingToolbar) return null;
-
-  void linkEditorOpen;
+  if (!editor) return null;
 
   return (
     <div ref={hostRef} aria-hidden="true">
       <div ref={menuRef} style={{ visibility: "hidden" }}>
         <div
           role="toolbar"
-          aria-label={t("editor.toolbar.inlineFormatting", {
-            defaultValue: "Text formatting",
+          aria-label={t("editor.table.menuLabel", {
+            defaultValue: "Table controls",
           })}
+          data-testid="table-bubble-menu"
           style={{
             display: "flex",
             gap: 4,
@@ -170,18 +149,20 @@ export function SelectionBubbleMenu({ editor }: SelectionBubbleMenuProps) {
               : "0 4px 20px rgba(0,0,0,0.12)",
           }}
         >
-          {INLINE_FORMAT_ITEMS.map((item) => {
-            const active = item.isActive?.(editor) ?? false;
-            const ariaLabel = getToolbarItemLabel(t, item.icon, item.label);
+          {TABLE_CONTROL_ITEMS.map((item) => {
+            const enabled = item.canExecute(editor);
+            const ariaLabel = t(item.labelKey);
             return (
               <button
-                key={item.icon}
+                key={item.id}
                 type="button"
+                data-testid={`table-bubble-${item.id}`}
                 aria-label={ariaLabel}
                 title={ariaLabel}
-                aria-pressed={active}
+                disabled={!enabled}
                 onMouseDown={(e) => {
                   e.preventDefault();
+                  if (!enabled) return;
                   if (touchHandledRef.current) {
                     touchHandledRef.current = false;
                     return;
@@ -190,6 +171,7 @@ export function SelectionBubbleMenu({ editor }: SelectionBubbleMenuProps) {
                 }}
                 onTouchEnd={(e) => {
                   e.preventDefault();
+                  if (!enabled) return;
                   touchHandledRef.current = true;
                   handleAction(item.action);
                 }}
@@ -202,30 +184,26 @@ export function SelectionBubbleMenu({ editor }: SelectionBubbleMenuProps) {
                   minWidth: 44,
                   borderRadius: 8,
                   border: "none",
-                  cursor: "pointer",
-                  backgroundColor: active
-                    ? theme.colors.accentLight
-                    : "transparent",
+                  cursor: enabled ? "pointer" : "default",
+                  backgroundColor: "transparent",
+                  opacity: enabled ? 1 : 0.35,
                   touchAction: "manipulation",
                   transition: "background-color 0.15s ease",
                 }}
                 onMouseEnter={(e) => {
-                  if (!active)
+                  if (enabled) {
                     e.currentTarget.style.backgroundColor =
                       theme.colors.surfaceHover;
+                  }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = active
-                    ? theme.colors.accentLight
-                    : "transparent";
+                  e.currentTarget.style.backgroundColor = "transparent";
                 }}
               >
                 <Icon
                   name={item.icon}
                   size={18}
-                  color={
-                    active ? theme.colors.accent : theme.colors.textSecondary
-                  }
+                  color={theme.colors.textSecondary}
                 />
               </button>
             );

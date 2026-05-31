@@ -150,8 +150,16 @@
       "prompt": "链接地址",
       "placeholder": "https://example.com",
       "apply": "应用",
+      "cancel": "取消",
       "remove": "移除",
       "invalidUrl": "请输入有效 URL（例如 https://example.com）"
+    },
+    "table": {
+      "menuLabel": "表格操作",
+      "addRowBelow": "在下方插入行",
+      "addColumnRight": "在右侧插入列",
+      "deleteRow": "删除行",
+      "deleteColumn": "删除列"
     },
     "image": {
       "tooLarge": "图片过大（最大 5 MB）"

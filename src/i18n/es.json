@@ -149,8 +149,16 @@
       "prompt": "URL del enlace",
       "placeholder": "https://example.com",
       "apply": "Aplicar",
+      "cancel": "Cancelar",
       "remove": "Quitar",
       "invalidUrl": "Introduce una URL válida (p. ej. https://example.com)"
+    },
+    "table": {
+      "menuLabel": "Controles de tabla",
+      "addRowBelow": "Añadir fila abajo",
+      "addColumnRight": "Añadir columna a la derecha",
+      "deleteRow": "Eliminar fila",
+      "deleteColumn": "Eliminar columna"
     },
     "image": {
       "tooLarge": "La imagen es demasiado grande (máx. 5 MB)"

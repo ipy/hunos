@@ -150,8 +150,16 @@
       "prompt": "Link URL",
       "placeholder": "https://example.com",
       "apply": "Apply",
+      "cancel": "Cancel",
       "remove": "Remove",
       "invalidUrl": "Please enter a valid URL (e.g. https://example.com)"
+    },
+    "table": {
+      "menuLabel": "Table controls",
+      "addRowBelow": "Add row below",
+      "addColumnRight": "Add column right",
+      "deleteRow": "Delete row",
+      "deleteColumn": "Delete column"
     },
     "image": {
       "tooLarge": "Image is too large (max 5 MB)"

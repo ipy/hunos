@@ -55,6 +55,7 @@ import { resetEditorHistory } from "./resetEditorHistory";
 import { syncNoteContentInEditor } from "./noteSwitchContentUtils";
 import ListItem from "@tiptap/extension-list-item";
 import { SelectionBubbleMenu } from "./SelectionBubbleMenu";
+import { TableBubbleMenu } from "./TableBubbleMenu";
 import { LinkEditorBubble } from "./LinkEditorBubble";
 import History from "@tiptap/extension-history";
 import { useTranslation } from "react-i18next";
@@ -202,8 +203,7 @@ export function TiptapEditor({
         nested: true,
         a11y: {
           checkboxLabel: (node, checked) => {
-            const text =
-              node.textContent.trim() || i18n.t("editor.task.empty");
+            const text = node.textContent.trim() || i18n.t("editor.task.empty");
             return checked
               ? i18n.t("editor.task.checkboxDone", { text })
               : i18n.t("editor.task.checkboxOpen", { text });
@@ -618,6 +618,7 @@ export function TiptapEditor({
         <EditorContent editor={editor} />
       </div>
       <SelectionBubbleMenu editor={editor} />
+      <TableBubbleMenu editor={editor} />
       <LinkEditorBubble editor={editor} />
     </>
   );

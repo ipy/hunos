@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "@/theme/ThemeContext";
 import { Icon } from "@/components/common/Icon";
 import { useUIStore } from "@/store/uiStore";
+import { isMobileViewport } from "@/hooks/useAdaptiveLayout";
 import {
   applyLinkUrl,
   getLinkEditorInitialUrl,
@@ -29,6 +30,7 @@ export function LinkEditorBubble({ editor }: LinkEditorBubbleProps) {
   const [url, setUrl] = useState("");
   const [showRemove, setShowRemove] = useState(false);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
+  const [useModalLayout, setUseModalLayout] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -37,7 +39,10 @@ export function LinkEditorBubble({ editor }: LinkEditorBubbleProps) {
       setAnchorRect(null);
       return;
     }
-    setAnchorRect(getLinkEditorAnchorRect(editor));
+    setUseModalLayout(isMobileViewport());
+    if (!isMobileViewport()) {
+      setAnchorRect(getLinkEditorAnchorRect(editor));
+    }
   }, [editor, linkEditorOpen]);
 
   useEffect(() => {
@@ -69,7 +74,7 @@ export function LinkEditorBubble({ editor }: LinkEditorBubbleProps) {
 
   useLayoutEffect(() => {
     const panel = panelRef.current;
-    if (!panel || !anchorRect) return;
+    if (!panel || useModalLayout || !anchorRect) return;
 
     const margin = 8;
     let top = anchorRect.bottom + margin;
@@ -94,7 +99,8 @@ export function LinkEditorBubble({ editor }: LinkEditorBubbleProps) {
 
     panel.style.top = `${top}px`;
     panel.style.left = `${left}px`;
-  }, [anchorRect, url, showRemove]);
+    panel.style.transform = "";
+  }, [anchorRect, url, showRemove, useModalLayout]);
 
   const handleClose = useCallback(() => {
     closeLinkEditor();
@@ -133,94 +139,158 @@ export function LinkEditorBubble({ editor }: LinkEditorBubbleProps) {
 
   if (!editor || !linkEditorOpen) return null;
 
-  return (
-    <div
-      ref={panelRef}
-      data-hunos-link-editor="true"
-      data-testid="link-editor-bubble"
-      role="dialog"
-      aria-label={t("editor.link.prompt")}
-      style={{
+  const panelStyle: React.CSSProperties = useModalLayout
+    ? {
         position: "fixed",
         zIndex: 250,
-        display: "flex",
-        alignItems: "center",
-        gap: 6,
-        padding: "6px 8px",
-        borderRadius: 10,
-        border: `1px solid ${theme.colors.borderLight}`,
-        backgroundColor: theme.isDark
-          ? "rgba(28,28,30,0.98)"
-          : "rgba(255,255,255,0.98)",
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
-        boxShadow: theme.isDark
-          ? "0 4px 20px rgba(0,0,0,0.45)"
-          : "0 4px 20px rgba(0,0,0,0.12)",
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+        width: "min(420px, calc(100vw - 32px))",
+      }
+    : {
+        position: "fixed",
+        zIndex: 250,
         minWidth: 280,
         maxWidth: "min(420px, calc(100vw - 24px))",
-      }}
-      onMouseDown={(e) => {
-        e.preventDefault();
-      }}
-    >
-      <Icon name="link" size={16} color={theme.colors.textTertiary} />
-      <input
-        ref={inputRef}
-        type="text"
-        inputMode="url"
-        autoComplete="off"
-        spellCheck={false}
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            handleApply();
-          }
-          if (e.key === "Escape") {
-            e.preventDefault();
-            handleClose();
-          }
+      };
+
+  return (
+    <>
+      <div
+        data-testid="link-editor-backdrop"
+        aria-hidden="true"
+        onMouseDown={(e) => {
+          e.preventDefault();
+          handleClose();
         }}
-        placeholder={t("editor.link.placeholder")}
-        aria-label={t("editor.link.prompt")}
-        data-testid="link-editor-input"
         style={{
-          flex: 1,
-          border: "none",
-          outline: "none",
-          background: "transparent",
-          fontSize: 14,
-          color: theme.colors.text,
-          minWidth: 0,
+          position: "fixed",
+          inset: 0,
+          zIndex: 249,
+          backgroundColor: theme.isDark
+            ? "rgba(0,0,0,0.45)"
+            : "rgba(0,0,0,0.25)",
         }}
       />
-      {showRemove && (
-        <button
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={handleRemove}
-          aria-label={t("editor.link.remove")}
-          title={t("editor.link.remove")}
-          data-testid="link-editor-remove"
-          style={secondaryButtonStyle(theme)}
-        >
-          {t("editor.link.remove")}
-        </button>
-      )}
-      <button
-        type="button"
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={handleApply}
-        aria-label={t("editor.link.apply")}
-        title={t("editor.link.apply")}
-        data-testid="link-editor-apply"
-        style={primaryButtonStyle(theme)}
+      <div
+        ref={panelRef}
+        data-hunos-link-editor="true"
+        data-testid="link-editor-bubble"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("editor.link.prompt")}
+        style={{
+          ...panelStyle,
+          display: "flex",
+          flexDirection: useModalLayout ? "column" : "row",
+          alignItems: useModalLayout ? "stretch" : "center",
+          gap: useModalLayout ? 10 : 6,
+          padding: useModalLayout ? "14px 16px" : "6px 8px",
+          borderRadius: useModalLayout ? 14 : 10,
+          border: `1px solid ${theme.colors.borderLight}`,
+          backgroundColor: theme.isDark
+            ? "rgba(28,28,30,0.98)"
+            : "rgba(255,255,255,0.98)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          boxShadow: theme.isDark
+            ? "0 4px 20px rgba(0,0,0,0.45)"
+            : "0 4px 20px rgba(0,0,0,0.12)",
+        }}
+        onMouseDown={(e) => {
+          e.preventDefault();
+        }}
       >
-        {t("editor.link.apply")}
-      </button>
-    </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            flex: 1,
+            minWidth: 0,
+          }}
+        >
+          <Icon name="link" size={16} color={theme.colors.textTertiary} />
+          <input
+            ref={inputRef}
+            type="text"
+            inputMode="url"
+            autoComplete="off"
+            spellCheck={false}
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleApply();
+              }
+              if (e.key === "Escape") {
+                e.preventDefault();
+                handleClose();
+              }
+            }}
+            placeholder={t("editor.link.placeholder")}
+            aria-label={t("editor.link.prompt")}
+            data-testid="link-editor-input"
+            style={{
+              flex: 1,
+              border: "none",
+              outline: "none",
+              background: "transparent",
+              fontSize: 14,
+              color: theme.colors.text,
+              minWidth: 0,
+            }}
+          />
+        </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: useModalLayout ? "flex-end" : "center",
+            gap: 6,
+            flexShrink: 0,
+          }}
+        >
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={handleClose}
+            aria-label={t("editor.link.cancel")}
+            title={t("editor.link.cancel")}
+            data-testid="link-editor-cancel"
+            style={secondaryButtonStyle(theme)}
+          >
+            {t("editor.link.cancel")}
+          </button>
+          {showRemove && (
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={handleRemove}
+              aria-label={t("editor.link.remove")}
+              title={t("editor.link.remove")}
+              data-testid="link-editor-remove"
+              style={secondaryButtonStyle(theme)}
+            >
+              {t("editor.link.remove")}
+            </button>
+          )}
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={handleApply}
+            aria-label={t("editor.link.apply")}
+            title={t("editor.link.apply")}
+            data-testid="link-editor-apply"
+            style={primaryButtonStyle(theme)}
+          >
+            {t("editor.link.apply")}
+          </button>
+        </div>
+      </div>
+    </>
   );
 }
 
