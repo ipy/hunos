@@ -910,6 +910,45 @@ export function formatPlaygroundMatchesCanonicalSeed(
   return normalizedStored === normalizedCanonical;
 }
 
+/** True when persisted or pending title differs from the locale seed title. */
+export function playgroundTitleDriftedFromCanonical(
+  storedTitle: string,
+  pendingTitleDraft: string | null,
+  canonicalTitle: string,
+): boolean {
+  if (storedTitle.trim() !== canonicalTitle) {
+    return true;
+  }
+  if (
+    pendingTitleDraft != null &&
+    pendingTitleDraft.trim() !== canonicalTitle
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/** True when the live title field shows a rename not yet reflected in storedTitle. */
+export function playgroundLiveTitleDriftedFromCanonical(
+  displayTitle: string,
+  storedTitle: string,
+  pendingTitleDraft: string | null,
+  canonicalTitle: string,
+): boolean {
+  if (playgroundTitleDriftedFromCanonical(storedTitle, pendingTitleDraft, canonicalTitle)) {
+    return true;
+  }
+  if (pendingTitleDraft != null) {
+    return false;
+  }
+  const trimmedDisplay = displayTitle.trim();
+  return (
+    trimmedDisplay !== storedTitle.trim() &&
+    trimmedDisplay !== canonicalTitle &&
+    trimmedDisplay !== ""
+  );
+}
+
 /** Show restore when playground attrs are present but title or body drifted from seed. */
 export function formatPlaygroundNeedsRestore(
   title: string,
@@ -1020,8 +1059,28 @@ export function shouldShowPlaygroundRestoreButton(options: {
     return false;
   }
 
+  if (
+    playgroundTitleDriftedFromCanonical(
+      storedTitle,
+      pendingTitleDraft,
+      canonicalTitle,
+    )
+  ) {
+    return true;
+  }
+
   if (isCanonical) {
     if (pendingDraftContent != null) {
+      if (
+        playgroundLiveTitleDriftedFromCanonical(
+          displayTitle,
+          storedTitle,
+          pendingTitleDraft,
+          canonicalTitle,
+        )
+      ) {
+        return true;
+      }
       if (
         playgroundFormatQaDraftHidesRestoreChip(
           pendingDraftContent,
@@ -1039,13 +1098,18 @@ export function shouldShowPlaygroundRestoreButton(options: {
         fallbackLocale: seedLocale,
       });
     }
-    if (
-      pendingTitleDraft != null &&
-      pendingTitleDraft.trim() !== canonicalTitle
-    ) {
-      return true;
-    }
     return false;
+  }
+
+  if (
+    playgroundLiveTitleDriftedFromCanonical(
+      displayTitle,
+      storedTitle,
+      pendingTitleDraft,
+      canonicalTitle,
+    )
+  ) {
+    return true;
   }
 
   if (pendingDraftContent != null) {

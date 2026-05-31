@@ -44,6 +44,8 @@ import {
   playgroundFormatQaDraftHidesRestoreChip,
   readFormatPlaygroundCanonicalRow,
   playgroundPersistedContentForRow,
+  playgroundTitleDriftedFromCanonical,
+  playgroundLiveTitleDriftedFromCanonical,
   playgroundWriteRegressesCanonicalStored,
   resolvePlaygroundSeedLocale,
   shouldShowPlaygroundRestoreButton,
@@ -583,6 +585,8 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         return { content: null, persisted: titleOk };
       }
 
+      stashEditorAutosaveSnapshot(activeNoteId, json);
+
       const contentOk = await persistEditorContent(
         activeNoteId,
         json,
@@ -592,10 +596,10 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         },
       );
       if (contentOk) {
+        clearStashedEditorAutosave(activeNoteId);
         pendingContentRef.current = null;
       } else {
-        stashEditorAutosaveSnapshot(activeNoteId, json);
-        pendingContentRef.current = null;
+        pendingContentRef.current = json;
       }
       return { content: json, persisted: titleOk && contentOk };
     }, [
@@ -978,19 +982,37 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       );
       const displayTitle = titleValue.trim() || note.title;
       const pendingTitle = pendingTitleRef.current;
-      const titleDrifted =
-        row != null &&
-        ((pendingTitle != null && pendingTitle.trim() !== row.canonicalTitle) ||
-          (pendingTitle == null &&
-            displayTitle.trim() !== row.canonicalTitle &&
-            displayTitle.trim() !== ""));
+      const seedLocale =
+        row?.seedLocale ??
+        resolvePlaygroundSeedLocale(noteContentForEditor, settings.locale);
       if (
-        !titleDrifted &&
+        row != null &&
+        playgroundTitleDriftedFromCanonical(
+          note.title,
+          pendingTitle,
+          row.canonicalTitle,
+        )
+      ) {
+        return true;
+      }
+      if (
+        row != null &&
+        playgroundLiveTitleDriftedFromCanonical(
+          displayTitle,
+          note.title,
+          pendingTitle,
+          row.canonicalTitle,
+        )
+      ) {
+        return true;
+      }
+      if (
+        row != null &&
         playgroundFormatQaDraftHidesRestoreChip(
           pendingDraftContent,
           note.title,
           noteContentForEditor,
-          settings.locale,
+          seedLocale,
         )
       ) {
         return false;

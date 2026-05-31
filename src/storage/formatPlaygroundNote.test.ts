@@ -28,6 +28,7 @@ import {
   comparePlaygroundStructuralDrift,
   normalizePlaygroundNodeTreeSnapshot,
   resolvePlaygroundSeedLocale,
+  playgroundTitleDriftedFromCanonical,
   shouldShowPlaygroundRestoreButton,
   restoreFormatPlaygroundContent,
 } from "./formatPlaygroundNote";
@@ -2337,6 +2338,233 @@ describe("playgroundFormatQaDraftHidesRestoreChip", () => {
         storedTitle: "格式试炼场",
         storedContent: marked,
         pendingDraftContent: null,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("iter 22 restore chip and persist policy", () => {
+  const seed = JSON.stringify(buildPlaygroundContent("zh"));
+
+  function stripTrailingEmptyParagraphs(parsed: {
+    content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+  }) {
+    while (
+      parsed.content.at(-1)?.type === "paragraph" &&
+      !parsed.content.at(-1)?.content?.length
+    ) {
+      parsed.content.pop();
+    }
+  }
+
+  function listsIndex(parsed: {
+    content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+  }) {
+    return parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
+    );
+  }
+
+  it("allows full QA persist (Q, Z, T22-doc-end-v2) over canonical seed", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{ type?: string; text?: string }>;
+      }>;
+    };
+    const introParagraph = parsed.content.find(
+      (node) =>
+        node.type === "paragraph" &&
+        node.content?.[0]?.text?.includes("在这一篇笔记里测试所有格式"),
+    );
+    if (introParagraph?.content?.[0]) {
+      introParagraph.content[0].text = `${introParagraph.content[0].text}Q`;
+    }
+    const idx = listsIndex(parsed);
+    const firstBulletText =
+      parsed.content[idx + 1]?.content?.[0]?.content?.[0]?.content?.[0];
+    if (firstBulletText) {
+      firstBulletText.text = `${firstBulletText.text}Z`;
+    }
+    stripTrailingEmptyParagraphs(parsed);
+    const lastParagraph = parsed.content[parsed.content.length - 1];
+    if (lastParagraph?.type === "paragraph" && lastParagraph.content?.[0]) {
+      lastParagraph.content[0].text = `${lastParagraph.content[0].text ?? ""} T22-doc-end-v2`;
+    }
+    const edited = JSON.stringify(parsed);
+
+    expect(comparePlaygroundStructuralDrift(edited, seed, "zh")).toBe(false);
+    expect(
+      playgroundWriteRegressesCanonicalStored("格式试炼场", seed, edited, "zh"),
+    ).toBe(false);
+    expect(
+      playgroundFormatQaDraftHidesRestoreChip(edited, "格式试炼场", seed, "zh"),
+    ).toBe(true);
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        pendingDraftContent: edited,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
+
+  it("hides chip for trailing T22-doc-end only", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{ type?: string; text?: string }>;
+      }>;
+    };
+    stripTrailingEmptyParagraphs(parsed);
+    const lastParagraph = parsed.content[parsed.content.length - 1];
+    if (lastParagraph?.type === "paragraph" && lastParagraph.content?.[0]) {
+      lastParagraph.content[0].text = `${lastParagraph.content[0].text ?? ""} T22-doc-end`;
+    }
+    const edited = JSON.stringify(parsed);
+
+    expect(
+      playgroundFormatQaDraftHidesRestoreChip(edited, "格式试炼场", seed, "zh"),
+    ).toBe(true);
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        pendingDraftContent: edited,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
+
+  it("shows chip for renamed stored title even when pending draft is mark-only", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          content?: Array<{
+            content?: Array<{ text?: string; marks?: unknown[] }>;
+          }>;
+        }>;
+      }>;
+    };
+    const idx = listsIndex(parsed);
+    const firstItemText =
+      parsed.content[idx + 1]?.content?.[0]?.content?.[0]?.content?.[0];
+    if (firstItemText) {
+      firstItemText.marks = [{ type: "bold" }];
+    }
+    const marked = JSON.stringify(parsed);
+
+    expect(
+      playgroundTitleDriftedFromCanonical(
+        "T22-Drift",
+        "T22-Drift",
+        null,
+        "格式试炼场",
+      ),
+    ).toBe(true);
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "T22-Drift",
+        storedTitle: "T22-Drift",
+        storedContent: seed,
+        pendingDraftContent: marked,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(true);
+  });
+
+  it("shows chip for combined T22-Drift title and T22-MIXED marker", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    const idx = listsIndex(parsed);
+    parsed.content.splice(idx + 1, 0, {
+      type: "paragraph",
+      content: [{ type: "text", text: "T22-MIXED-marker" }],
+    });
+    const drifted = JSON.stringify(parsed);
+
+    expect(formatPlaygroundNeedsRestore("T22-Drift", drifted, "zh")).toBe(true);
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "T22-Drift",
+        storedTitle: "T22-Drift",
+        storedContent: drifted,
+        pendingDraftContent: null,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(true);
+  });
+
+  it("hides chip for post-restore bold on 无序列表第一项", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          content?: Array<{
+            content?: Array<{ text?: string; marks?: unknown[] }>;
+          }>;
+        }>;
+      }>;
+    };
+    const idx = listsIndex(parsed);
+    const firstItemText =
+      parsed.content[idx + 1]?.content?.[0]?.content?.[0]?.content?.[0];
+    if (firstItemText) {
+      firstItemText.marks = [{ type: "bold" }];
+    }
+    const marked = JSON.stringify(parsed);
+
+    expect(
+      playgroundFormatQaMarkOnlyDrift(marked, "格式试炼场", seed, "zh"),
+    ).toBe(true);
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        pendingDraftContent: marked,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
+
+  it("hides chip for post-restore italic on 无序列表第二项", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          content?: Array<{
+            content?: Array<{ text?: string; marks?: unknown[] }>;
+          }>;
+        }>;
+      }>;
+    };
+    const idx = listsIndex(parsed);
+    const bulletList = parsed.content[idx + 1];
+    for (const listItem of bulletList?.content ?? []) {
+      const paragraph = listItem.content?.[0];
+      const textNode = paragraph?.content?.find(
+        (node) => node.text === "无序列表第二项",
+      );
+      if (textNode) {
+        textNode.marks = [{ type: "italic" }];
+        break;
+      }
+    }
+    const marked = JSON.stringify(parsed);
+
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        pendingDraftContent: marked,
         fallbackLocale: "zh",
       }),
     ).toBe(false);
