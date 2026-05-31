@@ -307,4 +307,44 @@ describe("playground restore visibility", () => {
       }),
     ).toBe(false);
   });
+
+  it("hides restore after autosave when persisted row only adds inline marks", () => {
+    const parsed = JSON.parse(seedContent) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          content?: Array<{
+            content?: Array<{
+              type?: string;
+              text?: string;
+              marks?: unknown[];
+            }>;
+          }>;
+        }>;
+      }>;
+    };
+    const listsIndex = parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
+    );
+    const firstItemParagraph =
+      parsed.content[listsIndex + 1]?.content?.[0]?.content?.[0];
+    if (firstItemParagraph) {
+      firstItemParagraph.content = [
+        { type: "text", text: "无序列表第一项", marks: [{ type: "bold" }] },
+      ];
+    }
+    const marked = JSON.stringify(parsed);
+    expect(formatPlaygroundNeedsRestore("格式试炼场", marked, "zh")).toBe(
+      false,
+    );
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: marked,
+        pendingDraftContent: null,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
 });

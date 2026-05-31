@@ -334,39 +334,11 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         return;
       }
 
-      if (
-        note &&
-        isFormatPlaygroundNote(note.title, noteContentForEditor) &&
-        formatPlaygroundMatchesCanonicalSeed(
-          note.title,
-          noteContentForEditor,
-          resolvePlaygroundSeedLocale(noteContentForEditor, settings.locale),
-        )
-      ) {
+      if (note && isFormatPlaygroundNote(note.title, noteContentForEditor)) {
         const playgroundLocale = resolvePlaygroundSeedLocale(
           noteContentForEditor,
           settings.locale,
         );
-        const storedFingerprint = normalizePlaygroundContentSnapshot(
-          noteContentForEditor,
-          playgroundLocale,
-        );
-        const liveFingerprint = normalizePlaygroundContentSnapshot(
-          json,
-          playgroundLocale,
-        );
-        if (liveFingerprint === storedFingerprint) {
-          const hadPending = pendingContentRef.current != null;
-          pendingContentRef.current = null;
-          if (saveTimeoutRef.current) {
-            clearTimeout(saveTimeoutRef.current);
-            saveTimeoutRef.current = undefined;
-          }
-          if (hadPending) {
-            setRestoreEditorSyncTick((tick) => tick + 1);
-          }
-          return;
-        }
         if (
           playgroundEditorMarkOnlyDriftFromStored(
             json,
@@ -385,6 +357,34 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
             }, 400);
           }
           return;
+        }
+        if (
+          formatPlaygroundMatchesCanonicalSeed(
+            note.title,
+            noteContentForEditor,
+            playgroundLocale,
+          )
+        ) {
+          const storedFingerprint = normalizePlaygroundContentSnapshot(
+            noteContentForEditor,
+            playgroundLocale,
+          );
+          const liveFingerprint = normalizePlaygroundContentSnapshot(
+            json,
+            playgroundLocale,
+          );
+          if (liveFingerprint === storedFingerprint) {
+            const hadPending = pendingContentRef.current != null;
+            pendingContentRef.current = null;
+            if (saveTimeoutRef.current) {
+              clearTimeout(saveTimeoutRef.current);
+              saveTimeoutRef.current = undefined;
+            }
+            if (hadPending) {
+              setRestoreEditorSyncTick((tick) => tick + 1);
+            }
+            return;
+          }
         }
       }
 

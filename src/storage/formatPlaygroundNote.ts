@@ -729,7 +729,21 @@ export function formatPlaygroundNeedsRestore(
 ): boolean {
   const body = content ?? "";
   if (!isFormatPlaygroundNote(title, body)) return false;
-  return !formatPlaygroundMatchesCanonicalSeed(title, body, fallbackLocale);
+  if (formatPlaygroundMatchesCanonicalSeed(title, body, fallbackLocale)) {
+    return false;
+  }
+
+  const seedLocale = resolvePlaygroundSeedLocale(body, fallbackLocale);
+  if (title !== getFormatPlaygroundTitle(seedLocale)) {
+    return true;
+  }
+
+  const canonical = JSON.stringify(buildPlaygroundContent(seedLocale));
+  if (playgroundEditorMarkOnlyDriftFromStored(body, canonical, seedLocale)) {
+    return false;
+  }
+
+  return true;
 }
 
 function playgroundLiveContentNeedsRestore(options: {

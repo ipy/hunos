@@ -1583,7 +1583,11 @@ describe("formatPlayground restore gating", () => {
         type: string;
         content?: Array<{
           content?: Array<{
-            content?: Array<{ type?: string; text?: string; marks?: unknown[] }>;
+            content?: Array<{
+              type?: string;
+              text?: string;
+              marks?: unknown[];
+            }>;
           }>;
         }>;
       }>;
@@ -1612,6 +1616,86 @@ describe("formatPlayground restore gating", () => {
         fallbackLocale: "zh",
       }),
     ).toBe(false);
+  });
+
+  it("does not need restore when persisted row only adds inline marks to seed", () => {
+    const seed = JSON.stringify(buildPlaygroundContent("zh"));
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          content?: Array<{
+            content?: Array<{
+              type?: string;
+              text?: string;
+              marks?: unknown[];
+            }>;
+          }>;
+        }>;
+      }>;
+    };
+    const listsIndex = parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
+    );
+    const firstItemParagraph =
+      parsed.content[listsIndex + 1]?.content?.[0]?.content?.[0];
+    if (firstItemParagraph) {
+      firstItemParagraph.content = [
+        { type: "text", text: "无序列表第一项", marks: [{ type: "bold" }] },
+      ];
+    }
+    const marked = JSON.stringify(parsed);
+    expect(formatPlaygroundNeedsRestore("格式试炼场", marked, "zh")).toBe(
+      false,
+    );
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: marked,
+        pendingDraftContent: null,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
+
+  it("still needs restore for renamed title even when body is mark-only drift", () => {
+    const seed = JSON.stringify(buildPlaygroundContent("zh"));
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          content?: Array<{
+            content?: Array<{
+              type?: string;
+              text?: string;
+              marks?: unknown[];
+            }>;
+          }>;
+        }>;
+      }>;
+    };
+    const listsIndex = parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
+    );
+    const firstItemParagraph =
+      parsed.content[listsIndex + 1]?.content?.[0]?.content?.[0];
+    if (firstItemParagraph) {
+      firstItemParagraph.content = [
+        { type: "text", text: "无序列表第一项", marks: [{ type: "bold" }] },
+      ];
+    }
+    const marked = JSON.stringify(parsed);
+    expect(formatPlaygroundNeedsRestore("T19-Drift", marked, "zh")).toBe(true);
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "T19-Drift",
+        storedTitle: "T19-Drift",
+        storedContent: marked,
+        pendingDraftContent: null,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(true);
   });
 
   it("hides restore for canonical zh seed when pending draft only adds inline marks", () => {
