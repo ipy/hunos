@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   buildPlaygroundContent,
@@ -155,6 +157,29 @@ describe("deriveNoteListPreview", () => {
     });
     expect(preview).toBe(getFormatPlaygroundIntroExcerpt("en"));
     expect(showRestore).toBe(false);
+  });
+
+  it("uses seed intro for TipTap editor echo persisted body (AC34-list-preview)", () => {
+    const raw = readFileSync(
+      join(process.cwd(), "src/storage/fixtures/playground-zh-tiptap-echo.json"),
+      "utf-8",
+    );
+    const parsed = JSON.parse(raw);
+    const content = JSON.stringify(parsed);
+    const contentPlain = extractPlainTextFromTiptap(parsed);
+    const preview = deriveNoteListPreview(
+      {
+        title: "格式试炼场",
+        content,
+        contentPlain,
+      },
+      "格式示例",
+      "zh",
+    );
+    expect(preview).toBe(getFormatPlaygroundIntroExcerpt("zh"));
+    expect(preview).toContain("在这一篇笔记里测试所有格式");
+    expect(preview).not.toContain("桌面快捷键");
+    expect(preview).not.toContain("Cmd+B");
   });
 
   it("uses seed intro when only title drifted (AC34-list-preview)", () => {

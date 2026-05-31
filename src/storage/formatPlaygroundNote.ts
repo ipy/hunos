@@ -1841,6 +1841,39 @@ export function formatPlaygroundNeedsRestore(
   return true;
 }
 
+/** True when the note list should show the locale seed intro (not contentPlain tail). */
+export function playgroundRowShowsSeedListPreview(
+  title: string,
+  rawContent: string,
+  fallbackLocale: Locale,
+): boolean {
+  const storedRow = readFormatPlaygroundCanonicalRow(
+    title,
+    rawContent,
+    fallbackLocale,
+  );
+  if (!storedRow) {
+    return false;
+  }
+  if (storedRow.isCanonical) {
+    return true;
+  }
+  if (
+    formatPlaygroundMatchesCanonicalSeed(
+      storedRow.canonicalTitle,
+      storedRow.rowContent,
+      storedRow.seedLocale,
+    )
+  ) {
+    return true;
+  }
+  return !formatPlaygroundNeedsRestore(
+    storedRow.canonicalTitle,
+    storedRow.rowContent,
+    storedRow.seedLocale,
+  );
+}
+
 function playgroundLiveContentNeedsRestore(options: {
   displayTitle: string;
   storedContent: string;
