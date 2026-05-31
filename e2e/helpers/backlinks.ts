@@ -1,14 +1,23 @@
 import { expect, type Page } from "@playwright/test";
+import { backlinkSnippetHasRawMarkdown } from "../../src/components/backlinks/formatBacklinkSnippet";
+import { noteHashForId } from "../../src/utils/noteRoute";
 import { PROJECT_DOCS_NOTE_TITLE } from "./playground";
 import { openNoteFromList } from "./notes";
 
-/** Markdown delimiters that must not appear in formatted backlink snippets. */
-export const BACKLINK_SNIPPET_RAW_MARKDOWN_RE =
-  /\*\*|__|~~|==|\[\[|\]\]|!\[|\]\(|`[^`]+`|(?<!\*)\*(?!\*)|(?<!_)_(?!_)/;
-
 export function assertBacklinkSnippetPlainText(text: string): void {
   expect(text.length).toBeGreaterThan(0);
-  expect(text).not.toMatch(BACKLINK_SNIPPET_RAW_MARKDOWN_RE);
+  expect(backlinkSnippetHasRawMarkdown(text)).toBe(false);
+}
+
+/** Assert location.hash references the target note id (AC61-backlinks-nav-hash). */
+export async function expectBacklinkNavigationHash(
+  page: Page,
+  expectedNoteId: string,
+): Promise<void> {
+  const expectedHash = noteHashForId(expectedNoteId);
+  await expect
+    .poll(() => page.evaluate(() => window.location.hash))
+    .toBe(expectedHash);
 }
 
 export async function scrollEditorToBacklinks(page: Page): Promise<void> {

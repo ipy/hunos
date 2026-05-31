@@ -35,7 +35,7 @@ function findWikiLinkTitlesInTagsParagraph(locale: "zh" | "en"): string[] {
 
 describe("iteration 57 — backlinks i18n (AC57-backlinks-i18n)", () => {
   it("localizes section headings in zh-CN without English fallbacks", () => {
-    expect(zh.editor.backlinks.title).toBe("反向链接");
+    expect(zh.editor.backlinks.title).toBe("链接");
     expect(zh.editor.backlinks.outgoing).toBe("链接到");
     expect(zh.editor.backlinks.incoming).toBe("引用自");
     expect(Object.keys(zh.editor.backlinks)).toEqual(

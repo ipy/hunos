@@ -9,14 +9,105 @@ import {
   clickEachIncomingBacklinkByFreshTestId,
   collectIncomingBacklinkRowTestIds,
   expandBacklinksPanelIfCollapsed,
+  expectBacklinkNavigationHash,
   openProjectDocsWithBacklinksPanel,
   waitForIncomingBacklinkRowCount,
 } from "../helpers/backlinks";
+import { noteIdFromListItem, openNoteFromList } from "../helpers/notes";
 
 const DESKTOP_VIEWPORT = { width: 1280, height: 720 } as const;
 
-test.describe("backlinks footer — iter 59", () => {
-  test.describe("mobile 606×844", () => {
+const BACKLINKS_VIEWPORTS = [
+  { label: "mobile 606×844", viewport: GATE_VIEWPORT },
+  { label: "desktop", viewport: DESKTOP_VIEWPORT },
+] as const;
+
+test.describe("backlinks footer — iter 61", () => {
+  for (const { label, viewport } of BACKLINKS_VIEWPORTS) {
+    test.describe(label, () => {
+      test.use({ viewport });
+
+      test.beforeEach(async ({ page }) => {
+        await openProjectDocsWithBacklinksPanel(page);
+      });
+
+      test("AC60-backlinks-stable-testid: row testids survive note switch and graph reload", async ({
+        page,
+      }) => {
+        await expandBacklinksPanelIfCollapsed(page);
+        const before = await collectIncomingBacklinkRowTestIds(page);
+
+        await openNoteFromList(page, FORMAT_PLAYGROUND_TITLE);
+        await expect(page.getByTestId("note-title")).toHaveValue(
+          FORMAT_PLAYGROUND_TITLE,
+          { timeout: 15_000 },
+        );
+
+        await openProjectDocsWithBacklinksPanel(page);
+        await expandBacklinksPanelIfCollapsed(page);
+        const after = await collectIncomingBacklinkRowTestIds(page);
+
+        expect(after).toEqual(before);
+        expect(new Set(after).size).toBe(2);
+      });
+
+      test("AC60-backlinks-e2e-navigation: multi-hop nav via stable row testids", async ({
+        page,
+      }) => {
+        await expandBacklinksPanelIfCollapsed(page);
+        await clickEachIncomingBacklinkByFreshTestId(
+          page,
+          FORMAT_PLAYGROUND_TITLE,
+        );
+      });
+
+      test("AC60-backlink-snippet-delimiters: snippets are plain text via snippet testid", async ({
+        page,
+      }) => {
+        await expandBacklinksPanelIfCollapsed(page);
+
+        const rowTestIds = await collectIncomingBacklinkRowTestIds(page);
+        const snippets: string[] = [];
+        for (const rowTestId of rowTestIds) {
+          const linkId = rowTestId.replace(/^backlinks-item-/, "");
+          const snippet = page.getByTestId(`backlinks-snippet-${linkId}`);
+          await expect(snippet).toBeVisible();
+          const text = await snippet.innerText();
+          snippets.push(text);
+          assertBacklinkSnippetPlainText(text);
+        }
+        expect(snippets[0]).not.toBe(snippets[1]);
+        expect(snippets.join(" ")).toMatch(/#42/);
+      });
+
+      test("AC61-backlinks-nav-hash: row click sets location.hash to target note id", async ({
+        page,
+      }) => {
+        const playgroundNoteId = await noteIdFromListItem(
+          page,
+          FORMAT_PLAYGROUND_TITLE,
+        );
+        await expandBacklinksPanelIfCollapsed(page);
+        const rowTestIds = await collectIncomingBacklinkRowTestIds(page);
+
+        for (const rowTestId of rowTestIds) {
+          await openProjectDocsWithBacklinksPanel(page);
+          await expandBacklinksPanelIfCollapsed(page);
+          await page.getByTestId(rowTestId).click();
+          await expectBacklinkNavigationHash(page, playgroundNoteId);
+          await expect(page.getByTestId("note-title")).toHaveValue(
+            FORMAT_PLAYGROUND_TITLE,
+            { timeout: 15_000 },
+          );
+          expect(await page.evaluate(() => window.location.hash)).not.toContain(
+            encodeURIComponent(FORMAT_PLAYGROUND_TITLE),
+          );
+        }
+      });
+    });
+  }
+
+  test.describe("mobile 606×844 — iter 59 regression", () => {
     test.use({ viewport: GATE_VIEWPORT });
 
     test.beforeEach(async ({ page }) => {
@@ -32,7 +123,7 @@ test.describe("backlinks footer — iter 59", () => {
       );
 
       const toggle = page.getByTestId("backlinks-panel-toggle");
-      await expect(toggle).toContainText("反向链接");
+      await expect(toggle).toContainText("链接");
       await expect(toggle).toContainText("(2)");
       await toggle.click();
       await waitForIncomingBacklinkRowCount(page, 2);
@@ -87,7 +178,7 @@ test.describe("backlinks footer — iter 59", () => {
       page,
     }) => {
       const toggle = page.getByTestId("backlinks-panel-toggle");
-      await expect(toggle).toContainText("反向链接 (2)");
+      await expect(toggle).toContainText("链接 (2)");
 
       const incoming = page.getByTestId("backlinks-incoming-section");
       await expect(incoming).toHaveCount(0);
@@ -159,7 +250,7 @@ test.describe("backlinks footer — iter 59", () => {
     });
   });
 
-  test.describe("desktop", () => {
+  test.describe("desktop — iter 59 regression", () => {
     test.use({ viewport: DESKTOP_VIEWPORT });
 
     test("AC59-backlinks-e2e-bootstrap: desktop cold start shows exactly two incoming rows", async ({
