@@ -30,6 +30,7 @@ import { applyHideCompletedTasksDomAttribute } from "@/utils/hideCompletedTasksD
 import { registerWikiLinkActivator } from "@/testing/hunos-e2e-bridge";
 import {
   WikiLinkDecoration,
+  WIKI_LINK_NOTES_REFRESH_META,
   activateWikiLinkByTitle,
 } from "./WikiLinkDecoration";
 import { WikiLinkSuggestion } from "./WikiLinkSuggestion";
@@ -356,6 +357,17 @@ export function TiptapEditor({
       editor.off("update", applyA11yLabel);
     };
   }, [editor, accessibilityLabel]);
+
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    return useNoteStore.subscribe((state, prevState) => {
+      if (state.notes === prevState.notes) return;
+      notesRef.current = state.notes;
+      editor.view.dispatch(
+        editor.state.tr.setMeta(WIKI_LINK_NOTES_REFRESH_META, true),
+      );
+    });
+  }, [editor]);
 
   useEffect(() => {
     if (editor) onEditorReady(editor);

@@ -15,6 +15,9 @@ import {
 const WIKI_LINK_REGEX = /\[\[([^\]]+)\]\]/g;
 const wikiLinkKey = new PluginKey("wikiLinkDecoration");
 
+/** Dispatched when note metadata changes so wiki-link decorations refresh without a body edit. */
+export const WIKI_LINK_NOTES_REFRESH_META = "wikiLinkNotesRefresh";
+
 /** Prefix for per-link wiki-link target testids (`wiki-link-target-{noteId|pos-N}`). */
 export const WIKI_LINK_TARGET_TESTID_PREFIX = "wiki-link-target";
 
@@ -35,6 +38,20 @@ export function wikiLinkTargetTestId(
 ): string {
   if (noteId) return `${WIKI_LINK_TARGET_TESTID_PREFIX}-${noteId}`;
   return `${WIKI_LINK_TARGET_TESTID_PREFIX}-pos-${match.start}`;
+}
+
+/** Stable per-occurrence key (unique even when two links resolve to the same note id). */
+export function wikiLinkDataLinkKey(match: Pick<WikiLinkMatch, "start">): string {
+  return `pos-${match.start}`;
+}
+
+export function findWikiLinkByLinkKey(
+  doc: ProseMirrorNode,
+  linkKey: string,
+): WikiLinkMatch | undefined {
+  const pos = Number.parseInt(linkKey.replace(/^pos-/, ""), 10);
+  if (!Number.isFinite(pos)) return undefined;
+  return findWikiLinks(doc).find((wl) => wl.start === pos);
 }
 
 export function isWikiLinkTargetTestId(testId: string | null): boolean {
@@ -150,6 +167,12 @@ export function wikiLinkMatchFromDomTarget(
   linkEl: Element,
   event?: MouseEvent | PointerEvent,
 ): WikiLinkMatch | null {
+  const linkKey = linkEl.getAttribute("data-link-key");
+  if (linkKey) {
+    const byKey = findWikiLinkByLinkKey(view.state.doc, linkKey);
+    if (byKey) return byKey;
+  }
+
   const title = linkEl.getAttribute("data-wiki-title");
   if (title) {
     const byTitle = findWikiLinkByTitle(view.state.doc, title);
@@ -179,6 +202,7 @@ export function buildWikiLinkDecorations(
       class: "wiki-link-content",
       href: "#",
       "data-testid": wikiLinkTargetTestId(wl, noteId),
+      "data-link-key": wikiLinkDataLinkKey(wl),
       "data-wiki-title": wl.title,
       role: "link",
       tabindex: "0",
@@ -307,6 +331,17 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
     return [
       new Plugin({
         key: wikiLinkKey,
+        state: {
+          init() {
+            return { notesRevision: 0 };
+          },
+          apply(tr, pluginState) {
+            if (tr.getMeta(WIKI_LINK_NOTES_REFRESH_META)) {
+              return { notesRevision: pluginState.notesRevision + 1 };
+            }
+            return pluginState;
+          },
+        },
         view(view) {
           const setPreClick = (
             from: number,
@@ -386,6 +421,8 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
         },
         props: {
           decorations(state) {
+            const pluginState = wikiLinkKey.getState(state);
+            void pluginState?.notesRevision;
             return buildWikiLinkDecorations(state, getNotes);
           },
           handleDOMEvents: {

@@ -6,7 +6,9 @@ import { describe, expect, it } from "vitest";
 import {
   WIKI_LINK_TARGET_TESTID_PREFIX,
   buildWikiLinkDecorations,
+  findWikiLinkByLinkKey,
   isWikiLinkTargetTestId,
+  wikiLinkDataLinkKey,
   wikiLinkTargetTestId,
 } from "./WikiLinkDecoration";
 
@@ -99,6 +101,33 @@ describe("buildWikiLinkDecorations", () => {
 
     expect(attrs?.["data-testid"]).toBe("wiki-link-target-welcome-id");
     expect(attrs?.["data-note-id"]).toBe("welcome-id");
+    expect(attrs?.["data-link-key"]).toBe(wikiLinkDataLinkKey({ start: 3 }));
+  });
+
+  it("disambiguates duplicate titles via data-link-key", () => {
+    const document = doc.create({}, [
+      paragraph.create({}, [
+        schema.text("[[项目文档]] 和 [[项目文档]]。"),
+      ]),
+    ]);
+    const state = EditorState.create({ schema, doc: document });
+    const decos = buildWikiLinkDecorations(state, () => [
+      { id: "p1", title: "项目文档", status: "active" },
+    ]);
+    const found = decos.find(0, state.doc.content.size);
+    const contentDecos = found
+      .filter((deco) => deco.inline)
+      .map(
+        (deco) =>
+          (deco as { type?: { attrs?: Record<string, string> } }).type?.attrs,
+      )
+      .filter((attrs) => attrs?.class === "wiki-link-content");
+
+    expect(contentDecos.length).toBe(2);
+    const keys = contentDecos.map((a) => a?.["data-link-key"]);
+    expect(new Set(keys).size).toBe(2);
+    expect(findWikiLinkByLinkKey(document, keys[0]!)?.title).toBe("项目文档");
+    expect(findWikiLinkByLinkKey(document, keys[1]!)?.title).toBe("项目文档");
   });
 
   it("exposes link role and accessible name (AC39-wiki-link-a11y)", () => {
@@ -138,6 +167,7 @@ describe("buildWikiLinkDecorations", () => {
     expect(wikiLinkSource).toContain(`wikiLinkTargetTestId(wl, noteId)`);
     expect(wikiLinkSource).toContain(`"data-wiki-title": wl.title`);
     expect(wikiLinkSource).toContain(`"data-note-id"`);
+    expect(wikiLinkSource).toContain(`"data-link-key"`);
   });
 
   it("always hides bracket characters instead of wiki-link-bracket-visible", () => {

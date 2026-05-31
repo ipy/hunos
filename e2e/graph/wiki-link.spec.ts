@@ -3,6 +3,7 @@ import {
   FORMAT_PLAYGROUND_TITLE,
   PROJECT_DOCS_NOTE_TITLE,
   WELCOME_NOTE_TITLE,
+  clickWikiLinkWithoutScroll,
   editorLocator,
   openCleanFormatPlayground,
   wikiLinkByTitle,
@@ -28,7 +29,8 @@ test.describe("wiki-link graph navigation", () => {
     expect(scrollBefore).toBe(0);
 
     const link = wikiLinkByTitle(page, PROJECT_DOCS_NOTE_TITLE);
-    await link.click({ force: true });
+    await expect(link.first()).toBeAttached();
+    await clickWikiLinkWithoutScroll(page, PROJECT_DOCS_NOTE_TITLE);
 
     await expect(page.getByTestId("note-title")).toHaveValue(
       PROJECT_DOCS_NOTE_TITLE,
@@ -45,7 +47,8 @@ test.describe("wiki-link graph navigation", () => {
     });
 
     const link = wikiLinkByTitle(page, WELCOME_NOTE_TITLE);
-    await link.click({ force: true });
+    await expect(link.first()).toBeAttached();
+    await clickWikiLinkWithoutScroll(page, WELCOME_NOTE_TITLE);
 
     await expect(page.getByTestId("note-title")).toHaveValue(
       WELCOME_NOTE_TITLE,

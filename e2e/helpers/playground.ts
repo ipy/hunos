@@ -86,6 +86,39 @@ export function wikiLinkByTitle(page: Page, title: string) {
   return page.locator(`.wiki-link-content[data-wiki-title="${title}"]`);
 }
 
+/** Click a wiki-link at viewport coordinates without scrollIntoView (AC42 offscreen). */
+export async function clickWikiLinkWithoutScroll(
+  page: Page,
+  title: string,
+  index = 0,
+): Promise<void> {
+  const point = await page.evaluate(
+    ({ wikiTitle, linkIndex }) => {
+      const pm = document.querySelector(
+        '[data-testid="note-editor"] .ProseMirror',
+      );
+      if (!(pm instanceof HTMLElement)) return null;
+      const links = Array.from(
+        pm.querySelectorAll(
+          `.wiki-link-content[data-wiki-title="${wikiTitle}"]`,
+        ),
+      );
+      const link = links[linkIndex];
+      if (!(link instanceof HTMLElement)) return null;
+      const rect = link.getBoundingClientRect();
+      return {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      };
+    },
+    { wikiTitle: title, linkIndex: index },
+  );
+  if (!point) {
+    throw new Error(`wiki-link not found: ${title} (#${index})`);
+  }
+  await page.mouse.click(point.x, point.y);
+}
+
 export function editorLocator(page: Page) {
   return page.getByTestId("note-editor").locator(".ProseMirror");
 }

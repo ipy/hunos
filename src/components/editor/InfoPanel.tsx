@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/theme/ThemeContext";
+import { useAdaptiveLayout } from "@/hooks/useAdaptiveLayout";
 import { Icon } from "@/components/common/Icon";
 import { SettingToggle } from "@/components/settings/SettingToggle";
 import type { Note } from "@/types/note";
@@ -66,6 +67,8 @@ export function InfoPanel({
 }: InfoPanelProps) {
   const { t } = useTranslation();
   const theme = useTheme();
+  const layout = useAdaptiveLayout();
+  const isMobilePanel = layout === "mobile";
   const [showHideCompletedToggle, setShowHideCompletedToggle] = useState(
     () => editorHasTaskList(editor) || noteContentHasTaskList(note.content),
   );
@@ -494,20 +497,30 @@ export function InfoPanel({
             </span>
             <button
               type="button"
-              data-testid="stats-panel-close"
+              data-testid={isMobilePanel ? "info-panel-done" : "stats-panel-close"}
               onClick={handleClose}
               aria-label={t("common.actions.done")}
               style={{
                 background: "none",
                 border: "none",
                 cursor: "pointer",
-                padding: 4,
+                padding: isMobilePanel ? "6px 10px" : 4,
                 display: "flex",
+                alignItems: "center",
                 position: "absolute",
                 right: 16,
+                fontSize: isMobilePanel ? 15 : undefined,
+                fontWeight: isMobilePanel ? 600 : undefined,
+                color: isMobilePanel
+                  ? theme.colors.accent
+                  : theme.colors.textTertiary,
               }}
             >
-              <Icon name="close" size={16} color={theme.colors.textTertiary} />
+              {isMobilePanel ? (
+                t("common.actions.done")
+              ) : (
+                <Icon name="close" size={16} color={theme.colors.textTertiary} />
+              )}
             </button>
           </div>
         </div>
