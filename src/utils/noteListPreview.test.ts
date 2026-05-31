@@ -120,7 +120,7 @@ describe("deriveNoteListPreview", () => {
       fallbackLocale: "en",
     });
     expect(showRestore).toBe(true);
-    expect(preview).not.toBe(getFormatPlaygroundIntroExcerpt("en"));
+    expect(preview).toBe(getFormatPlaygroundIntroExcerpt("en"));
 
     const aligned = { ...note, title: "Format Playground" };
     expect(deriveNoteListPreview(aligned, "Formatting samples", "en")).toBe(
@@ -155,6 +155,24 @@ describe("deriveNoteListPreview", () => {
     });
     expect(preview).toBe(getFormatPlaygroundIntroExcerpt("en"));
     expect(showRestore).toBe(false);
+  });
+
+  it("uses seed intro when only title drifted (AC34-list-preview)", () => {
+    const seed = buildPlaygroundContent("zh");
+    const seedPlain = extractPlainTextFromTiptap(seed);
+    const preview = deriveNoteListPreview(
+      {
+        title: "T34-Drift",
+        content: JSON.stringify(seed),
+        contentPlain: seedPlain,
+      },
+      "格式示例",
+      "zh",
+    );
+    expect(preview).toBe(getFormatPlaygroundIntroExcerpt("zh"));
+    expect(preview).toContain("在这一篇笔记里测试所有格式");
+    expect(preview).not.toContain("桌面快捷键");
+    expect(preview).not.toContain("Cmd+B");
   });
 
   it("detects playground notes by title", () => {

@@ -11,7 +11,6 @@ import { useNoteStore } from "@/store/noteStore";
 import { useUIStore } from "@/store/uiStore";
 import { useSettingsStore } from "@/store/settingsStore";
 import { Icon } from "@/components/common/Icon";
-import { syncPlaygroundDocumentH1WithTitle } from "@/components/editor/playgroundTitleH1Sync";
 import { TiptapEditor } from "@/components/editor/TiptapEditor";
 import { editorContentMatchesStoredJson } from "@/components/editor/noteSwitchContentUtils";
 import { EditorStatusBar } from "@/components/editor/EditorStatusBar";
@@ -362,23 +361,6 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       const noteId = activeNoteId;
       if (!noteId) return;
 
-      const editor = editorInstanceRef.current;
-      if (
-        editor &&
-        note &&
-        isFormatPlaygroundNote(note.title, noteContentForEditor) &&
-        syncPlaygroundDocumentH1WithTitle(editor, newTitle)
-      ) {
-        const json = JSON.stringify(editor.getJSON());
-        pendingContentRef.current = json;
-        scheduleContentPersist(
-          noteId,
-          json,
-          contentWriteEpochRef.current,
-          false,
-        );
-      }
-
       markPendingTitle(
         pendingTitleRef,
         titleTimeoutRef,
@@ -392,14 +374,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           ),
       );
     },
-    [
-      activeNoteId,
-      applyRestoreChipSuppressed,
-      note,
-      noteContentForEditor,
-      persistEditorTitle,
-      scheduleContentPersist,
-    ],
+    [activeNoteId, applyRestoreChipSuppressed, persistEditorTitle],
   );
 
   const handleContentChange = useCallback(
@@ -1092,7 +1067,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           flexShrink: 0,
           minHeight: 44,
           position: "relative",
-          zIndex: showStats || showRestorePlayground ? 70 : undefined,
+          zIndex: showStats ? 70 : undefined,
         }}
       >
         {showBackButton && (
@@ -1120,44 +1095,6 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           </button>
         )}
         <div style={{ flex: 1 }} />
-        {showRestorePlayground && (
-          <button
-            type="button"
-            onClick={handleRestorePlayground}
-            aria-label={restorePlaygroundLabel}
-            title={restorePlaygroundLabel}
-            data-testid="restore-playground-button"
-            style={{
-              position: "relative",
-              zIndex: 2,
-              background: theme.colors.surface,
-              border: `1px solid ${theme.colors.borderLight}`,
-              cursor: "pointer",
-              padding: isMobileRestoreChip ? "6px 8px" : "6px 12px",
-              borderRadius: theme.radius.full,
-              display: "flex",
-              alignItems: "center",
-              gap: isMobileRestoreChip ? 4 : 6,
-              minHeight: 44,
-              fontSize: 13,
-              fontWeight: 500,
-              color: theme.colors.textSecondary,
-              whiteSpace: "nowrap",
-              flexShrink: 0,
-              transition: "background-color 0.15s ease",
-            }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.backgroundColor =
-                theme.colors.surfaceHover)
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.backgroundColor = theme.colors.surface)
-            }
-          >
-            <Icon name="note" size={16} color={theme.colors.textSecondary} />
-            {restorePlaygroundVisibleText}
-          </button>
-        )}
         {focusMode && isCompactChrome ? (
           <>
             <button
@@ -1572,6 +1509,9 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       >
         <div
           style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
             padding: "16px 24px 0",
             maxWidth: `${settings.lineWidth}em`,
             margin: "0 auto",
@@ -1596,7 +1536,8 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
             }}
             placeholder={t("editor.titlePlaceholder")}
             style={{
-              width: "100%",
+              flex: 1,
+              minWidth: 0,
               border: "none",
               outline: "none",
               fontSize: settings.fontSize * 1.6,
@@ -1608,6 +1549,42 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
               lineHeight: 1.2,
             }}
           />
+          {showRestorePlayground && (
+            <button
+              type="button"
+              onClick={handleRestorePlayground}
+              aria-label={restorePlaygroundLabel}
+              title={restorePlaygroundLabel}
+              data-testid="restore-playground-button"
+              style={{
+                background: theme.colors.surface,
+                border: `1px solid ${theme.colors.borderLight}`,
+                cursor: "pointer",
+                padding: isMobileRestoreChip ? "6px 8px" : "6px 12px",
+                borderRadius: theme.radius.full,
+                display: "flex",
+                alignItems: "center",
+                gap: isMobileRestoreChip ? 4 : 6,
+                minHeight: 44,
+                fontSize: 13,
+                fontWeight: 500,
+                color: theme.colors.textSecondary,
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+                transition: "background-color 0.15s ease",
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.backgroundColor =
+                  theme.colors.surfaceHover)
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.backgroundColor = theme.colors.surface)
+              }
+            >
+              <Icon name="note" size={16} color={theme.colors.textSecondary} />
+              {restorePlaygroundVisibleText}
+            </button>
+          )}
         </div>
         <TiptapEditor
           noteId={note.id}

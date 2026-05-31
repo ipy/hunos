@@ -34,7 +34,9 @@ function createMockEditor(document: ReturnType<typeof doc.create>) {
     chain: () => {
       const chain = {
         setMeta: () => chain,
-        command: (fn: (args: { tr: import("@tiptap/pm/state").Transaction }) => boolean) => {
+        command: (
+          fn: (args: { tr: import("@tiptap/pm/state").Transaction }) => boolean,
+        ) => {
           const tr = state.tr;
           fn({ tr });
           lastTr = tr;
@@ -61,7 +63,7 @@ describe("playgroundTitleH1Sync", () => {
     expect(findPlaygroundDocumentH1Pos(document)).toBe(0);
   });
 
-  it("syncs the body H1 to the title field (AC33-restore-title-h1 prep)", () => {
+  it("replaces body H1 when explicitly syncing after restore", () => {
     const document = doc.create({}, [
       heading.create({ level: 1 }, schema.text("格式试炼场")),
       paragraph.create({}, schema.text("intro")),

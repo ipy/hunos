@@ -1,4 +1,5 @@
 import {
+  formatPlaygroundMatchesCanonicalSeed,
   getFormatPlaygroundIntroExcerpt,
   readFormatPlaygroundCanonicalRow,
 } from "@/storage/formatPlaygroundNote";
@@ -23,7 +24,14 @@ export function deriveNoteListPreview(
     locale,
   );
   if (storedRow) {
-    if (storedRow.isCanonical) {
+    if (
+      storedRow.isCanonical ||
+      formatPlaygroundMatchesCanonicalSeed(
+        storedRow.canonicalTitle,
+        storedRow.rowContent,
+        storedRow.seedLocale,
+      )
+    ) {
       return getFormatPlaygroundIntroExcerpt(storedRow.seedLocale);
     }
     const plain = normalizePlainExcerpt(note.contentPlain ?? "");

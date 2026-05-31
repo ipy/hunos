@@ -1,7 +1,9 @@
 import type { Editor } from "@tiptap/react";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 
-export function findPlaygroundDocumentH1Pos(doc: ProseMirrorNode): number | null {
+export function findPlaygroundDocumentH1Pos(
+  doc: ProseMirrorNode,
+): number | null {
   let found: number | null = null;
   doc.descendants((node, pos) => {
     if (found != null) {
@@ -16,7 +18,7 @@ export function findPlaygroundDocumentH1Pos(doc: ProseMirrorNode): number | null
   return found;
 }
 
-/** Keep the playground body H1 aligned with the note title field during title drift. */
+/** Replace the playground body H1 (used when restoring canonical seed into the editor). */
 export function syncPlaygroundDocumentH1WithTitle(
   editor: Editor,
   title: string,
