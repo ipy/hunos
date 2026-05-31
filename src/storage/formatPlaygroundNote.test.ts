@@ -20,7 +20,9 @@ import {
   formatPlaygroundNeedsRestore,
   playgroundEditorContentMatchesStored,
   playgroundEditorMarkOnlyDriftFromStored,
+  playgroundFormatQaDraftHidesRestoreChip,
   playgroundFormatQaMarkOnlyDrift,
+  playgroundFormatQaStructureMatchesCanonical,
   resolvePlaygroundSeedLocale,
   shouldShowPlaygroundRestoreButton,
   restoreFormatPlaygroundContent,
@@ -1968,5 +1970,100 @@ describe("playgroundFormatQaMarkOnlyDrift", () => {
     expect(
       playgroundFormatQaMarkOnlyDrift(drifted, "格式试炼场", seed, "zh"),
     ).toBe(false);
+  });
+});
+
+describe("playgroundFormatQaStructureMatchesCanonical", () => {
+  const seed = JSON.stringify(buildPlaygroundContent("zh"));
+
+  function markListItem(itemText: string, markType: "bold" | "italic"): string {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          content?: Array<{
+            content?: Array<{ text?: string; marks?: unknown[] }>;
+          }>;
+        }>;
+      }>;
+    };
+    const listsIndex = parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
+    );
+    const bulletList = parsed.content[listsIndex + 1];
+    for (const listItem of bulletList?.content ?? []) {
+      const paragraph = listItem.content?.[0];
+      const textNode = paragraph?.content?.find(
+        (node) => node.text === itemText,
+      );
+      if (textNode) {
+        textNode.marks = [{ type: markType }];
+        break;
+      }
+    }
+    return JSON.stringify(parsed);
+  }
+
+  it("matches canonical structure when only bold is added", () => {
+    const marked = markListItem("无序列表第一项", "bold");
+    expect(
+      playgroundFormatQaStructureMatchesCanonical(
+        marked,
+        "格式试炼场",
+        seed,
+        "zh",
+      ),
+    ).toBe(true);
+  });
+
+  it("does not match when T20-MIXED paragraph is inserted", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    parsed.content.push({
+      type: "paragraph",
+      content: [{ type: "text", text: "T20-MIXED-marker" }],
+    });
+    expect(
+      playgroundFormatQaStructureMatchesCanonical(
+        JSON.stringify(parsed),
+        "格式试炼场",
+        seed,
+        "zh",
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("playgroundFormatQaDraftHidesRestoreChip", () => {
+  const seed = JSON.stringify(buildPlaygroundContent("zh"));
+
+  it("hides chip for bold on canonical list item", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          content?: Array<{
+            content?: Array<{ text?: string; marks?: unknown[] }>;
+          }>;
+        }>;
+      }>;
+    };
+    const listsIndex = parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
+    );
+    const firstItemText =
+      parsed.content[listsIndex + 1]?.content?.[0]?.content?.[0]?.content?.[0];
+    if (firstItemText) {
+      firstItemText.marks = [{ type: "bold" }];
+    }
+    expect(
+      playgroundFormatQaDraftHidesRestoreChip(
+        JSON.stringify(parsed),
+        "格式试炼场",
+        seed,
+        "zh",
+      ),
+    ).toBe(true);
   });
 });

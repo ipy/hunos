@@ -12,20 +12,20 @@ describe("EditorScreen post-restore AC1 fixes", () => {
     expect(source).toContain(
       "contentWriteEpochRef.current = bumpPlaygroundWriteEpoch(note.id)",
     );
-    expect(source).toContain("setRestoreChipSuppressed(true)");
+    expect(source).toContain("applyRestoreChipSuppressed(true)");
     expect(source).toContain(
       "const restoredTitle =\n        restoredNote?.title ?? getFormatPlaygroundTitle(seedLocale)",
     );
     expect(source).toContain(
-      "if (restoreChipSuppressed) {\n      return false;\n    }",
+      "if (restoreChipSuppressed || restoreChipSuppressedRef.current) {\n      return false;\n    }",
     );
     expect(source).toContain("skipTitleSyncOnceRef.current = true");
     expect(source).toContain("setTitleValue(restoredTitle)");
     expect(source).toContain("titleInputRef.current?.blur()");
     expect(source).toMatch(
-      /setRestoreChipSuppressed\(true\)[\s\S]*finalizePlaygroundRestoreInEditor/,
+      /applyRestoreChipSuppressed\(true\)[\s\S]*finalizePlaygroundRestoreInEditor/,
     );
-    expect(source).toContain("playgroundFormatQaMarkOnlyDrift");
+    expect(source).toContain("playgroundFormatQaDraftHidesRestoreChip");
     expect(source).toContain("scheduleContentPersist");
     expect(source).toContain("JSON.stringify(editorInstance.getJSON())");
   });

@@ -41,7 +41,8 @@ import {
   normalizePlaygroundContentSnapshot,
   playgroundEditorContentMatchesStored,
   playgroundEditorMarkOnlyDriftFromStored,
-  playgroundFormatQaMarkOnlyDrift,
+  playgroundFormatQaDraftHidesRestoreChip,
+  readFormatPlaygroundCanonicalRow,
   playgroundPersistedContentForRow,
   playgroundWriteRegressesCanonicalStored,
   resolvePlaygroundSeedLocale,
@@ -206,9 +207,10 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     }
   }, [showActions, showStats]);
 
-  useEffect(() => {
-    restoreChipSuppressedRef.current = restoreChipSuppressed;
-  }, [restoreChipSuppressed]);
+  const applyRestoreChipSuppressed = useCallback((suppressed: boolean) => {
+    restoreChipSuppressedRef.current = suppressed;
+    setRestoreChipSuppressed(suppressed);
+  }, []);
 
   const handleEditorReady = useCallback((editor: Editor) => {
     editorInstanceRef.current = editor;
@@ -246,7 +248,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         stashEditorAutosaveSnapshot(leavingNoteId, orphan);
       }
     }
-    setRestoreChipSuppressed(false);
+    applyRestoreChipSuppressed(false);
     pendingContentRef.current = null;
     clearEditorOverlaySelection();
     setTitleValue(note?.title ?? "");
@@ -321,7 +323,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   );
 
   const handleTitleChange = (newTitle: string) => {
-    setRestoreChipSuppressed(false);
+    applyRestoreChipSuppressed(false);
     setTitleValue(newTitle);
     const noteId = activeNoteId;
     if (!noteId) return;
@@ -383,14 +385,14 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           settings.locale,
         );
         if (
-          playgroundFormatQaMarkOnlyDrift(
+          playgroundFormatQaDraftHidesRestoreChip(
             json,
             note.title,
             noteContentForEditor,
             playgroundLocale,
           )
         ) {
-          setRestoreChipSuppressed(true);
+          applyRestoreChipSuppressed(true);
           pendingContentRef.current = json;
           setRestoreEditorSyncTick((tick) => tick + 1);
           scheduleContentPersist(
@@ -444,7 +446,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
             noteContentForEditor,
             playgroundLocale,
           ) ||
-            playgroundFormatQaMarkOnlyDrift(
+            playgroundFormatQaDraftHidesRestoreChip(
               json,
               note.title,
               noteContentForEditor,
@@ -456,7 +458,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       } else if (
         note &&
         isFormatPlaygroundNote(note.title, noteContentForEditor) &&
-        playgroundFormatQaMarkOnlyDrift(
+        playgroundFormatQaDraftHidesRestoreChip(
           json,
           note.title,
           noteContentForEditor,
@@ -464,10 +466,10 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         )
       ) {
         clearRestoreSuppress = false;
-        setRestoreChipSuppressed(true);
+        applyRestoreChipSuppressed(true);
       }
       if (clearRestoreSuppress) {
-        setRestoreChipSuppressed(false);
+        applyRestoreChipSuppressed(false);
       }
       pendingContentRef.current = json;
       if (note && isFormatPlaygroundNote(note.title, noteContentForEditor)) {
@@ -482,6 +484,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     },
     [
       activeNoteId,
+      applyRestoreChipSuppressed,
       note,
       noteContentForEditor,
       scheduleContentPersist,
@@ -628,6 +631,16 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       const sanitized = sanitizeEditorStashContent(taken.content);
       pendingContentRef.current = sanitized;
       setEditorSeedContent(sanitized);
+      if (
+        playgroundFormatQaDraftHidesRestoreChip(
+          sanitized,
+          note.title,
+          note.content,
+          settings.locale,
+        )
+      ) {
+        applyRestoreChipSuppressed(true);
+      }
       void persistEditorContent(note.id, sanitized, undefined, {
         notifyOnError: false,
       });
@@ -641,6 +654,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     note?.id,
     note?.title,
     note?.content,
+    applyRestoreChipSuppressed,
     persistEditorContent,
     saveNoteContent,
     settings.locale,
@@ -860,7 +874,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     if (!note) return;
     const restoreSession = playgroundRestoreSessionRef.current;
     contentWriteEpochRef.current = bumpPlaygroundWriteEpoch(note.id);
-    setRestoreChipSuppressed(true);
+    applyRestoreChipSuppressed(true);
     restoreSession.begin(note.id);
     pendingRestoreToastRef.current = true;
     if (saveTimeoutRef.current) {
@@ -919,7 +933,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
   const showRestorePlayground = useMemo(() => {
     if (!note) return false;
-    if (restoreChipSuppressed) {
+    if (restoreChipSuppressed || restoreChipSuppressedRef.current) {
       return false;
     }
     let pendingDraftContent = pendingContentRef.current;
@@ -936,15 +950,32 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     }
     if (
       pendingDraftContent &&
-      isFormatPlaygroundNote(note.title, noteContentForEditor) &&
-      playgroundFormatQaMarkOnlyDrift(
-        pendingDraftContent,
+      isFormatPlaygroundNote(note.title, noteContentForEditor)
+    ) {
+      const row = readFormatPlaygroundCanonicalRow(
         note.title,
         noteContentForEditor,
         settings.locale,
-      )
-    ) {
-      return false;
+      );
+      const displayTitle = titleValue.trim() || note.title;
+      const pendingTitle = pendingTitleRef.current;
+      const titleDrifted =
+        row != null &&
+        ((pendingTitle != null && pendingTitle.trim() !== row.canonicalTitle) ||
+          (pendingTitle == null &&
+            displayTitle.trim() !== row.canonicalTitle &&
+            displayTitle.trim() !== ""));
+      if (
+        !titleDrifted &&
+        playgroundFormatQaDraftHidesRestoreChip(
+          pendingDraftContent,
+          note.title,
+          noteContentForEditor,
+          settings.locale,
+        )
+      ) {
+        return false;
+      }
     }
     return shouldShowPlaygroundRestoreButton({
       displayTitle: titleValue.trim() || note.title,

@@ -213,13 +213,15 @@ describe("useNoteStore.saveNoteContent", () => {
     expect(dbUpdate).toHaveBeenCalledOnce();
   });
 
-  it("propagates storage errors from saveNoteContent", async () => {
+  it("returns false when storage update fails", async () => {
     const note = await noteStorage.create({ title: "Fail path" });
     useNoteStore.setState({ notes: [note] });
     dbUpdate.mockRejectedValueOnce(new Error("disk full"));
 
-    await expect(
-      useNoteStore.getState().saveNoteContent(note.id, '{"type":"doc"}'),
-    ).rejects.toThrow("disk full");
+    const saved = await useNoteStore
+      .getState()
+      .saveNoteContent(note.id, '{"type":"doc"}');
+
+    expect(saved).toBe(false);
   });
 });

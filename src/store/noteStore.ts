@@ -76,36 +76,40 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
 
   saveNoteContent: async (id, content, writeEpoch) =>
     enqueueNoteContentSave(id, async () => {
-      if (isStalePlaygroundWrite(id, writeEpoch)) {
+      try {
+        if (isStalePlaygroundWrite(id, writeEpoch)) {
+          return false;
+        }
+        const existing =
+          get().notes.find((n) => n.id === id) ?? (await noteStorage.get(id));
+        if (
+          existing?.content &&
+          playgroundWriteRegressesCanonicalStored(
+            existing.title,
+            existing.content,
+            content,
+            useSettingsStore.getState().locale,
+          )
+        ) {
+          return false;
+        }
+        const applied = await noteStorage.update(id, { content });
+        const sanitized = applied?.content ?? content;
+        await graphEngine.syncNoteLinks(id, sanitized);
+        await useTagStore.getState().loadTags();
+        const updated = await noteStorage.get(id);
+        if (updated) {
+          const { notes } = get();
+          set({
+            notes: sortByModifiedDesc(
+              notes.map((n) => (n.id === id ? updated : n)),
+            ),
+          });
+        }
+        return true;
+      } catch {
         return false;
       }
-      const existing =
-        get().notes.find((n) => n.id === id) ?? (await noteStorage.get(id));
-      if (
-        existing?.content &&
-        playgroundWriteRegressesCanonicalStored(
-          existing.title,
-          existing.content,
-          content,
-          useSettingsStore.getState().locale,
-        )
-      ) {
-        return false;
-      }
-      const applied = await noteStorage.update(id, { content });
-      const sanitized = applied?.content ?? content;
-      await graphEngine.syncNoteLinks(id, sanitized);
-      await useTagStore.getState().loadTags();
-      const updated = await noteStorage.get(id);
-      if (updated) {
-        const { notes } = get();
-        set({
-          notes: sortByModifiedDesc(
-            notes.map((n) => (n.id === id ? updated : n)),
-          ),
-        });
-      }
-      return true;
     }),
 
   saveNoteTitle: async (id, title, writeEpoch) => {

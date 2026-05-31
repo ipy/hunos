@@ -29,9 +29,9 @@ describe("EditorScreen note-switch autosave cleanup", () => {
   });
 
   it("hides restore chip for mark-only playground format QA drafts", () => {
-    expect(editorSource).toContain("playgroundFormatQaMarkOnlyDrift");
+    expect(editorSource).toContain("playgroundFormatQaDraftHidesRestoreChip");
     expect(editorSource).toMatch(
-      /playgroundFormatQaMarkOnlyDrift\([\s\S]*return false;/,
+      /playgroundFormatQaDraftHidesRestoreChip\([\s\S]*return false;/,
     );
   });
 });

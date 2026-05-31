@@ -618,6 +618,52 @@ export function playgroundFormatQaMarkOnlyDrift(
   );
 }
 
+/** True when live playground body matches canonical seed structure (inline marks allowed). */
+export function playgroundFormatQaStructureMatchesCanonical(
+  liveContent: string,
+  storedTitle: string,
+  storedContent: string,
+  fallbackLocale: Locale,
+): boolean {
+  const rowContent = playgroundPersistedContentForRow(storedContent);
+  if (!isFormatPlaygroundNote(storedTitle, rowContent)) {
+    return false;
+  }
+  const seedLocale = resolvePlaygroundSeedLocale(rowContent, fallbackLocale);
+  const canonical = playgroundPersistedContentForRow(
+    JSON.stringify(buildPlaygroundContent(seedLocale)),
+  );
+  return (
+    normalizePlaygroundStructureSnapshot(liveContent, seedLocale) ===
+    normalizePlaygroundStructureSnapshot(canonical, seedLocale)
+  );
+}
+
+/** Hide restore chip for format QA drafts that only add inline marks on canonical structure. */
+export function playgroundFormatQaDraftHidesRestoreChip(
+  liveContent: string,
+  storedTitle: string,
+  storedContent: string,
+  fallbackLocale: Locale,
+): boolean {
+  if (
+    playgroundFormatQaMarkOnlyDrift(
+      liveContent,
+      storedTitle,
+      storedContent,
+      fallbackLocale,
+    )
+  ) {
+    return true;
+  }
+  return playgroundFormatQaStructureMatchesCanonical(
+    liveContent,
+    storedTitle,
+    storedContent,
+    fallbackLocale,
+  );
+}
+
 /** Persisted JSON normalized the same way for list preview and restore chip gating. */
 export function playgroundPersistedContentForRow(content: string): string {
   if (!content) return "";

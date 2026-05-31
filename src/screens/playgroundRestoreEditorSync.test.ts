@@ -182,7 +182,7 @@ describe("finalizePlaygroundRestoreInEditor", () => {
       /finalizePlaygroundRestoreInEditor\([\s\S]*?\);\s*if \(!applied && restoredContent\)/,
     );
     expect(source).toMatch(
-      /setRestoreChipSuppressed\(true\)[\s\S]*setTitleValue\(restoredTitle\)/,
+      /applyRestoreChipSuppressed\(true\)[\s\S]*setTitleValue\(restoredTitle\)/,
     );
     expect(source).toMatch(
       /setTitleValue\(restoredTitle\)[\s\S]*finalizePlaygroundRestoreInEditor/,

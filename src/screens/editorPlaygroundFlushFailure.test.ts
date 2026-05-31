@@ -70,11 +70,11 @@ describe("EditorScreen mark-only restore chip suppression", () => {
       "utf-8",
     );
     expect(source).toMatch(
-      /setRestoreChipSuppressed\(true\)[\s\S]*restoreSession\.begin/,
+      /applyRestoreChipSuppressed\(true\)[\s\S]*restoreSession\.begin/,
     );
     expect(source).toContain("formatPlaygroundMatchesCanonicalSeed(");
     expect(source).toMatch(
-      /formatPlaygroundMatchesCanonicalSeed\([\s\S]*setRestoreChipSuppressed\(true\)/,
+      /formatPlaygroundMatchesCanonicalSeed\([\s\S]*applyRestoreChipSuppressed\(true\)/,
     );
   });
 });
