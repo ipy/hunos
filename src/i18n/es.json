@@ -75,6 +75,7 @@
     "placeholder": "Empieza a escribir...",
     "titlePlaceholder": "Título",
     "regionLabel": "Editando: {{title}}",
+    "bodyLabel": "Cuerpo de la nota",
     "saveFailed": "No se pudieron guardar los cambios. Tus ediciones siguen en el editor.",
     "toolbar": {
       "bold": "Negrita",

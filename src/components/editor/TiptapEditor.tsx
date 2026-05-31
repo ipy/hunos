@@ -322,7 +322,7 @@ export function TiptapEditor({
         class: "hunos-editor",
         ...(accessibilityLabel
           ? {
-              "aria-labelledby": "note-editor-title",
+              "aria-label": accessibilityLabel,
               role: "textbox",
               "aria-multiline": "true",
             }
@@ -336,8 +336,8 @@ export function TiptapEditor({
     const dom = editor.view.dom;
     const applyA11yLabel = () => {
       if (accessibilityLabel) {
-        dom.removeAttribute("aria-label");
-        dom.setAttribute("aria-labelledby", "note-editor-title");
+        dom.setAttribute("aria-label", accessibilityLabel);
+        dom.removeAttribute("aria-labelledby");
         dom.setAttribute("role", "textbox");
         dom.setAttribute("aria-multiline", "true");
       } else {
@@ -430,7 +430,7 @@ export function TiptapEditor({
 
   return (
     <>
-      <style>{`
+      <style aria-hidden="true">{`
         .hunos-editor {
           outline: none;
           padding: 20px 24px;

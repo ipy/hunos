@@ -1152,7 +1152,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const editorNoteTitle = titleValue.trim() || note?.title || "";
   const editorAccessibilityLabel = editorNoteTitle
     ? t("editor.regionLabel", { title: editorNoteTitle })
-    : undefined;
+    : t("editor.bodyLabel");
   const isMobileRestoreChip = layout === "mobile";
 
   return (
@@ -1208,6 +1208,8 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           <button
             type="button"
             data-testid="editor-all-notes-button"
+            aria-hidden="true"
+            tabIndex={-1}
             onClick={returnToNoteList}
             style={{
               background: "none",

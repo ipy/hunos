@@ -29,16 +29,21 @@ describe("iteration 51 — unified off-screen TOC activation", () => {
     expect(pinBlock).not.toContain("preventDefault");
   });
 
-  it("activates direct TOC entry target before pointer-Y resolution on click capture", () => {
+  it("delegates direct TOC entry clicks to button onClick only (no list capture dup)", () => {
     const clickBlock = infoPanelSource.slice(
       infoPanelSource.indexOf("handleTocListClickCapture"),
       infoPanelSource.indexOf("handleTocListTouchEndCapture"),
     );
-    expect(clickBlock).toContain("panelTocEntryIndex");
-    expect(clickBlock).toContain("activateTocEntry");
-    expect(clickBlock.indexOf("activateTocEntry")).toBeLessThan(
-      clickBlock.indexOf("activateTocAtClientY"),
+    expect(clickBlock).toMatch(/if \(directEntry\)[\s\S]*return;/);
+    expect(clickBlock).not.toMatch(
+      /if \(directEntry\)[\s\S]*activateTocEntry/,
     );
+    const entryBlock = infoPanelSource.slice(
+      infoPanelSource.indexOf("data-testid={`info-panel-toc-entry-${i}`}"),
+      infoPanelSource.indexOf('touchAction: "manipulation"'),
+    );
+    expect(entryBlock).toContain("activateTocEntry");
+    expect(clickBlock).toContain("activateTocAtClientY");
   });
 
   it("picks first below-fold row on bottom-edge tap, not last visible 表格 row", () => {

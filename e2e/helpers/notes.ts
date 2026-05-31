@@ -2,12 +2,17 @@ import { expect, type Locator, type Page } from "@playwright/test";
 import { isMobileAppLayout } from "./interactions";
 import { isHarmonyRuntime } from "./e2e-runtime";
 import { AUTOSAVE_WAIT_MS } from "./playground";
+import { NOTE_LIST_ITEM_TITLE_TESTID } from "../../src/screens/NoteListScreen";
 
 const HUNOS_DB = "hunos";
 
-/** Swipeable card: click inner row (`children[1]`), not the outer wrapper (DevLoop iter 109). */
+/** Match list row by exact title, not preview text that mentions another note. */
 export function noteListItem(page: Page, title: string): Locator {
-  return page.getByTestId("note-list-item").filter({ hasText: title });
+  return page.getByTestId("note-list-item").filter({
+    has: page
+      .getByTestId(NOTE_LIST_ITEM_TITLE_TESTID)
+      .filter({ hasText: title, exact: true }),
+  });
 }
 
 export async function ensureNoteListScreen(page: Page): Promise<void> {

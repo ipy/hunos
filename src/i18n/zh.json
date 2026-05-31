@@ -75,6 +75,7 @@
     "placeholder": "开始写作...",
     "titlePlaceholder": "标题",
     "regionLabel": "编辑：{{title}}",
+    "bodyLabel": "笔记正文",
     "saveFailed": "无法保存更改，编辑内容仍保留在编辑器中。",
     "toolbar": {
       "inlineFormatting": "文本格式",

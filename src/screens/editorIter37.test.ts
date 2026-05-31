@@ -51,17 +51,14 @@ describe("iteration 37 — restore confirm", () => {
 });
 
 describe("iteration 37 — editor a11y label", () => {
-  it("labels ProseMirror with note title only via editor.regionLabel", () => {
+  it("labels ProseMirror with note title via editor.regionLabel aria-label", () => {
     expect(editorSource).toContain('t("editor.regionLabel"');
     expect(editorSource).toContain(
       "accessibilityLabel={editorAccessibilityLabel}",
     );
     expect(tiptapSource).toContain("accessibilityLabel?: string");
-    expect(tiptapSource).toContain('"aria-labelledby": "note-editor-title"');
-    expect(tiptapSource).not.toMatch(
-      /editorProps:[\s\S]*"aria-label": accessibilityLabel/,
-    );
-    expect(tiptapSource).not.toContain("aria-label={accessibilityLabel}");
+    expect(tiptapSource).toContain('"aria-label": accessibilityLabel');
+    expect(tiptapSource).not.toContain('"aria-labelledby": "note-editor-title"');
     expect(editorSource).toContain('id="note-editor-title"');
     expect(zh.editor.regionLabel).toBe("编辑：{{title}}");
   });

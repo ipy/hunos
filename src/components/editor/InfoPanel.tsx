@@ -332,11 +332,8 @@ export function InfoPanel({
           )
         : null;
     if (directEntry) {
-      const index = panelTocEntryIndex(directEntry);
-      if (index >= 0 && index < toc.length) {
-        activateTocEntry(index, toc[index]?.docPos, directEntry);
-        return;
-      }
+      // Entry buttons own activation; avoid double handler / duplicate a11y actions.
+      return;
     }
     activateTocAtClientY(event.clientY, listEl);
   };
@@ -353,11 +350,7 @@ export function InfoPanel({
           )
         : null;
     if (directEntry) {
-      const index = panelTocEntryIndex(directEntry);
-      if (index >= 0 && index < toc.length) {
-        activateTocEntry(index, toc[index]?.docPos, directEntry);
-        return;
-      }
+      return;
     }
     activateTocAtClientY(touch.clientY, listEl);
   };
@@ -687,8 +680,10 @@ export function InfoPanel({
                     key={i}
                     type="button"
                     data-testid={`info-panel-toc-entry-${i}`}
+                    aria-label={item.text}
                     onClick={(event) => {
                       if (!editor) return;
+                      event.stopPropagation();
                       activateTocEntry(i, item.docPos, event.currentTarget);
                     }}
                     onKeyDown={(event) => {

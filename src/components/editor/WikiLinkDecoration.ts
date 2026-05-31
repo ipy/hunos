@@ -229,8 +229,16 @@ function navigateWikiLinkFromTarget(
     event instanceof KeyboardEvent &&
     (event.key === "Enter" || event.key === " ");
 
+  const decorationTarget =
+    linkEl instanceof HTMLElement &&
+    linkEl.getAttribute("data-testid") === WIKI_LINK_TARGET_TESTID;
+  const pointerClick =
+    event instanceof MouseEvent || event instanceof PointerEvent;
+
   if (
     !navigateOnKeyboard &&
+    !pointerClick &&
+    !decorationTarget &&
     !shouldNavigateWikiLinkClick(selectionFromBeforeInteraction, linkAtPos)
   ) {
     return false;
@@ -315,9 +323,12 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
             }
           };
 
-          const scrollRoot =
-            findEditorScrollContainer(view.dom) ?? view.dom;
-          scrollRoot.addEventListener("pointerdown", onPointerDownCapture, true);
+          const scrollRoot = findEditorScrollContainer(view.dom) ?? view.dom;
+          scrollRoot.addEventListener(
+            "pointerdown",
+            onPointerDownCapture,
+            true,
+          );
           scrollRoot.addEventListener("click", onClickCapture, true);
           document.addEventListener("pointerdown", onPointerDownCapture, true);
           document.addEventListener("click", onClickCapture, true);

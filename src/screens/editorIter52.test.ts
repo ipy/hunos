@@ -96,7 +96,13 @@ describe("iteration 52 — AC44 pointer–DOM parity", () => {
     );
     expect(entryBlock).toMatch(/onClick=\{/);
     expect(entryBlock).toContain("activateTocEntry");
+    expect(entryBlock).toContain("event.stopPropagation()");
     expect(entryBlock).not.toMatch(/onPointerDown=\{/);
+    const listClickBlock = infoPanelSource.slice(
+      infoPanelSource.indexOf("handleTocListClickCapture"),
+      infoPanelSource.indexOf("handleTocListTouchEndCapture"),
+    );
+    expect(listClickBlock).toMatch(/if \(directEntry\)[\s\S]*return;/);
   });
 
   it("aligns bottom-edge pointer Y with layout-bounds center for entry-11", () => {

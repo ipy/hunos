@@ -75,6 +75,7 @@
     "placeholder": "Start writing...",
     "titlePlaceholder": "Title",
     "regionLabel": "Editing: {{title}}",
+    "bodyLabel": "Note body",
     "saveFailed": "Could not save changes. Your edits are still in the editor.",
     "toolbar": {
       "inlineFormatting": "Text formatting",
