@@ -8,69 +8,63 @@ import {
   shouldShowPlaygroundRestoreButton,
   shouldShowPlaygroundRestoreInDriftBanner,
 } from "@/storage/formatPlaygroundNote";
-import { defaultInfoPanelTab, extractTocFromDoc } from "@/utils/noteToc";
+import { extractTocFromDoc } from "@/utils/noteToc";
 
+const editorSource = readFileSync(
+  join(process.cwd(), "src/screens/EditorScreen.tsx"),
+  "utf-8",
+);
 const infoPanelSource = readFileSync(
   join(process.cwd(), "src/components/editor/InfoPanel.tsx"),
   "utf-8",
 );
 
-describe("iteration 45 — TOC discoverability", () => {
-  it("includes 标签与链接 in playground TOC", () => {
+describe("iteration 46 — TOC bottom padding", () => {
+  it("includes playground bottom headings in TOC", () => {
     const toc = extractTocFromDoc(buildPlaygroundContent("zh"));
     expect(toc.some((entry) => entry.text === "标签与链接")).toBe(true);
+    expect(toc.some((entry) => entry.text === "自由试炼")).toBe(true);
   });
 
-  it("defaults info panel to TOC for heading-rich playground notes", () => {
-    const content = JSON.stringify(buildPlaygroundContent("zh"));
-    expect(
-      defaultInfoPanelTab(
-        {
-          id: "playground",
-          title: "格式试炼场",
-          content,
-          contentPlain: "",
-          isPinned: false,
-          status: "active",
-          trashedAt: null,
-          createdAt: 0,
-          modifiedAt: 0,
-          wordCount: 0,
-        },
-        null,
-      ),
-    ).toBe("toc");
-  });
-
-  it("renders toc entries in the default panel view without a tab switch", () => {
-    expect(infoPanelSource).toContain("defaultInfoPanelTab");
-    expect(infoPanelSource).not.toContain('useState<InfoPanelTab>("stats")');
-    expect(infoPanelSource).toContain(
-      "data-testid={`info-panel-toc-entry-${i}`}",
-    );
+  it("adds scroll breathing room below the last TOC row", () => {
+    expect(infoPanelSource).toContain("TOC_LIST_BOTTOM_PADDING_PX");
+    expect(infoPanelSource).toMatch(/TOC_LIST_BOTTOM_PADDING_PX = 32/);
+    expect(infoPanelSource).toContain("paddingBottom:");
+    expect(infoPanelSource).toContain("safe-area-inset-bottom");
   });
 });
 
-describe("iteration 45 — TOC first-click single handler", () => {
-  it("activates TOC entries via capture pointerdown and entry click", () => {
-    expect(infoPanelSource).toContain(
-      "onPointerDownCapture={handleTocPointerDownCapture}",
-    );
+describe("iteration 46 — TOC click activation", () => {
+  it("activates entries via pointerdown capture and synthetic click", () => {
     expect(infoPanelSource).toContain("handleTocPointerDownCapture");
-    expect(infoPanelSource).toContain("findPanelTocEntryAtPointerY");
     expect(infoPanelSource).toContain("activateTocEntry");
 
     const tocEntryBlock = infoPanelSource.slice(
       infoPanelSource.indexOf("info-panel-toc-entry-"),
       infoPanelSource.indexOf('touchAction: "manipulation"'),
     );
-    expect(tocEntryBlock).not.toMatch(/onPointerDown=\{/);
     expect(tocEntryBlock).toMatch(/onClick=\{/);
-    expect(tocEntryBlock).toContain("onKeyDown");
+    expect(tocEntryBlock).not.toMatch(/onPointerDown=\{/);
   });
 });
 
-describe("iteration 45 — BACKTEST drift banner friction (regression)", () => {
+describe("iteration 46 — info panel tab memory", () => {
+  it("remembers tab on close and restores on reopen", () => {
+    expect(infoPanelSource).toContain("initialInfoPanelTab");
+    expect(infoPanelSource).toContain("rememberInfoPanelTabForReopen");
+    expect(infoPanelSource).toContain("handleClose");
+    expect(infoPanelSource).toContain("selectTab");
+  });
+
+  it("clears reopen memory when switching notes", () => {
+    expect(editorSource).toContain("clearInfoPanelTabReopenMemory");
+    expect(editorSource).toMatch(
+      /leavingNoteId && leavingNoteId !== nextNoteId[\s\S]*clearInfoPanelTabReopenMemory/,
+    );
+  });
+});
+
+describe("iteration 46 — BACKTEST drift banner friction (regression)", () => {
   const seedContent = JSON.stringify(buildPlaygroundContent("zh"));
 
   it("detects BACKTEST marker headings for restore menu gating", () => {
@@ -84,7 +78,7 @@ describe("iteration 45 — BACKTEST drift banner friction (regression)", () => {
     parsed.content.splice(5, 0, {
       type: "heading",
       attrs: { level: 2 },
-      content: [{ type: "text", text: "BACKTEST45" }],
+      content: [{ type: "text", text: "BACKTEST46" }],
     });
     const pendingDraft = JSON.stringify(parsed);
 
@@ -120,7 +114,7 @@ describe("iteration 45 — BACKTEST drift banner friction (regression)", () => {
     parsed.content.splice(5, 0, {
       type: "heading",
       attrs: { level: 2 },
-      content: [{ type: "text", text: "BACKTEST45" }],
+      content: [{ type: "text", text: "BACKTEST46" }],
     });
     const pendingDraft = JSON.stringify(parsed);
 

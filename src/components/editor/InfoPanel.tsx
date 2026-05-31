@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/theme/ThemeContext";
 import { Icon } from "@/components/common/Icon";
@@ -17,8 +23,11 @@ import {
 } from "@/utils/noteContentHasTaskList";
 import { deriveNoteStats } from "@/utils/noteStats";
 import {
+  clearInfoPanelTabReopenMemory,
   defaultInfoPanelTab,
   deriveToc,
+  initialInfoPanelTab,
+  rememberInfoPanelTabForReopen,
   type InfoPanelTab,
 } from "@/utils/noteToc";
 
@@ -32,7 +41,7 @@ interface InfoPanelProps {
 
 const DRAG_CLOSE_THRESHOLD = 80;
 /** Breathing room below the last TOC row inside the panel scroll viewport. */
-const TOC_LIST_BOTTOM_PADDING_PX = 24;
+const TOC_LIST_BOTTOM_PADDING_PX = 32;
 
 function formatDateTime(ts: number): string {
   const d = new Date(ts);
@@ -57,7 +66,7 @@ export function InfoPanel({
     () => editorHasTaskList(editor) || noteContentHasTaskList(note.content),
   );
   const [activeTab, setActiveTab] = useState<InfoPanelTab>(() =>
-    defaultInfoPanelTab(note, editor),
+    initialInfoPanelTab(note, editor),
   );
   const [statsRevision, setStatsRevision] = useState(0);
   const [dragOffset, setDragOffset] = useState(0);
@@ -73,8 +82,22 @@ export function InfoPanel({
   useEffect(() => {
     if (noteIdRef.current === note.id) return;
     noteIdRef.current = note.id;
+    clearInfoPanelTabReopenMemory();
     setActiveTab(defaultInfoPanelTab(note, editor));
   }, [note.id, note, editor]);
+
+  const handleClose = useCallback(() => {
+    rememberInfoPanelTabForReopen(note.id, activeTab);
+    onClose();
+  }, [note.id, activeTab, onClose]);
+
+  const selectTab = useCallback(
+    (tab: InfoPanelTab) => {
+      setActiveTab(tab);
+      rememberInfoPanelTabForReopen(note.id, tab);
+    },
+    [note.id],
+  );
 
   useEffect(() => {
     if (!editor) {
@@ -106,12 +129,12 @@ export function InfoPanel({
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        onClose();
+        handleClose();
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
+  }, [handleClose]);
 
   const { charCount, wordCount, paragraphCount, readingTimeMinutes } = useMemo(
     () => deriveNoteStats(note, editor),
@@ -179,7 +202,7 @@ export function InfoPanel({
     (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
 
     if (dragOffsetRef.current > DRAG_CLOSE_THRESHOLD) {
-      onClose();
+      handleClose();
     } else {
       dragOffsetRef.current = 0;
       setDragOffset(0);
@@ -192,7 +215,7 @@ export function InfoPanel({
       {/* Backdrop — below editor-toolbar-layer (55) so format actions stay clickable */}
       <div
         data-testid="stats-panel-backdrop"
-        onClick={onClose}
+        onClick={handleClose}
         style={{
           position: "fixed",
           inset: 0,
@@ -291,7 +314,7 @@ export function InfoPanel({
             <button
               type="button"
               data-testid="stats-panel-close"
-              onClick={onClose}
+              onClick={handleClose}
               aria-label={t("common.actions.done")}
               style={{
                 background: "none",
@@ -322,7 +345,7 @@ export function InfoPanel({
             <button
               key={tab.id}
               data-testid={`info-panel-tab-${tab.id}`}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => selectTab(tab.id)}
               style={{
                 flex: 1,
                 display: "flex",
@@ -458,6 +481,10 @@ export function InfoPanel({
                     key={i}
                     type="button"
                     data-testid={`info-panel-toc-entry-${i}`}
+                    onClick={(event) => {
+                      if (!editor) return;
+                      activateTocEntry(i, item.docPos, event.currentTarget);
+                    }}
                     onKeyDown={(event) => {
                       if (!editor) return;
                       if (event.key !== "Enter" && event.key !== " ") return;

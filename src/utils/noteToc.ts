@@ -86,3 +86,28 @@ export function defaultInfoPanelTab(
 ): InfoPanelTab {
   return deriveToc(note, editor).length > 0 ? "toc" : "stats";
 }
+
+/** Reopen memory: survives close/reopen on the same note, cleared on note switch. */
+let infoPanelReopenTab: { noteId: string; tab: InfoPanelTab } | null = null;
+
+export function rememberInfoPanelTabForReopen(
+  noteId: string,
+  tab: InfoPanelTab,
+): void {
+  infoPanelReopenTab = { noteId, tab };
+}
+
+export function clearInfoPanelTabReopenMemory(): void {
+  infoPanelReopenTab = null;
+}
+
+/** Tab for a freshly opened panel — restores last tab after close/reopen on same note. */
+export function initialInfoPanelTab(
+  note: Note,
+  editor: Editor | null,
+): InfoPanelTab {
+  if (infoPanelReopenTab?.noteId === note.id) {
+    return infoPanelReopenTab.tab;
+  }
+  return defaultInfoPanelTab(note, editor);
+}

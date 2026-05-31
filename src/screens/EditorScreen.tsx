@@ -24,7 +24,7 @@ import { exportAndCopy, exportAndDownload } from "@/utils/export";
 import { resolveTextFontFamily } from "@/utils/fonts";
 import type { Editor } from "@tiptap/react";
 import type { LayoutMode } from "@/hooks/useAdaptiveLayout";
-import { registerHunosE2eEditor } from "@/testing/hunos-e2e-bridge";
+import { clearInfoPanelTabReopenMemory } from "@/utils/noteToc";
 import { dismissEditorOverlayOnEscape } from "@/utils/editorOverlayEscape";
 import {
   attachEditorOverlaySelectionSync,
@@ -262,6 +262,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         stashEditorAutosaveSnapshot(leavingNoteId, orphan);
       }
       stashRestoreHandledForNoteRef.current = null;
+      clearInfoPanelTabReopenMemory();
     }
     applyRestoreChipSuppressed(false);
     pendingContentRef.current = null;

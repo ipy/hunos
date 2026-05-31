@@ -1,9 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
+  clearInfoPanelTabReopenMemory,
   defaultInfoPanelTab,
   deriveToc,
   extractTocFromContent,
   extractTocFromDoc,
+  initialInfoPanelTab,
+  rememberInfoPanelTabForReopen,
 } from "./noteToc";
 import type { Note } from "@/types/note";
 import type { Editor } from "@tiptap/react";
@@ -169,5 +172,30 @@ describe("defaultInfoPanelTab", () => {
       }),
     });
     expect(defaultInfoPanelTab(note, null)).toBe("stats");
+  });
+});
+
+describe("info panel tab reopen memory", () => {
+  afterEach(() => {
+    clearInfoPanelTabReopenMemory();
+  });
+
+  it("restores last tab after close/reopen on the same note", () => {
+    const note = baseNote({ content: JSON.stringify(sampleDoc) });
+    rememberInfoPanelTabForReopen(note.id, "stats");
+    expect(initialInfoPanelTab(note, null)).toBe("stats");
+  });
+
+  it("falls back to default when reopen memory is for another note", () => {
+    const note = baseNote({ content: JSON.stringify(sampleDoc) });
+    rememberInfoPanelTabForReopen("other-note", "stats");
+    expect(initialInfoPanelTab(note, null)).toBe("toc");
+  });
+
+  it("clears reopen memory on note switch", () => {
+    const note = baseNote({ content: JSON.stringify(sampleDoc) });
+    rememberInfoPanelTabForReopen(note.id, "stats");
+    clearInfoPanelTabReopenMemory();
+    expect(initialInfoPanelTab(note, null)).toBe("toc");
   });
 });
