@@ -77,4 +77,17 @@ describe("EditorScreen mark-only restore chip suppression", () => {
       /formatPlaygroundMatchesCanonicalSeed\([\s\S]*applyRestoreChipSuppressed\(true\)/,
     );
   });
+
+  it("ends restore session and persists format QA edits during post-restore mark apply", () => {
+    const source = readFileSync(
+      join(process.cwd(), "src/screens/EditorScreen.tsx"),
+      "utf-8",
+    );
+    expect(source).toMatch(
+      /playgroundRestoreSessionRef\.current\.isActive\(\)[\s\S]*playgroundFormatQaDraftHidesRestoreChip/,
+    );
+    expect(source).toMatch(
+      /playgroundFormatQaDraftHidesRestoreChip\([\s\S]*playgroundRestoreSessionRef\.current\.end\(\)/,
+    );
+  });
 });

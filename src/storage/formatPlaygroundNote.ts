@@ -559,7 +559,9 @@ function normalizePlaygroundDocNodeTreeForFingerprint(
   parsed: PlaygroundDoc,
   seedLocale: PlaygroundLocale,
 ): PlaygroundDoc {
-  const content = stripTextFromPlaygroundNodes(parsed.content).map((node) => {
+  const content = stripTextFromPlaygroundNodes(
+    stripTrailingEmptyParagraphs(parsed.content),
+  ).map((node) => {
     const migratedImage = migratePlaygroundSampleImageNode(node);
     return migratedImage ?? node;
   });

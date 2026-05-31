@@ -378,8 +378,22 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           )
         ) {
           playgroundRestoreSessionRef.current.end();
+          return;
         }
-        return;
+        if (
+          note &&
+          isFormatPlaygroundNote(note.title, noteContentForEditor) &&
+          playgroundFormatQaDraftHidesRestoreChip(
+            json,
+            note.title,
+            noteContentForEditor,
+            resolvePlaygroundSeedLocale(noteContentForEditor, settings.locale),
+          )
+        ) {
+          playgroundRestoreSessionRef.current.end();
+        } else {
+          return;
+        }
       }
 
       if (note && isFormatPlaygroundNote(note.title, noteContentForEditor)) {

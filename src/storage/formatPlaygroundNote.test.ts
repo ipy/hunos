@@ -1496,9 +1496,15 @@ describe("playgroundWriteRegressesCanonicalStored", () => {
     if (firstBulletText) {
       firstBulletText.text = `${firstBulletText.text}Z`;
     }
+    while (
+      parsed.content.at(-1)?.type === "paragraph" &&
+      !parsed.content.at(-1)?.content?.length
+    ) {
+      parsed.content.pop();
+    }
     const lastParagraph = parsed.content[parsed.content.length - 1];
-    if (lastParagraph?.type === "paragraph") {
-      lastParagraph.content = [{ type: "text", text: "T21-doc-end" }];
+    if (lastParagraph?.type === "paragraph" && lastParagraph.content?.[0]) {
+      lastParagraph.content[0].text = `${lastParagraph.content[0].text ?? ""} T21-doc-end`;
     }
     const edited = JSON.stringify(parsed);
     expect(
@@ -1997,6 +2003,68 @@ describe("comparePlaygroundStructuralDrift", () => {
       comparePlaygroundStructuralDrift(JSON.stringify(parsed), seed, "zh"),
     ).toBe(true);
   });
+
+  it("treats TipTap round-trip without trailing empty paragraphs as no drift", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    while (
+      parsed.content.at(-1)?.type === "paragraph" &&
+      !parsed.content.at(-1)?.content?.length
+    ) {
+      parsed.content.pop();
+    }
+    const editorEcho = JSON.stringify(parsed);
+    expect(comparePlaygroundStructuralDrift(editorEcho, seed, "zh")).toBe(
+      false,
+    );
+    expect(
+      playgroundWriteRegressesCanonicalStored(
+        "格式试炼场",
+        seed,
+        editorEcho,
+        "zh",
+      ),
+    ).toBe(false);
+  });
+
+  it("persists in-node QA edits after TipTap strips trailing empty paragraphs", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{ type?: string; text?: string }>;
+      }>;
+    };
+    while (
+      parsed.content.at(-1)?.type === "paragraph" &&
+      !parsed.content.at(-1)?.content?.length
+    ) {
+      parsed.content.pop();
+    }
+    const introParagraph = parsed.content.find(
+      (node) =>
+        node.type === "paragraph" &&
+        node.content?.[0]?.text?.includes("在这一篇笔记里测试所有格式"),
+    );
+    if (introParagraph?.content?.[0]) {
+      introParagraph.content[0].text = `${introParagraph.content[0].text}Q`;
+    }
+    const listsIndex = parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
+    );
+    const firstBulletText =
+      parsed.content[listsIndex + 1]?.content?.[0]?.content?.[0]?.content?.[0];
+    if (firstBulletText) {
+      firstBulletText.text = `${firstBulletText.text}Z`;
+    }
+    const edited = JSON.stringify(parsed);
+    expect(
+      playgroundWriteRegressesCanonicalStored("格式试炼场", seed, edited, "zh"),
+    ).toBe(false);
+    expect(
+      playgroundFormatQaDraftHidesRestoreChip(edited, "格式试炼场", seed, "zh"),
+    ).toBe(true);
+  });
 });
 
 describe("playgroundFormatQaMarkOnlyDrift", () => {
@@ -2150,6 +2218,53 @@ describe("playgroundFormatQaDraftHidesRestoreChip", () => {
     expect(formatPlaygroundNeedsRestore("格式试炼场", marked, "zh")).toBe(
       false,
     );
+  });
+
+  it("hides chip for bold after TipTap strips trailing empty paragraphs", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          content?: Array<{
+            content?: Array<{
+              type?: string;
+              text?: string;
+              marks?: unknown[];
+            }>;
+          }>;
+        }>;
+      }>;
+    };
+    while (
+      parsed.content.at(-1)?.type === "paragraph" &&
+      !parsed.content.at(-1)?.content?.length
+    ) {
+      parsed.content.pop();
+    }
+    const listsIndex = parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
+    );
+    const firstItemParagraph =
+      parsed.content[listsIndex + 1]?.content?.[0]?.content?.[0];
+    if (firstItemParagraph) {
+      firstItemParagraph.content = [
+        { type: "text", text: "无序列表" },
+        { type: "text", text: "第一项", marks: [{ type: "bold" }] },
+      ];
+    }
+    const marked = JSON.stringify(parsed);
+    expect(
+      playgroundFormatQaDraftHidesRestoreChip(marked, "格式试炼场", seed, "zh"),
+    ).toBe(true);
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        pendingDraftContent: marked,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
   });
 
   it("hides chip for italic on 无序列表第二项 when persisted", () => {
