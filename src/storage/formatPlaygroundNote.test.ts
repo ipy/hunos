@@ -2057,13 +2057,52 @@ describe("playgroundFormatQaDraftHidesRestoreChip", () => {
     if (firstItemText) {
       firstItemText.marks = [{ type: "bold" }];
     }
+    const marked = JSON.stringify(parsed);
     expect(
-      playgroundFormatQaDraftHidesRestoreChip(
-        JSON.stringify(parsed),
-        "格式试炼场",
-        seed,
-        "zh",
-      ),
+      playgroundFormatQaDraftHidesRestoreChip(marked, "格式试炼场", seed, "zh"),
     ).toBe(true);
+    expect(formatPlaygroundNeedsRestore("格式试炼场", marked, "zh")).toBe(
+      false,
+    );
+  });
+
+  it("hides chip for italic on 无序列表第二项 when persisted", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          content?: Array<{
+            content?: Array<{ text?: string; marks?: unknown[] }>;
+          }>;
+        }>;
+      }>;
+    };
+    const listsIndex = parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
+    );
+    const bulletList = parsed.content[listsIndex + 1];
+    for (const listItem of bulletList?.content ?? []) {
+      const paragraph = listItem.content?.[0];
+      const textNode = paragraph?.content?.find(
+        (node) => node.text === "无序列表第二项",
+      );
+      if (textNode) {
+        textNode.marks = [{ type: "italic" }];
+        break;
+      }
+    }
+    const marked = JSON.stringify(parsed);
+    expect(formatPlaygroundNeedsRestore("格式试炼场", marked, "zh")).toBe(
+      false,
+    );
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: marked,
+        pendingDraftContent: null,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
   });
 });

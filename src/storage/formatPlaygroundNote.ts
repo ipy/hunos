@@ -833,8 +833,26 @@ export function formatPlaygroundNeedsRestore(
   if (playgroundEditorMarkOnlyDriftFromStored(body, canonical, seedLocale)) {
     return false;
   }
+  if (playgroundBodyHidesRestoreChip(body, title, fallbackLocale)) {
+    return false;
+  }
 
   return true;
+}
+
+function playgroundBodyHidesRestoreChip(
+  body: string,
+  title: string,
+  fallbackLocale: Locale,
+): boolean {
+  if (
+    playgroundFormatQaDraftHidesRestoreChip(body, title, body, fallbackLocale)
+  ) {
+    return true;
+  }
+  const seedLocale = resolvePlaygroundSeedLocale(body, fallbackLocale);
+  const canonical = JSON.stringify(buildPlaygroundContent(seedLocale));
+  return playgroundEditorMarkOnlyDriftFromStored(body, canonical, seedLocale);
 }
 
 function playgroundLiveContentNeedsRestore(options: {
@@ -859,6 +877,17 @@ function playgroundLiveContentNeedsRestore(options: {
   if (
     playgroundEditorMarkOnlyDriftFromStored(
       liveContent,
+      storedContent,
+      fallbackLocale,
+    )
+  ) {
+    return false;
+  }
+
+  if (
+    playgroundFormatQaDraftHidesRestoreChip(
+      liveContent,
+      displayTitle,
       storedContent,
       fallbackLocale,
     )
@@ -910,6 +939,16 @@ export function shouldShowPlaygroundRestoreButton(options: {
 
   if (isCanonical) {
     if (pendingDraftContent != null) {
+      if (
+        playgroundFormatQaDraftHidesRestoreChip(
+          pendingDraftContent,
+          storedTitle,
+          rowContent,
+          seedLocale,
+        )
+      ) {
+        return false;
+      }
       return playgroundLiveContentNeedsRestore({
         displayTitle,
         storedContent: rowContent,
@@ -927,6 +966,16 @@ export function shouldShowPlaygroundRestoreButton(options: {
   }
 
   if (pendingDraftContent != null) {
+    if (
+      playgroundFormatQaDraftHidesRestoreChip(
+        pendingDraftContent,
+        storedTitle,
+        rowContent,
+        seedLocale,
+      )
+    ) {
+      return false;
+    }
     return formatPlaygroundNeedsRestore(
       displayTitle,
       pendingDraftContent,

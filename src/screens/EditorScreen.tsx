@@ -159,6 +159,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const titleInputRef = useRef<HTMLInputElement>(null);
   const skipTitleSyncOnceRef = useRef(false);
   const prevActiveNoteIdRef = useRef<string | null>(null);
+  const stashRestoreHandledForNoteRef = useRef<string | null>(null);
 
   const captureSelectionForOverlay = useCallback(() => {
     if (editorInstanceRef.current) {
@@ -247,9 +248,11 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       if (orphan) {
         stashEditorAutosaveSnapshot(leavingNoteId, orphan);
       }
+      stashRestoreHandledForNoteRef.current = null;
     }
     applyRestoreChipSuppressed(false);
     pendingContentRef.current = null;
+    setEditorSeedContent(null);
     clearEditorOverlaySelection();
     setTitleValue(note?.title ?? "");
     if (note?.id) {
@@ -606,16 +609,16 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
   useEffect(() => {
     if (!note?.id) return;
+    if (stashRestoreHandledForNoteRef.current === note.id) return;
 
     if (playgroundRestoreSessionRef.current.isActive()) {
-      clearStashedEditorAutosave();
-      setEditorSeedContent(null);
       return;
     }
 
     const snapshot = peekStashedEditorAutosaveForNote(note.id);
+    stashRestoreHandledForNoteRef.current = note.id;
+
     if (!snapshot) {
-      setEditorSeedContent(null);
       return;
     }
 
@@ -625,7 +628,6 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     const isPlayground = isFormatPlaygroundNote(note.title, note.content);
     if (isPlayground) {
       if (!playgroundContentMatchesLocale(taken.content, settings.locale)) {
-        setEditorSeedContent(null);
         return;
       }
       const sanitized = sanitizeEditorStashContent(taken.content);
@@ -653,7 +655,6 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   }, [
     note?.id,
     note?.title,
-    note?.content,
     applyRestoreChipSuppressed,
     persistEditorContent,
     saveNoteContent,
@@ -711,7 +712,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     if (!isFormatPlaygroundNote(note.title, note.content)) return;
     clearStashedEditorAutosave();
     setEditorSeedContent(null);
-  }, [settings.locale, note?.id]);
+  }, [settings.locale]);
 
   useEffect(() => {
     if (!note?.id || !note.content) return;
