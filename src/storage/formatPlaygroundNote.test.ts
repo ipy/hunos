@@ -23,6 +23,8 @@ import {
   playgroundFormatQaDraftHidesRestoreChip,
   playgroundFormatQaMarkOnlyDrift,
   playgroundFormatQaStructureMatchesCanonical,
+  comparePlaygroundStructuralDrift,
+  normalizePlaygroundNodeTreeSnapshot,
   resolvePlaygroundSeedLocale,
   shouldShowPlaygroundRestoreButton,
   restoreFormatPlaygroundContent,
@@ -1469,6 +1471,43 @@ describe("playgroundWriteRegressesCanonicalStored", () => {
       ),
     ).toBe(false);
   });
+
+  it("allows in-node text QA writes over canonical stored seed", () => {
+    const seed = JSON.stringify(buildPlaygroundContent("zh"));
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{ type?: string; text?: string }>;
+      }>;
+    };
+    const introParagraph = parsed.content.find(
+      (node) =>
+        node.type === "paragraph" &&
+        node.content?.[0]?.text?.includes("在这一篇笔记里测试所有格式"),
+    );
+    if (introParagraph?.content?.[0]) {
+      introParagraph.content[0].text = `${introParagraph.content[0].text}Q`;
+    }
+    const listsIndex = parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
+    );
+    const firstBulletText =
+      parsed.content[listsIndex + 1]?.content?.[0]?.content?.[0]?.content?.[0];
+    if (firstBulletText) {
+      firstBulletText.text = `${firstBulletText.text}Z`;
+    }
+    const lastParagraph = parsed.content[parsed.content.length - 1];
+    if (lastParagraph?.type === "paragraph") {
+      lastParagraph.content = [{ type: "text", text: "T21-doc-end" }];
+    }
+    const edited = JSON.stringify(parsed);
+    expect(
+      playgroundWriteRegressesCanonicalStored("格式试炼场", seed, edited, "zh"),
+    ).toBe(false);
+    expect(
+      playgroundFormatQaDraftHidesRestoreChip(edited, "格式试炼场", seed, "zh"),
+    ).toBe(true);
+  });
 });
 
 describe("getFormatPlaygroundIntroExcerpt", () => {
@@ -1509,7 +1548,7 @@ describe("formatPlayground restore gating", () => {
     );
   });
 
-  it("detects mid-document reorder drift even when plain text is unchanged", () => {
+  it("tolerates mid-document list reorder when node tree is unchanged (format QA)", () => {
     const seed = JSON.parse(JSON.stringify(buildPlaygroundContent("zh"))) as {
       content: Array<{
         type: string;
@@ -1532,8 +1571,16 @@ describe("formatPlayground restore gating", () => {
       formatPlaygroundMatchesCanonicalSeed("格式试炼场", reordered, "zh"),
     ).toBe(false);
     expect(formatPlaygroundNeedsRestore("格式试炼场", reordered, "zh")).toBe(
-      true,
+      false,
     );
+    expect(
+      playgroundFormatQaDraftHidesRestoreChip(
+        reordered,
+        "格式试炼场",
+        JSON.stringify(buildPlaygroundContent("zh")),
+        "zh",
+      ),
+    ).toBe(true);
   });
 
   it("matches canonical zh seed when app locale is en", () => {
@@ -1910,6 +1957,45 @@ describe("filterNotesForPlaygroundList", () => {
   it("leaves non-playground notes untouched when no playground exists", () => {
     const filtered = filterNotesForPlaygroundList([regularNote], "zh");
     expect(filtered).toEqual([regularNote]);
+  });
+});
+
+describe("comparePlaygroundStructuralDrift", () => {
+  const seed = JSON.stringify(buildPlaygroundContent("zh"));
+
+  it("returns false for mark-only and in-node text QA edits", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{ type?: string; text?: string; marks?: unknown[] }>;
+      }>;
+    };
+    const introParagraph = parsed.content.find(
+      (node) =>
+        node.type === "paragraph" &&
+        node.content?.[0]?.text?.includes("在这一篇笔记里测试所有格式"),
+    );
+    if (introParagraph?.content?.[0]) {
+      introParagraph.content[0].text = `${introParagraph.content[0].text}Q`;
+    }
+    const edited = JSON.stringify(parsed);
+    expect(comparePlaygroundStructuralDrift(edited, seed, "zh")).toBe(false);
+    expect(normalizePlaygroundNodeTreeSnapshot(edited, "zh")).toBe(
+      normalizePlaygroundNodeTreeSnapshot(seed, "zh"),
+    );
+  });
+
+  it("returns true when a new paragraph is inserted", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    parsed.content.push({
+      type: "paragraph",
+      content: [{ type: "text", text: "T21-MIXED-marker" }],
+    });
+    expect(
+      comparePlaygroundStructuralDrift(JSON.stringify(parsed), seed, "zh"),
+    ).toBe(true);
   });
 });
 

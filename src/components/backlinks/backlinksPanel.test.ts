@@ -7,6 +7,7 @@ import {
   BACKLINKS_PANEL_TESTID,
   BACKLINKS_PANEL_TOGGLE_TESTID,
   backlinksItemTestId,
+  backlinksRowKey,
 } from "./BacklinksPanel";
 
 const panelSource = readFileSync(
@@ -30,6 +31,21 @@ describe("BacklinksPanel automation testids", () => {
     expect(backlinksItemTestId("pg-zh")).toBe("backlinks-item-pg-zh");
   });
 
+  it("derives stable row keys from link id, note id, and list index", () => {
+    expect(
+      backlinksRowKey(
+        {
+          linkId: "dup",
+          noteId: "pg-zh",
+          noteTitle: "格式试炼场",
+          context: "ctx",
+          type: "wiki_link",
+        },
+        1,
+      ),
+    ).toBe("dup:pg-zh:1");
+  });
+
   it("wires testids on panel root, toggle, sections, and items", () => {
     expect(panelSource).toContain(`data-testid={BACKLINKS_PANEL_TESTID}`);
     expect(panelSource).toContain(
@@ -41,7 +57,7 @@ describe("BacklinksPanel automation testids", () => {
     expect(panelSource).toContain(
       `data-testid={BACKLINKS_INCOMING_SECTION_TESTID}`,
     );
-    expect(panelSource).toContain("key={bl.linkId}");
+    expect(panelSource).toContain("key={backlinksRowKey(bl, index)}");
     expect(panelSource).toContain(
       "data-testid={backlinksItemTestId(bl.noteId)}",
     );

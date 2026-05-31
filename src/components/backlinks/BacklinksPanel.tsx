@@ -15,6 +15,11 @@ export function backlinksItemTestId(noteId: string): string {
   return `backlinks-item-${noteId}`;
 }
 
+/** Stable React key when linkId alone may duplicate across wiki-link rows. */
+export function backlinksRowKey(bl: BacklinkResult, index: number): string {
+  return `${bl.linkId}:${bl.noteId}:${index}`;
+}
+
 interface BacklinksPanelProps {
   noteId: string;
 }
@@ -34,9 +39,9 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
 
   if (backlinks.length === 0 && outgoing.length === 0) return null;
 
-  const renderLink = (bl: BacklinkResult) => (
+  const renderLink = (bl: BacklinkResult, index: number) => (
     <div
-      key={bl.linkId}
+      key={backlinksRowKey(bl, index)}
       data-testid={backlinksItemTestId(bl.noteId)}
       data-note-title={bl.noteTitle}
       onClick={() => setActiveNote(bl.noteId)}
@@ -149,7 +154,7 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
                 {t("editor.backlinks.outgoing", { defaultValue: "Links to" })} (
                 {outgoing.length})
               </div>
-              {outgoing.map(renderLink)}
+              {outgoing.map((bl, index) => renderLink(bl, index))}
             </div>
           )}
           {backlinks.length > 0 && (
@@ -169,7 +174,7 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
                 })}{" "}
                 ({backlinks.length})
               </div>
-              {backlinks.map(renderLink)}
+              {backlinks.map((bl, index) => renderLink(bl, index))}
             </div>
           )}
         </>

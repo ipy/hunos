@@ -535,6 +535,82 @@ export function normalizePlaygroundStructureSnapshot(
   }
 }
 
+function stripTextFromPlaygroundNode(
+  node: PlaygroundDocNode,
+): PlaygroundDocNode | null {
+  if (node.type === "text") {
+    return null;
+  }
+  const content = node.content?.length
+    ? stripTextFromPlaygroundNodes(node.content)
+    : undefined;
+  return { ...node, content: content?.length ? content : undefined };
+}
+
+function stripTextFromPlaygroundNodes(
+  nodes: PlaygroundDocNode[],
+): PlaygroundDocNode[] {
+  return nodes
+    .map((node) => stripTextFromPlaygroundNode(node))
+    .filter((node): node is PlaygroundDocNode => node != null);
+}
+
+function normalizePlaygroundDocNodeTreeForFingerprint(
+  parsed: PlaygroundDoc,
+  seedLocale: PlaygroundLocale,
+): PlaygroundDoc {
+  const content = stripTextFromPlaygroundNodes(parsed.content).map((node) => {
+    const migratedImage = migratePlaygroundSampleImageNode(node);
+    return migratedImage ?? node;
+  });
+  return {
+    type: "doc",
+    attrs: {
+      playgroundContentVersion: PLAYGROUND_CONTENT_VERSION,
+      playgroundContentLocale: seedLocale,
+    },
+    content,
+  };
+}
+
+/** Node-type tree fingerprint — ignores inline marks and text content. */
+export function normalizePlaygroundNodeTreeSnapshot(
+  content: string,
+  locale: Locale,
+): string {
+  const migrated = migratePlaygroundContentIfStale(content, locale) ?? content;
+  try {
+    const parsed = JSON.parse(migrated) as PlaygroundDoc;
+    if (parsed.type !== "doc" || !Array.isArray(parsed.content)) {
+      return migrated;
+    }
+    const seedLocale = resolvePlaygroundSeedLocale(migrated, locale);
+    return JSON.stringify(
+      normalizePlaygroundDocNodeTreeForFingerprint(parsed, seedLocale),
+    );
+  } catch {
+    return migrated;
+  }
+}
+
+/** True when live JSON structurally drifts from reference (marks and text edits allowed). */
+export function comparePlaygroundStructuralDrift(
+  liveContent: string,
+  referenceContent: string,
+  fallbackLocale: Locale,
+): boolean {
+  const liveRow = playgroundPersistedContentForRow(liveContent);
+  const referenceRow = playgroundPersistedContentForRow(referenceContent);
+  if (!liveRow || !referenceRow) {
+    return liveRow !== referenceRow;
+  }
+  const seedLocale = resolvePlaygroundSeedLocale(referenceRow, fallbackLocale);
+  return (
+    normalizePlaygroundNodeTreeSnapshot(liveRow, seedLocale) !==
+    normalizePlaygroundNodeTreeSnapshot(referenceRow, seedLocale)
+  );
+}
+
 /** True when live editor JSON matches persisted playground content (round-trip tolerant). */
 export function playgroundEditorContentMatchesStored(
   editorContentJson: string,
@@ -618,7 +694,7 @@ export function playgroundFormatQaMarkOnlyDrift(
   );
 }
 
-/** True when live playground body matches canonical seed structure (inline marks allowed). */
+/** True when live playground body matches canonical seed node tree (marks/text edits allowed). */
 export function playgroundFormatQaStructureMatchesCanonical(
   liveContent: string,
   storedTitle: string,
@@ -633,30 +709,28 @@ export function playgroundFormatQaStructureMatchesCanonical(
   const canonical = playgroundPersistedContentForRow(
     JSON.stringify(buildPlaygroundContent(seedLocale)),
   );
-  return (
-    normalizePlaygroundStructureSnapshot(liveContent, seedLocale) ===
-    normalizePlaygroundStructureSnapshot(canonical, seedLocale)
-  );
+  return !comparePlaygroundStructuralDrift(liveContent, canonical, seedLocale);
 }
 
-/** Hide restore chip for format QA drafts that only add inline marks on canonical structure. */
+/** Hide restore chip when format QA edits preserve seed node tree (marks or in-node text). */
 export function playgroundFormatQaDraftHidesRestoreChip(
   liveContent: string,
   storedTitle: string,
   storedContent: string,
   fallbackLocale: Locale,
 ): boolean {
-  if (
-    playgroundFormatQaMarkOnlyDrift(
-      liveContent,
-      storedTitle,
-      storedContent,
-      fallbackLocale,
-    )
-  ) {
+  const rowContent = playgroundPersistedContentForRow(storedContent);
+  if (!isFormatPlaygroundNote(storedTitle, rowContent)) {
+    return false;
+  }
+  const seedLocale = resolvePlaygroundSeedLocale(rowContent, fallbackLocale);
+  const canonical = playgroundPersistedContentForRow(
+    JSON.stringify(buildPlaygroundContent(seedLocale)),
+  );
+  if (!comparePlaygroundStructuralDrift(liveContent, canonical, seedLocale)) {
     return true;
   }
-  return playgroundFormatQaStructureMatchesCanonical(
+  return playgroundFormatQaMarkOnlyDrift(
     liveContent,
     storedTitle,
     storedContent,
@@ -731,27 +805,17 @@ export function playgroundWriteRegressesCanonicalStored(
     return false;
   }
 
-  const storedStructure = normalizePlaygroundStructureSnapshot(
-    stored.rowContent,
-    stored.seedLocale,
-  );
-  const candidateStructure = normalizePlaygroundStructureSnapshot(
-    candidateRow,
-    stored.seedLocale,
-  );
-  if (candidateStructure === storedStructure) {
+  if (
+    !comparePlaygroundStructuralDrift(
+      candidateRow,
+      stored.rowContent,
+      stored.seedLocale,
+    )
+  ) {
     return false;
   }
 
-  const storedFingerprint = normalizePlaygroundContentSnapshot(
-    stored.rowContent,
-    stored.seedLocale,
-  );
-  const candidateFingerprint = normalizePlaygroundContentSnapshot(
-    candidateRow,
-    stored.seedLocale,
-  );
-  return candidateFingerprint !== storedFingerprint;
+  return true;
 }
 
 /** Stable JSON fingerprint for canonical seed comparison (editor round-trip tolerant). */
@@ -830,29 +894,14 @@ export function formatPlaygroundNeedsRestore(
   }
 
   const canonical = JSON.stringify(buildPlaygroundContent(seedLocale));
-  if (playgroundEditorMarkOnlyDriftFromStored(body, canonical, seedLocale)) {
+  if (!comparePlaygroundStructuralDrift(body, canonical, seedLocale)) {
     return false;
   }
-  if (playgroundBodyHidesRestoreChip(body, title, fallbackLocale)) {
+  if (playgroundEditorMarkOnlyDriftFromStored(body, canonical, seedLocale)) {
     return false;
   }
 
   return true;
-}
-
-function playgroundBodyHidesRestoreChip(
-  body: string,
-  title: string,
-  fallbackLocale: Locale,
-): boolean {
-  if (
-    playgroundFormatQaDraftHidesRestoreChip(body, title, body, fallbackLocale)
-  ) {
-    return true;
-  }
-  const seedLocale = resolvePlaygroundSeedLocale(body, fallbackLocale);
-  const canonical = JSON.stringify(buildPlaygroundContent(seedLocale));
-  return playgroundEditorMarkOnlyDriftFromStored(body, canonical, seedLocale);
 }
 
 function playgroundLiveContentNeedsRestore(options: {

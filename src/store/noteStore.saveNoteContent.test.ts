@@ -213,6 +213,49 @@ describe("useNoteStore.saveNoteContent", () => {
     expect(dbUpdate).toHaveBeenCalledOnce();
   });
 
+  it("persists in-node format QA text over canonical playground seed", async () => {
+    const seed = JSON.stringify(buildPlaygroundContent("zh"));
+    const note = await noteStorage.create({
+      title: "格式试炼场",
+      content: seed,
+      contentPlain: "格式试炼场",
+    });
+    useNoteStore.setState({ notes: [note] });
+    dbUpdate.mockClear();
+
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{ type?: string; text?: string }>;
+      }>;
+    };
+    const introParagraph = parsed.content.find(
+      (node) =>
+        node.type === "paragraph" &&
+        node.content?.[0]?.text?.includes("在这一篇笔记里测试所有格式"),
+    );
+    if (introParagraph?.content?.[0]) {
+      introParagraph.content[0].text = `${introParagraph.content[0].text}Q`;
+    }
+    const listsIndex = parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
+    );
+    const firstBulletText =
+      parsed.content[listsIndex + 1]?.content?.[0]?.content?.[0]?.content?.[0];
+    if (firstBulletText) {
+      firstBulletText.text = `${firstBulletText.text}Z`;
+    }
+
+    const saved = await useNoteStore
+      .getState()
+      .saveNoteContent(note.id, JSON.stringify(parsed));
+
+    expect(saved).toBe(true);
+    expect(dbUpdate).toHaveBeenCalledOnce();
+    expect(notesById.get(note.id)?.content).toContain("Q");
+    expect(notesById.get(note.id)?.content).toContain("Z");
+  });
+
   it("returns false when storage update fails", async () => {
     const note = await noteStorage.create({ title: "Fail path" });
     useNoteStore.setState({ notes: [note] });
