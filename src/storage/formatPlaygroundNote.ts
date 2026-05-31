@@ -465,7 +465,9 @@ function normalizePlaygroundDocForFingerprint(
   };
 }
 
-function stripPlaygroundInlineMarks(node: PlaygroundDocNode): PlaygroundDocNode {
+function stripPlaygroundInlineMarks(
+  node: PlaygroundDocNode,
+): PlaygroundDocNode {
   if (node.type === "text") {
     return { type: "text", text: node.text ?? "" };
   }
@@ -478,13 +480,37 @@ function stripPlaygroundInlineMarks(node: PlaygroundDocNode): PlaygroundDocNode 
   };
 }
 
+function coalesceAdjacentTextNodes(
+  nodes: PlaygroundDocNode[],
+): PlaygroundDocNode[] {
+  const coalesced: PlaygroundDocNode[] = [];
+  for (const node of nodes) {
+    let next = node;
+    if (next.content?.length) {
+      next = {
+        ...next,
+        content: coalesceAdjacentTextNodes(next.content),
+      };
+    }
+    const previous = coalesced[coalesced.length - 1];
+    if (next.type === "text" && previous?.type === "text") {
+      previous.text = (previous.text ?? "") + (next.text ?? "");
+      continue;
+    }
+    coalesced.push(next);
+  }
+  return coalesced;
+}
+
 function normalizePlaygroundDocStructureForFingerprint(
   parsed: PlaygroundDoc,
   seedLocale: PlaygroundLocale,
 ): PlaygroundDoc {
   const stripped: PlaygroundDoc = {
     ...parsed,
-    content: parsed.content.map(stripPlaygroundInlineMarks),
+    content: coalesceAdjacentTextNodes(
+      parsed.content.map(stripPlaygroundInlineMarks),
+    ),
   };
   return normalizePlaygroundDocForFingerprint(stripped, seedLocale);
 }
@@ -587,6 +613,18 @@ export function playgroundWriteRegressesCanonicalStored(
       candidateSeedLocale,
     )
   ) {
+    return false;
+  }
+
+  const storedStructure = normalizePlaygroundStructureSnapshot(
+    stored.rowContent,
+    stored.seedLocale,
+  );
+  const candidateStructure = normalizePlaygroundStructureSnapshot(
+    candidateRow,
+    stored.seedLocale,
+  );
+  if (candidateStructure === storedStructure) {
     return false;
   }
 

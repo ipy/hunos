@@ -1428,6 +1428,43 @@ describe("playgroundWriteRegressesCanonicalStored", () => {
       playgroundWriteRegressesCanonicalStored("格式试炼场", seed, seed, "zh"),
     ).toBe(false);
   });
+
+  it("allows mark-only writes over canonical stored seed", () => {
+    const seed = JSON.stringify(buildPlaygroundContent("zh"));
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          content?: Array<{
+            content?: Array<{
+              type?: string;
+              text?: string;
+              marks?: unknown[];
+            }>;
+          }>;
+        }>;
+      }>;
+    };
+    const listsIndex = parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
+    );
+    const firstItemText =
+      parsed.content[listsIndex + 1]?.content?.[0]?.content?.[0]?.content?.[0];
+    if (firstItemText) {
+      firstItemText.content = [
+        { type: "text", text: "无序列表" },
+        { type: "text", text: "第一项", marks: [{ type: "bold" }] },
+      ];
+    }
+    expect(
+      playgroundWriteRegressesCanonicalStored(
+        "格式试炼场",
+        seed,
+        JSON.stringify(parsed),
+        "zh",
+      ),
+    ).toBe(false);
+  });
 });
 
 describe("getFormatPlaygroundIntroExcerpt", () => {
@@ -1579,7 +1616,8 @@ describe("formatPlayground restore gating", () => {
       }>;
     };
     const inlineSectionIndex = content.content.findIndex(
-      (node) => node.type === "heading" && node.content?.[0]?.text === "行内样式",
+      (node) =>
+        node.type === "heading" && node.content?.[0]?.text === "行内样式",
     );
     const demoParagraph = content.content[inlineSectionIndex + 1];
     const markedTexts = (demoParagraph?.content ?? [])

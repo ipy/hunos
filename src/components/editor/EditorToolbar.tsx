@@ -17,7 +17,10 @@ import {
   runToolbarChain,
 } from "@/utils/editorOverlaySelection";
 import { getToolbarItemLabel } from "./toolbarItemLabels";
-import { resolveMobileToolbarItems } from "./editorToolbarItems";
+import {
+  resolveDesktopToolbarItems,
+  resolveMobileToolbarItems,
+} from "./editorToolbarItems";
 
 interface EditorToolbarProps {
   editor: Editor | null;
@@ -256,15 +259,22 @@ export function EditorToolbar({
   };
 
   const isMobile = layout === "mobile";
+  const isDesktop = layout === "desktop";
+  const useTabbedToolbar = isMobile || isDesktop;
   const canUndo = editor.can().undo();
   const canRedo = editor.can().redo();
+  const toolbarItemGroups = {
+    format: INLINE_FORMAT_ITEMS,
+    blocks: BLOCK_ITEMS,
+    insert: INSERT_ITEMS,
+  };
+  const desktopTab: "format" | "blocks" =
+    activeTab === "format" ? "format" : "blocks";
   const items = isMobile
-    ? resolveMobileToolbarItems(activeTab, {
-        format: INLINE_FORMAT_ITEMS,
-        blocks: BLOCK_ITEMS,
-        insert: INSERT_ITEMS,
-      })
-    : [...INLINE_FORMAT_ITEMS, ...BLOCK_ITEMS, ...INSERT_ITEMS];
+    ? resolveMobileToolbarItems(activeTab, toolbarItemGroups)
+    : isDesktop
+      ? resolveDesktopToolbarItems(desktopTab, toolbarItemGroups)
+      : [...INLINE_FORMAT_ITEMS, ...BLOCK_ITEMS, ...INSERT_ITEMS];
 
   return (
     <>
@@ -287,7 +297,7 @@ export function EditorToolbar({
           WebkitBackdropFilter: "blur(12px)",
         }}
       >
-        {isMobile && (
+        {useTabbedToolbar && (
           <div
             style={{
               display: "flex",
@@ -296,6 +306,8 @@ export function EditorToolbar({
             }}
           >
             <button
+              type="button"
+              data-testid="editor-toolbar-tab-format"
               onMouseDown={(e) => {
                 e.preventDefault();
                 setActiveTab("format");
@@ -323,6 +335,8 @@ export function EditorToolbar({
               Aa
             </button>
             <button
+              type="button"
+              data-testid="editor-toolbar-tab-blocks"
               onMouseDown={(e) => {
                 e.preventDefault();
                 setActiveTab("blocks");
@@ -336,11 +350,11 @@ export function EditorToolbar({
                 fontSize: 12,
                 fontWeight: "600",
                 color:
-                  activeTab === "blocks"
+                  activeTab === "blocks" || activeTab === "insert"
                     ? theme.colors.accent
                     : theme.colors.textTertiary,
                 borderBottom:
-                  activeTab === "blocks"
+                  activeTab === "blocks" || activeTab === "insert"
                     ? `2px solid ${theme.colors.accent}`
                     : "2px solid transparent",
                 touchAction: "manipulation",
@@ -349,49 +363,55 @@ export function EditorToolbar({
             >
               ¶
             </button>
-            <button
-              onMouseDown={(e) => {
-                e.preventDefault();
-                setActiveTab("insert");
-              }}
-              style={{
-                flex: 1,
-                padding: "8px 0",
-                border: "none",
-                cursor: "pointer",
-                background: "none",
-                fontSize: 12,
-                fontWeight: "600",
-                color:
-                  activeTab === "insert"
-                    ? theme.colors.accent
-                    : theme.colors.textTertiary,
-                borderBottom:
-                  activeTab === "insert"
-                    ? `2px solid ${theme.colors.accent}`
-                    : "2px solid transparent",
-                touchAction: "manipulation",
-                transition: "color 0.15s ease, border-color 0.15s ease",
-              }}
-            >
-              +
-            </button>
-            <button
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => editor.commands.blur()}
-              style={{
-                padding: "8px 12px",
-                border: "none",
-                cursor: "pointer",
-                background: "none",
-                fontSize: 12,
-                fontWeight: "500",
-                color: theme.colors.textTertiary,
-                touchAction: "manipulation",
-              }}
-            >
-              ⌨↓
-            </button>
+            {isMobile && (
+              <>
+                <button
+                  type="button"
+                  data-testid="editor-toolbar-tab-insert"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setActiveTab("insert");
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: "8px 0",
+                    border: "none",
+                    cursor: "pointer",
+                    background: "none",
+                    fontSize: 12,
+                    fontWeight: "600",
+                    color:
+                      activeTab === "insert"
+                        ? theme.colors.accent
+                        : theme.colors.textTertiary,
+                    borderBottom:
+                      activeTab === "insert"
+                        ? `2px solid ${theme.colors.accent}`
+                        : "2px solid transparent",
+                    touchAction: "manipulation",
+                    transition: "color 0.15s ease, border-color 0.15s ease",
+                  }}
+                >
+                  +
+                </button>
+                <button
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => editor.commands.blur()}
+                  style={{
+                    padding: "8px 12px",
+                    border: "none",
+                    cursor: "pointer",
+                    background: "none",
+                    fontSize: 12,
+                    fontWeight: "500",
+                    color: theme.colors.textTertiary,
+                    touchAction: "manipulation",
+                  }}
+                >
+                  ⌨↓
+                </button>
+              </>
+            )}
           </div>
         )}
         <div

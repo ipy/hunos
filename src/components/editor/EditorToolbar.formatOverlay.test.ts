@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { resolveMobileToolbarItems } from "./editorToolbarItems";
+import {
+  resolveDesktopToolbarItems,
+  resolveMobileToolbarItems,
+} from "./editorToolbarItems";
 import { getToolbarItemLabel, TOOLBAR_I18N_KEYS } from "./toolbarItemLabels";
 
 describe("EditorToolbar format overlay (iter 18)", () => {
@@ -14,6 +17,19 @@ describe("EditorToolbar format overlay (iter 18)", () => {
     expect(
       resolveMobileToolbarItems("format", { format, blocks, insert }),
     ).toEqual(format);
+  });
+
+  it("keeps desktop tabs exclusive — Aa inline-only, ¶ block+insert", () => {
+    const format = [{ icon: "bold" }, { icon: "link" }];
+    const blocks = [{ icon: "heading1" }, { icon: "divider" }];
+    const insert = [{ icon: "image" }, { icon: "table" }];
+    const groups = { format, blocks, insert };
+
+    expect(resolveDesktopToolbarItems("format", groups)).toEqual(format);
+    expect(resolveDesktopToolbarItems("blocks", groups)).toEqual([
+      ...blocks,
+      ...insert,
+    ]);
   });
 
   it("localizes toolbar control labels via shared i18n keys", () => {

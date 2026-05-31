@@ -270,4 +270,41 @@ describe("playground restore visibility", () => {
       }),
     ).toBe(false);
   });
+
+  it("hides restore when bold splits list text into adjacent nodes (TipTap)", () => {
+    const parsed = JSON.parse(seedContent) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          content?: Array<{
+            content?: Array<{
+              type?: string;
+              text?: string;
+              marks?: unknown[];
+            }>;
+          }>;
+        }>;
+      }>;
+    };
+    const listsIndex = parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
+    );
+    const firstItemParagraph =
+      parsed.content[listsIndex + 1]?.content?.[0]?.content?.[0];
+    if (firstItemParagraph) {
+      firstItemParagraph.content = [
+        { type: "text", text: "无序列表" },
+        { type: "text", text: "第一项", marks: [{ type: "bold" }] },
+      ];
+    }
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seedContent,
+        pendingDraftContent: JSON.stringify(parsed),
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
 });
