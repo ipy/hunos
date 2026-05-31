@@ -25,6 +25,7 @@ describe("NoteListScreen list row testids", () => {
       `data-testid={NOTE_LIST_ITEM_PREVIEW_TESTID}`,
     );
     expect(noteListSource).toContain("deriveNoteListPreview");
+    expect(noteListSource).toContain("formatNoteListPreviewDisplay");
     expect(noteListSource).toContain("WebkitLineClamp: 2");
   });
 });

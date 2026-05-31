@@ -10,7 +10,10 @@ import {
 } from "@/storage/formatPlaygroundNote";
 import { extractPlainTextFromTiptap } from "@/graph/linkExtractor";
 import { getWelcomeSeed } from "@/storage/welcomeNotes";
-import { deriveNoteListPreview } from "@/utils/noteListPreview";
+import {
+  deriveNoteListPreview,
+  formatNoteListPreviewDisplay,
+} from "@/utils/noteListPreview";
 import { isFormatPlaygroundNote } from "@/storage/formatPlaygroundNote";
 
 describe("deriveNoteListPreview", () => {
@@ -315,7 +318,68 @@ describe("deriveNoteListPreview", () => {
       "",
       "en",
     );
-    expect(enPreview).toContain("Hunos is a beautiful, graph-aware note-taking app");
+    expect(enPreview).toContain(
+      "Hunos is a beautiful, graph-aware note-taking app",
+    );
     expect(enPreview.split("Welcome to Hunos").length - 1).toBe(0);
+  });
+
+  it("strips glued welcome title prefix without newline (AC36-welcome-preview)", () => {
+    const seed = getWelcomeSeed("zh");
+    const preview = deriveNoteListPreview(
+      {
+        title: seed.title,
+        content: JSON.stringify(seed.content),
+        contentPlain:
+          "欢迎使用 HunosHunos 是一款美观的、支持知识图谱的笔记应用。",
+      },
+      "",
+      "zh",
+    );
+    expect(preview).toContain("Hunos 是一款");
+    expect(preview).not.toContain("HunosHunos");
+    expect(preview.split("欢迎使用 Hunos").length - 1).toBe(0);
+  });
+
+  it("uses seed intro for canonical playground without title echo (AC36-preview-separator)", () => {
+    const preview = deriveNoteListPreview(
+      {
+        title: "格式试炼场",
+        content: JSON.stringify(buildPlaygroundContent("zh")),
+        contentPlain: "格式试炼场在这一篇笔记里测试所有格式。",
+      },
+      "格式示例",
+      "zh",
+    );
+    expect(preview).toBe(getFormatPlaygroundIntroExcerpt("zh"));
+    expect(preview).not.toMatch(/^格式试炼场/);
+    expect(formatNoteListPreviewDisplay(preview)).toMatch(/^· /);
+  });
+
+  it("dedupes body H1 from drifted playground plain fallback (AC36-drift-preview-dedup)", () => {
+    const seed = buildPlaygroundContent("zh");
+    const seedPlain = extractPlainTextFromTiptap(seed);
+    const preview = deriveNoteListPreview(
+      {
+        title: "T36-Drift",
+        content: JSON.stringify(seed),
+        contentPlain: seedPlain.replace("\n", ""),
+      },
+      "格式示例",
+      "zh",
+    );
+    expect(preview).toBe(getFormatPlaygroundIntroExcerpt("zh"));
+    expect(preview).not.toContain("格式试炼场");
+    expect(preview).toContain("在这一篇笔记里测试所有格式");
+  });
+
+  it("prefixes list preview display with a middle dot delimiter (AC36-preview-separator)", () => {
+    expect(formatNoteListPreviewDisplay("在这一篇笔记里测试所有格式")).toBe(
+      "· 在这一篇笔记里测试所有格式",
+    );
+    expect(formatNoteListPreviewDisplay("")).toBe("");
+    expect(formatNoteListPreviewDisplay("· already marked")).toBe(
+      "· already marked",
+    );
   });
 });

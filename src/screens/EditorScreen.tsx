@@ -934,8 +934,14 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       const restoredContent = restoredRaw
         ? playgroundPersistedContentForRow(restoredRaw)
         : "";
-      const restoredTitle =
-        restoredNote?.title ?? getFormatPlaygroundTitle(seedLocale);
+      const restoredTitle = getFormatPlaygroundTitle(seedLocale);
+      if (restoredNote && restoredNote.title !== restoredTitle) {
+        await saveNoteTitle(
+          note.id,
+          restoredTitle,
+          contentWriteEpochRef.current,
+        );
+      }
       skipTitleSyncOnceRef.current = true;
       setTitleValue(restoredTitle);
       titleInputRef.current?.blur();

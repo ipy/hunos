@@ -6,7 +6,10 @@ import { useSettingsStore } from "@/store/settingsStore";
 import { useUIStore } from "@/store/uiStore";
 import { useTagStore } from "@/store/tagStore";
 import { filterNotesForPlaygroundList } from "@/storage/formatPlaygroundNote";
-import { deriveNoteListPreview } from "@/utils/noteListPreview";
+import {
+  deriveNoteListPreview,
+  formatNoteListPreviewDisplay,
+} from "@/utils/noteListPreview";
 import { Icon } from "@/components/common/Icon";
 import { FAB } from "@/components/common/FAB";
 import type { LayoutMode } from "@/hooks/useAdaptiveLayout";
@@ -64,7 +67,7 @@ function SwipeableNoteCard({
   emptyPreviewLabel: string;
 }) {
   const theme = useTheme();
-  const snippet = previewText;
+  const snippet = formatNoteListPreviewDisplay(previewText);
   const [offsetX, setOffsetX] = useState(0);
   const [isSwipeOpen, setIsSwipeOpen] = useState(false);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(

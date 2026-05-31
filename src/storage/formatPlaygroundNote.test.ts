@@ -1918,6 +1918,29 @@ describe("restoreFormatPlaygroundContent", () => {
     expect(parsed.content[0]?.content?.[0]?.text).toBe("格式试炼场");
   });
 
+  it("restores metadata title when only title drifted with canonical body (AC36-restore-title)", async () => {
+    const seed = buildPlaygroundContent("zh");
+    noteStorageGet.mockResolvedValue({
+      id: "playground-id",
+      title: "T36-Drift",
+      content: JSON.stringify(seed),
+    });
+    noteStorageUpdate.mockClear();
+
+    await restoreFormatPlaygroundContent("playground-id", "zh");
+
+    const [, payload] = noteStorageUpdate.mock.calls[0] as [
+      string,
+      { title: string; content: string; contentPlain: string },
+    ];
+    expect(payload.title).toBe("格式试炼场");
+    expect(payload.contentPlain).toContain("格式试炼场");
+    const parsed = JSON.parse(payload.content) as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    expect(parsed.content[0]?.content?.[0]?.text).toBe("格式试炼场");
+  });
+
   it("uses English title when locale is en", async () => {
     noteStorageUpdate.mockClear();
     noteStorageGet.mockResolvedValue(undefined);
