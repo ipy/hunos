@@ -46,6 +46,20 @@ describe("iteration 61 — footer label consistency (AC61-footer-i18n)", () => {
   });
 });
 
+describe("iteration 61 — nav hash mobile setup (AC61-backlinks-nav-hash)", () => {
+  it("re-opens project docs after noteIdFromListItem before expanding backlinks", () => {
+    const ac61Start = backlinksE2eSource.indexOf("AC61-backlinks-nav-hash");
+    expect(ac61Start).toBeGreaterThan(-1);
+    const ac61Block = backlinksE2eSource.slice(ac61Start, ac61Start + 900);
+    const noteIdIdx = ac61Block.indexOf("noteIdFromListItem");
+    const reopenIdx = ac61Block.indexOf("openProjectDocsWithBacklinksPanel");
+    const expandIdx = ac61Block.indexOf("expandBacklinksPanelIfCollapsed");
+    expect(noteIdIdx).toBeGreaterThan(-1);
+    expect(reopenIdx).toBeGreaterThan(noteIdIdx);
+    expect(expandIdx).toBeGreaterThan(reopenIdx);
+  });
+});
+
 describe("iteration 61 — backlinks e2e AC60/AC61 gates (AC61-backlinks-ac60-e2e)", () => {
   it("names AC60 primary scenarios explicitly on desktop and 606×844", () => {
     for (const ac of [

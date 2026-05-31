@@ -87,6 +87,8 @@ test.describe("backlinks footer — iter 61", () => {
           page,
           FORMAT_PLAYGROUND_TITLE,
         );
+        // Mobile: noteIdFromListItem backs out to the list via ensureNoteListScreen.
+        await openProjectDocsWithBacklinksPanel(page);
         await expandBacklinksPanelIfCollapsed(page);
         const rowTestIds = await collectIncomingBacklinkRowTestIds(page);
 
