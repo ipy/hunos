@@ -799,7 +799,8 @@ function findPlaygroundSeedTable(
   const s = STRINGS[seedLocale];
   const tableHeadingIndex = parsed.content.findIndex(
     (node) =>
-      node.type === "heading" && collectPlaygroundNodeText(node) === s.sectionTable,
+      node.type === "heading" &&
+      collectPlaygroundNodeText(node) === s.sectionTable,
   );
   if (tableHeadingIndex < 0) return null;
   const tableNode = parsed.content[tableHeadingIndex + 1];
@@ -976,6 +977,14 @@ export function classifyPlaygroundDrift(options: {
   }
 
   if (playgroundContentMatchesQaTableRowAppend(rowForClassify, seedLocale)) {
+    return "qaTableAppend";
+  }
+
+  if (
+    liveContent != null &&
+    liveContent !== rowContent &&
+    playgroundContentMatchesQaTableRowAppend(rowContent, seedLocale)
+  ) {
     return "qaTableAppend";
   }
 
@@ -1365,6 +1374,9 @@ export function formatPlaygroundNeedsRestore(
   }
 
   const canonical = JSON.stringify(buildPlaygroundContent(seedLocale));
+  if (playgroundContentMatchesQaTableRowAppend(body, seedLocale)) {
+    return false;
+  }
   if (!comparePlaygroundStructuralDrift(body, canonical, seedLocale)) {
     return false;
   }

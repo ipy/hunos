@@ -2864,8 +2864,7 @@ describe("iter 25 playground table QA drift", () => {
     content: Array<{ type: string; content?: Array<{ text?: string }> }>;
   }) {
     return parsed.content.findIndex(
-      (node) =>
-        node.type === "heading" && node.content?.[0]?.text === "表格",
+      (node) => node.type === "heading" && node.content?.[0]?.text === "表格",
     );
   }
 
@@ -2931,5 +2930,47 @@ describe("iter 25 playground table QA drift", () => {
         fallbackLocale: "zh",
       }),
     ).toBe("qaTableAppend");
+  });
+
+  it("hides restore chip on reload when stored has table rows but live editor is still canonical (AC5)", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          type: string;
+          content?: Array<{ type: string; content?: unknown[] }>;
+        }>;
+      }>;
+    };
+    const tableIndex = tableSectionIndex(parsed) + 1;
+    const table = parsed.content[tableIndex];
+    const templateRow = table?.content?.[1];
+    if (!table?.content || !templateRow) throw new Error("seed table missing");
+    table.content.push(
+      JSON.parse(JSON.stringify(templateRow)) as (typeof table.content)[number],
+    );
+    const stored = JSON.stringify(parsed);
+
+    expect(
+      classifyPlaygroundDrift({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: stored,
+        liveContent: seed,
+        fallbackLocale: "zh",
+      }),
+    ).toBe("qaTableAppend");
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: stored,
+        pendingDraftContent: seed,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+    expect(formatPlaygroundNeedsRestore("格式试炼场", stored, "zh")).toBe(
+      false,
+    );
   });
 });
