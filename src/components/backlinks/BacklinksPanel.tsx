@@ -16,8 +16,12 @@ export function backlinksItemTestId(noteId: string): string {
 }
 
 /** Stable React key when linkId alone may duplicate across wiki-link rows. */
-export function backlinksRowKey(bl: BacklinkResult, index: number): string {
-  return `${bl.linkId}:${bl.noteId}:${index}`;
+export function backlinksRowKey(
+  section: "incoming" | "outgoing",
+  bl: BacklinkResult,
+  index: number,
+): string {
+  return `${section}:${bl.linkId}:${bl.noteId}:${index}`;
 }
 
 interface BacklinksPanelProps {
@@ -33,15 +37,31 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
   useEffect(() => {
-    graphEngine.getBacklinks(noteId).then(setBacklinks);
-    graphEngine.getOutgoingLinks(noteId).then(setOutgoing);
+    let cancelled = false;
+    setBacklinks([]);
+    setOutgoing([]);
+
+    void graphEngine.getBacklinks(noteId).then((rows) => {
+      if (!cancelled) setBacklinks(rows);
+    });
+    void graphEngine.getOutgoingLinks(noteId).then((rows) => {
+      if (!cancelled) setOutgoing(rows);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [noteId, notes]);
 
   if (backlinks.length === 0 && outgoing.length === 0) return null;
 
-  const renderLink = (bl: BacklinkResult, index: number) => (
+  const renderLink = (
+    section: "incoming" | "outgoing",
+    bl: BacklinkResult,
+    index: number,
+  ) => (
     <div
-      key={backlinksRowKey(bl, index)}
+      key={backlinksRowKey(section, bl, index)}
       data-testid={backlinksItemTestId(bl.noteId)}
       data-note-title={bl.noteTitle}
       onClick={() => setActiveNote(bl.noteId)}
@@ -154,7 +174,7 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
                 {t("editor.backlinks.outgoing", { defaultValue: "Links to" })} (
                 {outgoing.length})
               </div>
-              {outgoing.map((bl, index) => renderLink(bl, index))}
+              {outgoing.map((bl, index) => renderLink("outgoing", bl, index))}
             </div>
           )}
           {backlinks.length > 0 && (
@@ -174,7 +194,7 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
                 })}{" "}
                 ({backlinks.length})
               </div>
-              {backlinks.map((bl, index) => renderLink(bl, index))}
+              {backlinks.map((bl, index) => renderLink("incoming", bl, index))}
             </div>
           )}
         </>

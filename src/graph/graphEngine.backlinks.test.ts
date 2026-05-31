@@ -93,4 +93,15 @@ describe("graphEngine backlink keys", () => {
     expect(new Set(outgoing.map((row) => row.linkId)).size).toBe(2);
     expect(outgoing.every((row) => row.noteId === "target")).toBe(true);
   });
+
+  it("dedupes duplicate link ids defensively in incoming results", async () => {
+    seedNote("target", "Welcome");
+    seedNote("source", "格式试炼场");
+    const link = seedWikiLink("dup-link", "source", "target", "[[Welcome]]");
+    linksByTarget.set("target", [link, link]);
+
+    const incoming = await graphEngine.getBacklinks("target");
+    expect(incoming).toHaveLength(1);
+    expect(incoming[0]?.linkId).toBe("dup-link");
+  });
 });

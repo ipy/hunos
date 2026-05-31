@@ -23,6 +23,7 @@ import {
   playgroundEditorContentMatchesStored,
   playgroundEditorMarkOnlyDriftFromStored,
   playgroundFormatQaDraftHidesRestoreChip,
+  playgroundContentMatchesQaTableRowAppend,
   playgroundFormatQaMarkOnlyDrift,
   playgroundFormatQaStructureMatchesCanonical,
   playgroundRestoreChipOverridesSuppress,
@@ -2853,5 +2854,82 @@ describe("playgroundRestoreChipOverridesSuppress", () => {
         fallbackLocale: "zh",
       }),
     ).toBe(false);
+  });
+});
+
+describe("iter 25 playground table QA drift", () => {
+  const seed = JSON.stringify(buildPlaygroundContent("zh"));
+
+  function tableSectionIndex(parsed: {
+    content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+  }) {
+    return parsed.content.findIndex(
+      (node) =>
+        node.type === "heading" && node.content?.[0]?.text === "表格",
+    );
+  }
+
+  it("hides restore chip when only trailing table rows were appended", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          type: string;
+          content?: Array<{ type: string; content?: unknown[] }>;
+        }>;
+      }>;
+    };
+    const tableIndex = tableSectionIndex(parsed) + 1;
+    const table = parsed.content[tableIndex];
+    const templateRow = table?.content?.[1];
+    if (!table?.content || !templateRow) throw new Error("seed table missing");
+    table.content.push(
+      JSON.parse(JSON.stringify(templateRow)) as (typeof table.content)[number],
+    );
+    const edited = JSON.stringify(parsed);
+
+    expect(playgroundContentMatchesQaTableRowAppend(edited, "zh")).toBe(true);
+    expect(
+      playgroundFormatQaDraftHidesRestoreChip(edited, "格式试炼场", seed, "zh"),
+    ).toBe(true);
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        pendingDraftContent: edited,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
+
+  it("classifies appended table rows as qaTableAppend", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          type: string;
+          content?: Array<{ type: string; content?: unknown[] }>;
+        }>;
+      }>;
+    };
+    const tableIndex = tableSectionIndex(parsed) + 1;
+    const table = parsed.content[tableIndex];
+    const templateRow = table?.content?.[1];
+    if (!table?.content || !templateRow) throw new Error("seed table missing");
+    table.content.push(
+      JSON.parse(JSON.stringify(templateRow)) as (typeof table.content)[number],
+    );
+    const edited = JSON.stringify(parsed);
+
+    expect(
+      classifyPlaygroundDrift({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        liveContent: edited,
+        fallbackLocale: "zh",
+      }),
+    ).toBe("qaTableAppend");
   });
 });

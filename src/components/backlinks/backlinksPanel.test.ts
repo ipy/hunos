@@ -31,9 +31,10 @@ describe("BacklinksPanel automation testids", () => {
     expect(backlinksItemTestId("pg-zh")).toBe("backlinks-item-pg-zh");
   });
 
-  it("derives stable row keys from link id, note id, and list index", () => {
+  it("derives stable row keys from section, link id, note id, and list index", () => {
     expect(
       backlinksRowKey(
+        "incoming",
         {
           linkId: "dup",
           noteId: "pg-zh",
@@ -43,7 +44,7 @@ describe("BacklinksPanel automation testids", () => {
         },
         1,
       ),
-    ).toBe("dup:pg-zh:1");
+    ).toBe("incoming:dup:pg-zh:1");
   });
 
   it("wires testids on panel root, toggle, sections, and items", () => {
@@ -57,7 +58,8 @@ describe("BacklinksPanel automation testids", () => {
     expect(panelSource).toContain(
       `data-testid={BACKLINKS_INCOMING_SECTION_TESTID}`,
     );
-    expect(panelSource).toContain("key={backlinksRowKey(bl, index)}");
+    expect(panelSource).toContain("key={backlinksRowKey(section, bl, index)}");
+    expect(panelSource).toContain("let cancelled = false");
     expect(panelSource).toContain(
       "data-testid={backlinksItemTestId(bl.noteId)}",
     );

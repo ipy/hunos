@@ -10,6 +10,15 @@ import { replaceWikiLinkTitleInContent } from "@/utils/wikiLink";
 import type { BacklinkResult } from "@/types/graph";
 import type { Note } from "@/types/note";
 
+function dedupeBacklinksByLinkId(results: BacklinkResult[]): BacklinkResult[] {
+  const seen = new Set<string>();
+  return results.filter((row) => {
+    if (seen.has(row.linkId)) return false;
+    seen.add(row.linkId);
+    return true;
+  });
+}
+
 export const graphEngine = {
   async syncNoteLinks(noteId: string, content: string): Promise<void> {
     let plainText: string;
@@ -103,7 +112,7 @@ export const graphEngine = {
       }
     }
 
-    return results;
+    return dedupeBacklinksByLinkId(results);
   },
 
   async getOutgoingLinks(noteId: string): Promise<BacklinkResult[]> {
@@ -124,6 +133,6 @@ export const graphEngine = {
       }
     }
 
-    return results;
+    return dedupeBacklinksByLinkId(results);
   },
 };
