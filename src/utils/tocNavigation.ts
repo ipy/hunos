@@ -158,10 +158,13 @@ export function shouldDeferPanelTocScrollIntoView(
     entryEl.closest<HTMLElement>('[data-testid="info-panel-toc-list"]');
   if (!list) return false;
   const scrollEl = resolvePanelTocScrollContainer(list);
-  if (!scrollEl || scrollEl.scrollTop > 0) return false;
+  if (!scrollEl) return false;
   const scrollRect = scrollEl.getBoundingClientRect();
   const entryRect = entryEl.getBoundingClientRect();
-  return entryRect.bottom > scrollRect.bottom + 1;
+  // Below-fold at scrollTop 0 (not current scroll) so Playwright pre-scroll still pins (AC44).
+  const entryTopInContent = entryRect.top - scrollRect.top + scrollEl.scrollTop;
+  const entryBottomInContent = entryTopInContent + entryRect.height;
+  return entryBottomInContent > scrollEl.clientHeight + 1;
 }
 
 /** Scroll a panel TOC button into the info-panel content viewport. */

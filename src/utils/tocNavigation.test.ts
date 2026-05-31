@@ -690,7 +690,55 @@ describe("panel TOC pointer helpers", () => {
 
     expect(shouldDeferPanelTocScrollIntoView(entry)).toBe(true);
     scrollTop = 40;
-    expect(shouldDeferPanelTocScrollIntoView(entry)).toBe(false);
+    expect(shouldDeferPanelTocScrollIntoView(entry)).toBe(true);
+  });
+
+  it("defers panel scroll when Playwright pre-scrolls a below-fold row into view", () => {
+    const scrollRect = {
+      top: 432,
+      bottom: 844,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 412,
+      x: 0,
+      y: 432,
+      toJSON: () => ({}),
+    };
+    let scrollTop = 85;
+    const list = {
+      scrollHeight: 926,
+      clientHeight: 412,
+      closest: () => null,
+      getBoundingClientRect: () => scrollRect,
+    } as unknown as HTMLElement;
+    Object.defineProperty(list, "scrollTop", {
+      get: () => scrollTop,
+      set: (v: number) => {
+        scrollTop = v;
+      },
+    });
+    vi.stubGlobal(
+      "getComputedStyle",
+      vi.fn(() => ({ overflowY: "auto" }) as CSSStyleDeclaration),
+    );
+    const entry = {
+      closest: (selector: string) =>
+        selector.includes("info-panel-toc-list") ? list : null,
+      getBoundingClientRect: () => ({
+        top: 756,
+        bottom: 793,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 37,
+        x: 0,
+        y: 756,
+        toJSON: () => ({}),
+      }),
+    } as unknown as HTMLElement;
+
+    expect(shouldDeferPanelTocScrollIntoView(entry)).toBe(true);
   });
 
   it("scrolls a clipped entry into the panel viewport", () => {
