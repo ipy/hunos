@@ -67,18 +67,48 @@ export function extractFromPlainText(text: string): ExtractionResult {
   };
 }
 
+function isWikiLinkMark(marks: unknown[] | undefined): boolean {
+  if (!Array.isArray(marks)) return false;
+  return marks.some((mark) => (mark as { type?: string }).type === "wikiLink");
+}
+
+/** Plain text for one TipTap text node; wiki-link marks and [[title]] literals are omitted from search body. */
+export function plainTextFromTiptapTextNode(
+  text: string,
+  marks?: unknown[],
+): string {
+  if (isWikiLinkMark(marks)) {
+    return " ";
+  }
+  return text.replace(/\[\[[^\]]+\]\]/g, " ");
+}
+
 export function extractPlainTextFromTiptap(json: unknown): string {
   if (!json || typeof json !== "object") return "";
 
-  const doc = json as { type?: string; content?: unknown[]; text?: string };
-  if (doc.type === "text" && doc.text) return doc.text;
+  const doc = json as {
+    type?: string;
+    content?: unknown[];
+    text?: string;
+    marks?: unknown[];
+  };
+  if (doc.type === "text" && doc.text) {
+    return plainTextFromTiptapTextNode(doc.text, doc.marks);
+  }
 
   if (!Array.isArray(doc.content)) return "";
 
   return doc.content
     .map((node: unknown) => {
-      const n = node as { type?: string; content?: unknown[]; text?: string };
-      if (n.type === "text") return n.text || "";
+      const n = node as {
+        type?: string;
+        content?: unknown[];
+        text?: string;
+        marks?: unknown[];
+      };
+      if (n.type === "text") {
+        return plainTextFromTiptapTextNode(n.text || "", n.marks);
+      }
       if (n.type === "paragraph" || n.type === "heading") {
         return extractPlainTextFromTiptap(n) + "\n";
       }

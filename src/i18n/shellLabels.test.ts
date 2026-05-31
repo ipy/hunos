@@ -24,8 +24,10 @@ describe("shell sidebar labels", () => {
     expect(zh.export.html).not.toBe("HTML");
   });
 
-  it("localizes zh task checkbox aria labels", () => {
-    expect(zh.editor.task.checkboxOpen).toContain("{{text}}");
+  it("localizes zh task checkbox aria labels without task text echo", () => {
+    expect(zh.editor.task.checkboxOpen).toBe("未完成任务");
+    expect(zh.editor.task.checkboxDone).toBe("已完成任务");
+    expect(zh.editor.task.checkboxOpen).not.toContain("{{text}}");
     expect(zh.editor.task.checkboxOpen).not.toContain("Task item checkbox");
   });
 });

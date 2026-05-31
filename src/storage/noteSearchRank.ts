@@ -1,6 +1,8 @@
 export interface NoteSearchMatchFields {
+  id?: string;
   title: string;
   contentPlain?: string | null;
+  isPinned?: boolean;
 }
 
 /** Body search text with wiki-link targets removed (AC37-search-title-first). */
@@ -47,4 +49,28 @@ export function filterNotesByTitleFirstSearch<T extends NoteSearchMatchFields>(
     : matched;
 
   return filtered.map(({ note }) => note);
+}
+
+/** Keep pinned notes visible while a search filter is active (AC39-search-restore-ghost). */
+export function mergePinnedNotesForSearchDisplay<
+  T extends NoteSearchMatchFields,
+>(searchResults: T[], allNotes: T[]): T[] {
+  if (searchResults.length === 0) {
+    return searchResults;
+  }
+
+  const merged = [...searchResults];
+  const seen = new Set(
+    searchResults.map((note) => note.id).filter(Boolean) as string[],
+  );
+
+  for (const note of allNotes) {
+    if (!note.isPinned || !note.id || seen.has(note.id)) {
+      continue;
+    }
+    merged.unshift(note);
+    seen.add(note.id);
+  }
+
+  return merged;
 }

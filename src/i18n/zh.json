@@ -141,8 +141,8 @@
     },
     "task": {
       "empty": "空任务",
-      "checkboxOpen": "未完成任务：{{text}}",
-      "checkboxDone": "已完成任务：{{text}}"
+      "checkboxOpen": "未完成任务",
+      "checkboxDone": "已完成任务"
     },
     "focusMode": {
       "enter": "进入专注模式",

@@ -57,8 +57,11 @@ describe("iteration 37 — editor a11y label", () => {
       "accessibilityLabel={editorAccessibilityLabel}",
     );
     expect(tiptapSource).toContain("accessibilityLabel?: string");
-    expect(tiptapSource).toContain('"aria-label": accessibilityLabel');
     expect(tiptapSource).toContain('"aria-labelledby": "note-editor-title"');
+    expect(tiptapSource).not.toMatch(
+      /editorProps:[\s\S]*"aria-label": accessibilityLabel/,
+    );
+    expect(tiptapSource).not.toContain("aria-label={accessibilityLabel}");
     expect(editorSource).toContain('id="note-editor-title"');
     expect(zh.editor.regionLabel).toBe("编辑：{{title}}");
   });

@@ -179,6 +179,17 @@ export const noteStorage = {
     return Promise.all(results.map(hydrateNoteFromDb));
   },
 
+  async findActiveByTitle(title: string): Promise<Note | undefined> {
+    const trimmed = title.trim();
+    if (!trimmed) return undefined;
+    const lower = trimmed.toLowerCase();
+    const active = await db.notes
+      .filter((note) => note.status === "active")
+      .toArray();
+    const match = active.find((note) => note.title.toLowerCase() === lower);
+    return match ? hydrateNoteFromDb(match) : undefined;
+  },
+
   async search(query: string): Promise<Note[]> {
     if (!query.trim()) return [];
     const active = await db.notes

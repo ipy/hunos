@@ -6,6 +6,7 @@ import { useSettingsStore } from "@/store/settingsStore";
 import { useUIStore } from "@/store/uiStore";
 import { useTagStore } from "@/store/tagStore";
 import { filterNotesForPlaygroundList } from "@/storage/formatPlaygroundNote";
+import { mergePinnedNotesForSearchDisplay } from "@/storage/noteSearchRank";
 import {
   deriveNoteListPreview,
   formatNoteListPreviewDisplay,
@@ -68,6 +69,12 @@ function SwipeableNoteCard({
 }) {
   const theme = useTheme();
   const snippet = formatNoteListPreviewDisplay(previewText);
+  const previewExcerpt = snippet.replace(/^·\s*/, "").trim();
+  const displayTitle = note.title || "Untitled";
+  const rowAriaLabel =
+    previewExcerpt && previewExcerpt !== emptyPreviewLabel
+      ? `${displayTitle} · ${previewExcerpt}`
+      : displayTitle;
   const [offsetX, setOffsetX] = useState(0);
   const [isSwipeOpen, setIsSwipeOpen] = useState(false);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(
@@ -192,6 +199,7 @@ function SwipeableNoteCard({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        aria-label={rowAriaLabel}
         style={{
           padding: "13px 16px 12px",
           cursor: "pointer",
@@ -228,6 +236,7 @@ function SwipeableNoteCard({
           )}
           <span
             data-testid={NOTE_LIST_ITEM_TITLE_TESTID}
+            aria-hidden="true"
             style={{
               fontSize: 15,
               fontWeight: 600,
@@ -244,6 +253,7 @@ function SwipeableNoteCard({
         </div>
         <div
           data-testid={NOTE_LIST_ITEM_PREVIEW_TESTID}
+          aria-hidden="true"
           style={{
             fontSize: 13,
             color: theme.colors.textSecondary,
@@ -318,7 +328,9 @@ export function NoteListScreen({ layout = "mobile" }: NoteListScreenProps) {
     ? `#${activeTag.displayName}`
     : t("tags.sections.allNotes");
   const displayedNotes = filterNotesForPlaygroundList(
-    searchQuery ? searchResults : notes,
+    searchQuery
+      ? mergePinnedNotesForSearchDisplay(searchResults, notes)
+      : notes,
     locale,
   );
 

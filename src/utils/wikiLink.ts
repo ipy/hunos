@@ -10,10 +10,9 @@ export function replaceWikiLinkTitleInContent(
   return content.replace(re, `[[${newTitle}]]`);
 }
 
-export function findNoteByWikiTitle(
-  notes: { id: string; title: string; status: string }[],
-  title: string,
-): { id: string; title: string; status: string } | undefined {
+export function findNoteByWikiTitle<
+  T extends { id: string; title: string; status: string },
+>(notes: T[], title: string): T | undefined {
   const lower = title.toLowerCase();
   return notes.find(
     (n) => n.status === "active" && n.title.toLowerCase() === lower,

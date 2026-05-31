@@ -141,8 +141,8 @@
     },
     "task": {
       "empty": "empty task",
-      "checkboxOpen": "Task item checkbox for {{text}}",
-      "checkboxDone": "Completed task item checkbox for {{text}}"
+      "checkboxOpen": "Task item checkbox",
+      "checkboxDone": "Completed task item checkbox"
     },
     "focusMode": {
       "enter": "Enter focus mode",

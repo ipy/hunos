@@ -11,7 +11,9 @@ import type { BacklinkResult } from "@/types/graph";
 import type { Note } from "@/types/note";
 
 /** Drop duplicate link rows defensively before UI render. */
-export function dedupeBacklinkResults(results: BacklinkResult[]): BacklinkResult[] {
+export function dedupeBacklinkResults(
+  results: BacklinkResult[],
+): BacklinkResult[] {
   const seen = new Set<string>();
   return results.filter((row) => {
     if (seen.has(row.linkId)) return false;
@@ -47,10 +49,7 @@ export const graphEngine = {
     }
 
     for (const wikiLink of extraction.wikiLinks) {
-      const targetNotes = await noteStorage.search(wikiLink.title);
-      const target = targetNotes.find(
-        (n) => n.title.toLowerCase() === wikiLink.title.toLowerCase(),
-      );
+      const target = await noteStorage.findActiveByTitle(wikiLink.title);
 
       if (target) {
         await linkStorage.create(

@@ -973,6 +973,10 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         showToast(t("notes.actions.restorePlaygroundDone"));
         pendingRestoreToastRef.current = false;
       }
+      const activeSearch = useUIStore.getState().searchQuery.trim();
+      if (activeSearch) {
+        await useUIStore.getState().performSearch(activeSearch);
+      }
       dismissActionsOverlay();
     } catch {
       pendingRestoreToastRef.current = false;

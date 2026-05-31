@@ -90,47 +90,62 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
     return [
       new Plugin({
         key: wikiLinkKey,
+        view(view) {
+          const onPointerDownCapture = (event: PointerEvent) => {
+            const target = event.target as HTMLElement;
+            const linkEl = target.closest(".wiki-link-content");
+            if (!linkEl) {
+              preClickSelectionFrom = null;
+              preClickLinkSpan = null;
+              return;
+            }
+
+            suppressWikiLinkSuggestionBriefly();
+
+            const coords = view.posAtCoords({
+              left: event.clientX,
+              top: event.clientY,
+            });
+            if (!coords) {
+              preClickSelectionFrom = null;
+              preClickLinkSpan = null;
+              return;
+            }
+
+            const wikiLinks = findWikiLinks(view.state.doc);
+            const linkAtPos = wikiLinks.find(
+              (wl) => coords.pos >= wl.start && coords.pos <= wl.end,
+            );
+            if (!linkAtPos) {
+              preClickSelectionFrom = null;
+              preClickLinkSpan = null;
+              return;
+            }
+
+            preClickSelectionFrom = view.state.selection.from;
+            preClickLinkSpan = {
+              start: linkAtPos.start,
+              end: linkAtPos.end,
+            };
+          };
+
+          view.dom.addEventListener("pointerdown", onPointerDownCapture, true);
+          return {
+            destroy() {
+              view.dom.removeEventListener(
+                "pointerdown",
+                onPointerDownCapture,
+                true,
+              );
+            },
+          };
+        },
         props: {
           decorations(state) {
             return buildWikiLinkDecorations(state);
           },
           handleDOMEvents: {
             mousedown(view, event) {
-              const target = event.target as HTMLElement;
-              const linkEl = target.closest(".wiki-link-content");
-              if (!linkEl) {
-                preClickSelectionFrom = null;
-                preClickLinkSpan = null;
-                return false;
-              }
-
-              suppressWikiLinkSuggestionBriefly();
-
-              const coords = view.posAtCoords({
-                left: event.clientX,
-                top: event.clientY,
-              });
-              if (!coords) {
-                preClickSelectionFrom = null;
-                preClickLinkSpan = null;
-                return false;
-              }
-
-              const wikiLinks = findWikiLinks(view.state.doc);
-              const linkAtPos = wikiLinks.find(
-                (wl) => coords.pos >= wl.start && coords.pos <= wl.end,
-              );
-              if (!linkAtPos) {
-                preClickSelectionFrom = null;
-                preClickLinkSpan = null;
-                return false;
-              }
-
-              preClickSelectionFrom = view.state.selection.from;
-              preClickLinkSpan = {
-                start: linkAtPos.start,
-                end: linkAtPos.end,
-              };
               return false;
             },
           },

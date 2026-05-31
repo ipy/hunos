@@ -1,16 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
   filterNotesByTitleFirstSearch,
+  mergePinnedNotesForSearchDisplay,
   noteSearchBodyPlain,
   noteSearchMatchFlags,
 } from "./noteSearchRank";
 
 describe("noteSearchRank", () => {
   const playground = {
+    id: "pg-1",
     title: "格式试炼场",
     contentPlain: "用标签 #hunos/格式测试 并链接 [[欢迎使用 Hunos]]。",
+    isPinned: true,
   };
   const welcome = {
+    id: "welcome-1",
     title: "欢迎使用 Hunos",
     contentPlain:
       "欢迎使用 Hunos。Hunos 是一款美观的、支持知识图谱的笔记应用。",
@@ -55,5 +59,26 @@ describe("noteSearchRank", () => {
 
   it("returns empty for blank query", () => {
     expect(filterNotesByTitleFirstSearch([welcome], "   ")).toEqual([]);
+  });
+
+  it("keeps pinned notes visible during active search (AC39-search-restore-ghost)", () => {
+    const merged = mergePinnedNotesForSearchDisplay(
+      [welcome],
+      [playground, welcome],
+    );
+    expect(merged.map((n) => n.title)).toEqual([
+      "格式试炼场",
+      "欢迎使用 Hunos",
+    ]);
+  });
+
+  it("does not duplicate pinned notes already in search results", () => {
+    const pinnedPlayground = { ...playground, isPinned: true };
+    const merged = mergePinnedNotesForSearchDisplay(
+      [pinnedPlayground],
+      [pinnedPlayground, welcome],
+    );
+    expect(merged).toHaveLength(1);
+    expect(merged[0]?.title).toBe("格式试炼场");
   });
 });

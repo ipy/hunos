@@ -136,12 +136,11 @@ export function TiptapEditor({
     let target = findNoteByWikiTitle(store.notes, title);
 
     if (!target) {
-      const searchResults = await noteStorage.search(title);
-      target = findNoteByWikiTitle(searchResults, title);
+      target = await noteStorage.findActiveByTitle(title);
     }
 
     if (target) {
-      store.setActiveNote(target.id);
+      await store.setActiveNote(target.id);
       return;
     }
 
@@ -207,12 +206,10 @@ export function TiptapEditor({
       MarkdownTaskItem.configure({
         nested: true,
         a11y: {
-          checkboxLabel: (node, checked) => {
-            const text = node.textContent.trim() || i18n.t("editor.task.empty");
-            return checked
-              ? i18n.t("editor.task.checkboxDone", { text })
-              : i18n.t("editor.task.checkboxOpen", { text });
-          },
+          checkboxLabel: (_node, checked) =>
+            checked
+              ? i18n.t("editor.task.checkboxDone")
+              : i18n.t("editor.task.checkboxOpen"),
         },
       }),
       MarkdownHighlight.configure({ multicolor: true }),
@@ -317,7 +314,6 @@ export function TiptapEditor({
         class: "hunos-editor",
         ...(accessibilityLabel
           ? {
-              "aria-label": accessibilityLabel,
               "aria-labelledby": "note-editor-title",
               role: "textbox",
               "aria-multiline": "true",
@@ -332,7 +328,7 @@ export function TiptapEditor({
     const dom = editor.view.dom;
     const applyA11yLabel = () => {
       if (accessibilityLabel) {
-        dom.setAttribute("aria-label", accessibilityLabel);
+        dom.removeAttribute("aria-label");
         dom.setAttribute("aria-labelledby", "note-editor-title");
         dom.setAttribute("role", "textbox");
         dom.setAttribute("aria-multiline", "true");
@@ -651,11 +647,7 @@ export function TiptapEditor({
           padding: 0.05em 0;
         }
       `}</style>
-      <div
-        data-testid="note-editor"
-        aria-label={accessibilityLabel}
-        aria-labelledby={accessibilityLabel ? "note-editor-title" : undefined}
-      >
+      <div data-testid="note-editor">
         <EditorContent editor={editor} />
       </div>
       <SelectionBubbleMenu editor={editor} />
