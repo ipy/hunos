@@ -4,6 +4,9 @@ import { findEditorScrollContainer } from "@/components/editor/wikiLinkPointerUt
 
 const TOC_SCROLL_TOP_PADDING_PX = 12;
 const TOC_SCROLL_BOTTOM_PADDING_PX = 8;
+/** Slop for panel TOC taps when an entry sits on the scroll viewport edge. */
+const PANEL_TOC_EDGE_SLOP_PX = 6;
+const PANEL_TOC_SCROLL_MARGIN_PX = 8;
 
 /** Visible editor viewport; shrinks when the info panel overlays the bottom. */
 export function resolveTocScrollViewportBounds(scrollEl: HTMLElement): {
@@ -15,7 +18,11 @@ export function resolveTocScrollViewportBounds(scrollEl: HTMLElement): {
   const infoPanel = scrollEl.ownerDocument?.querySelector(
     '[data-testid="info-panel"]',
   );
-  if (infoPanel && typeof infoPanel === "object" && "getBoundingClientRect" in infoPanel) {
+  if (
+    infoPanel &&
+    typeof infoPanel === "object" &&
+    "getBoundingClientRect" in infoPanel
+  ) {
     const panelRect = (
       infoPanel as { getBoundingClientRect: () => DOMRect }
     ).getBoundingClientRect();
@@ -41,8 +48,7 @@ export function editorScrollDeltaForTocReveal(options: {
   let delta = options.headingTop - targetTop;
 
   if (options.followBlockBottom != null) {
-    const projectedFollowBottom =
-      options.followBlockBottom - delta;
+    const projectedFollowBottom = options.followBlockBottom - delta;
     const maxFollowBottom = options.scrollViewportBottom - paddingBottom;
     if (projectedFollowBottom > maxFollowBottom) {
       delta += projectedFollowBottom - maxFollowBottom;
@@ -54,7 +60,66 @@ export function editorScrollDeltaForTocReveal(options: {
     delta = options.headingTop - targetTop;
   }
 
-  return delta;
+  return Math.min(delta, options.headingTop - targetTop);
+}
+
+/** Scroll a panel TOC button into the info-panel content viewport. */
+export function scrollPanelTocEntryIntoView(entryEl: HTMLElement): void {
+  const list = entryEl.closest('[data-testid="info-panel-toc-list"]');
+  const scrollEl = list?.parentElement;
+  if (!scrollEl) return;
+
+  const scrollRect = scrollEl.getBoundingClientRect();
+  const entryRect = entryEl.getBoundingClientRect();
+  const topBound = scrollRect.top + PANEL_TOC_SCROLL_MARGIN_PX;
+  const bottomBound = scrollRect.bottom - PANEL_TOC_SCROLL_MARGIN_PX;
+
+  if (entryRect.top < topBound) {
+    scrollEl.scrollTop -= topBound - entryRect.top;
+  } else if (entryRect.bottom > bottomBound) {
+    scrollEl.scrollTop += entryRect.bottom - bottomBound;
+  }
+}
+
+/** Resolve a TOC entry from a pointer Y, including bottom-edge slop. */
+export function findPanelTocEntryAtPointerY(
+  listEl: HTMLElement,
+  clientY: number,
+): HTMLElement | null {
+  const entries = listEl.querySelectorAll<HTMLElement>(
+    '[data-testid^="info-panel-toc-entry-"]',
+  );
+  let best: HTMLElement | null = null;
+  let bestDistance = Infinity;
+
+  for (const entry of entries) {
+    const rect = entry.getBoundingClientRect();
+    if (
+      clientY < rect.top - PANEL_TOC_EDGE_SLOP_PX ||
+      clientY > rect.bottom + PANEL_TOC_EDGE_SLOP_PX
+    ) {
+      continue;
+    }
+    const distance =
+      clientY < rect.top
+        ? rect.top - clientY
+        : clientY > rect.bottom
+          ? clientY - rect.bottom
+          : 0;
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = entry;
+    }
+  }
+
+  return best;
+}
+
+export function panelTocEntryIndex(entryEl: HTMLElement): number {
+  const match = entryEl
+    .getAttribute("data-testid")
+    ?.match(/info-panel-toc-entry-(\d+)/);
+  return match ? Number.parseInt(match[1], 10) : -1;
 }
 
 function isDomElement(el: unknown): el is HTMLElement {
@@ -145,12 +210,16 @@ function scrollHeadingIntoEditorPane(
 
   if (Math.abs(delta) < 1) return scrollEl.scrollTop;
 
-  scrollEl.scrollTop += delta;
-  return scrollEl.scrollTop;
+  const targetScrollTop = scrollEl.scrollTop + delta;
+  scrollEl.scrollTop = targetScrollTop;
+  return targetScrollTop;
 }
 
 /** Scroll editor to a heading at the given document position. */
-export function scrollToTocDocPos(editor: Editor, headingDocPos: number): boolean {
+export function scrollToTocDocPos(
+  editor: Editor,
+  headingDocPos: number,
+): boolean {
   const contentPos = headingDocPos + 1;
 
   const scrolled = editor
@@ -171,7 +240,9 @@ export function scrollToTocDocPos(editor: Editor, headingDocPos: number): boolea
     scrollEl.scrollTop = targetScrollTop;
     const stabilize = () => {
       const retry = applyScroll();
-      if (retry != null) scrollEl.scrollTop = retry;
+      if (retry != null && Math.abs(retry - scrollEl.scrollTop) > 1) {
+        scrollEl.scrollTop = retry;
+      }
     };
     if (typeof requestAnimationFrame === "function") {
       requestAnimationFrame(stabilize);

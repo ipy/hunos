@@ -5,7 +5,12 @@ import { Icon } from "@/components/common/Icon";
 import { SettingToggle } from "@/components/settings/SettingToggle";
 import type { Note } from "@/types/note";
 import type { Editor } from "@tiptap/react";
-import { handleInfoPanelTocTap } from "@/utils/tocNavigation";
+import {
+  findPanelTocEntryAtPointerY,
+  handleInfoPanelTocTap,
+  panelTocEntryIndex,
+  scrollPanelTocEntryIntoView,
+} from "@/utils/tocNavigation";
 import {
   editorHasTaskList,
   noteContentHasTaskList,
@@ -24,8 +29,8 @@ interface InfoPanelProps {
 }
 
 const DRAG_CLOSE_THRESHOLD = 80;
-/** Keep last TOC rows above editor-toolbar-layer (z-index 65). */
-const TOC_LIST_BOTTOM_PADDING_PX = 96;
+/** Breathing room below the last TOC row inside the panel scroll viewport. */
+const TOC_LIST_BOTTOM_PADDING_PX = 24;
 
 function formatDateTime(ts: number): string {
   const d = new Date(ts);
@@ -106,13 +111,35 @@ export function InfoPanel({
     [note, editor, statsRevision],
   );
 
-  const activateTocEntry = (index: number, docPos?: number) => {
+  const activateTocEntry = (
+    index: number,
+    docPos?: number,
+    entryEl?: HTMLElement | null,
+  ) => {
     if (!editor) return;
     const now = Date.now();
     const last = lastTocActivateRef.current;
     if (last?.index === index && now - last.time < 300) return;
     lastTocActivateRef.current = { index, time: now };
+    if (entryEl) scrollPanelTocEntryIntoView(entryEl);
     handleInfoPanelTocTap(editor, index, docPos);
+  };
+
+  const handleTocPointerDownCapture = (event: React.PointerEvent) => {
+    if (activeTab !== "toc" || event.button !== 0) return;
+    const list = event.currentTarget.querySelector(
+      '[data-testid="info-panel-toc-list"]',
+    );
+    if (!list) return;
+    const entry = findPanelTocEntryAtPointerY(
+      list as HTMLElement,
+      event.clientY,
+    );
+    if (!entry) return;
+    const index = panelTocEntryIndex(entry);
+    if (index < 0 || index >= toc.length) return;
+    event.preventDefault();
+    activateTocEntry(index, toc[index]?.docPos, entry);
   };
 
   const tabs: { id: Tab; icon: string }[] = [
@@ -188,6 +215,7 @@ export function InfoPanel({
           maxHeight: "60vh",
           display: "flex",
           flexDirection: "column",
+          overflow: "hidden",
           animation:
             dragOffset === 0 && !isDragging
               ? "sheetSlideUp 0.35s cubic-bezier(0.32, 0.72, 0, 1)"
@@ -313,6 +341,7 @@ export function InfoPanel({
 
         {/* Content */}
         <div
+          onPointerDownCapture={handleTocPointerDownCapture}
           style={{
             flex: 1,
             overflowY: "auto",
@@ -421,18 +450,18 @@ export function InfoPanel({
                     onPointerDown={(event) => {
                       if (!editor || event.button !== 0) return;
                       event.preventDefault();
-                      activateTocEntry(i, item.docPos);
+                      activateTocEntry(i, item.docPos, event.currentTarget);
                     }}
                     onClick={(event) => {
                       if (!editor) return;
                       event.preventDefault();
-                      activateTocEntry(i, item.docPos);
+                      activateTocEntry(i, item.docPos, event.currentTarget);
                     }}
                     onKeyDown={(event) => {
                       if (!editor) return;
                       if (event.key !== "Enter" && event.key !== " ") return;
                       event.preventDefault();
-                      activateTocEntry(i, item.docPos);
+                      activateTocEntry(i, item.docPos, event.currentTarget);
                     }}
                     style={{
                       display: "block",

@@ -6,6 +6,9 @@ import {
   editorScrollDeltaForTocReveal,
   scrollToTocIndex,
   handleInfoPanelTocTap,
+  findPanelTocEntryAtPointerY,
+  scrollPanelTocEntryIntoView,
+  panelTocEntryIndex,
 } from "./tocNavigation";
 
 const schema = new Schema({
@@ -67,6 +70,16 @@ describe("editorScrollDeltaForTocReveal", () => {
     });
     expect(400 - delta).toBeGreaterThanOrEqual(100);
     expect(440 - delta).toBeLessThanOrEqual(272);
+  });
+
+  it("does not overshoot heading above the pane top", () => {
+    const delta = editorScrollDeltaForTocReveal({
+      scrollViewportTop: 100,
+      scrollViewportBottom: 180,
+      headingTop: 500,
+      followBlockBottom: 560,
+    });
+    expect(500 - delta).toBeGreaterThanOrEqual(112);
   });
 });
 
@@ -309,5 +322,77 @@ describe("handleInfoPanelTocTap", () => {
 
     expect(handleInfoPanelTocTap(editor as never, 0)).toBe(true);
     expect(selectionPos).toBeGreaterThan(0);
+  });
+});
+
+describe("panel TOC pointer helpers", () => {
+  it("finds entries within bottom-edge slop", () => {
+    const entry = {
+      getAttribute: () => "info-panel-toc-entry-3",
+      getBoundingClientRect: () => ({
+        top: 800,
+        bottom: 836,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 36,
+        x: 0,
+        y: 800,
+        toJSON: () => ({}),
+      }),
+    } as unknown as HTMLElement;
+    const list = {
+      querySelectorAll: () => [entry],
+    } as unknown as HTMLElement;
+
+    expect(findPanelTocEntryAtPointerY(list, 838)).toBe(entry);
+    expect(findPanelTocEntryAtPointerY(list, 850)).toBeNull();
+    expect(panelTocEntryIndex(entry)).toBe(3);
+  });
+
+  it("scrolls a clipped entry into the panel viewport", () => {
+    let scrollTop = 120;
+    const scrollEl = {
+      scrollTop: 0,
+      getBoundingClientRect: () => ({
+        top: 300,
+        bottom: 600,
+        left: 0,
+        right: 400,
+        width: 400,
+        height: 300,
+        x: 0,
+        y: 300,
+        toJSON: () => ({}),
+      }),
+    } as unknown as HTMLElement;
+    Object.defineProperty(scrollEl, "scrollTop", {
+      get: () => scrollTop,
+      set: (value: number) => {
+        scrollTop = value;
+      },
+    });
+
+    const list = {
+      parentElement: scrollEl,
+    } as unknown as HTMLElement;
+    const entry = {
+      closest: (selector: string) =>
+        selector.includes("info-panel-toc-list") ? list : null,
+      getBoundingClientRect: () => ({
+        top: 610,
+        bottom: 646,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 36,
+        x: 0,
+        y: 610,
+        toJSON: () => ({}),
+      }),
+    } as unknown as HTMLElement;
+
+    scrollPanelTocEntryIntoView(entry);
+    expect(scrollTop).toBe(174);
   });
 });

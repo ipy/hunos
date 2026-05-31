@@ -44,10 +44,15 @@ describe("iteration 44 — TOC scroll alignment", () => {
 
 describe("iteration 44 — TOC first-click reliability", () => {
   it("handles TOC tap on pointerdown and click with toolbar-safe stacking", () => {
+    expect(infoPanelSource).toContain("onPointerDownCapture");
+    expect(infoPanelSource).toContain("handleTocPointerDownCapture");
+    expect(infoPanelSource).toContain("findPanelTocEntryAtPointerY");
+    expect(infoPanelSource).toContain("scrollPanelTocEntryIntoView");
     expect(infoPanelSource).toContain("onPointerDown");
     expect(infoPanelSource).toContain("onClick");
     expect(infoPanelSource).toContain("activateTocEntry");
     expect(infoPanelSource).toContain('touchAction: "manipulation"');
+    expect(infoPanelSource).toContain('overflow: "hidden"');
     expect(infoPanelSource).toContain("safe-area-inset-bottom");
     expect(infoPanelSource).toContain("TOC_LIST_BOTTOM_PADDING_PX");
     expect(infoPanelSource).toContain("zIndex: 68");
@@ -58,9 +63,7 @@ describe("iteration 44 — overlay panel exclusion", () => {
   it("closes info panel when note search opens", () => {
     expect(editorSource).toContain("setNoteSearchVisible(false)");
     expect(editorSource).toContain("setShowStats(false)");
-    expect(editorSource).toMatch(
-      /noteSearchOpen[\s\S]*setShowStats\(false\)/,
-    );
+    expect(editorSource).toMatch(/noteSearchOpen[\s\S]*setShowStats\(false\)/);
   });
 
   it("closes note search when info panel opens", () => {
