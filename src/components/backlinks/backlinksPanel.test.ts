@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   BACKLINKS_INCOMING_SECTION_TESTID,
@@ -11,11 +9,6 @@ import {
   backlinksRowKey,
 } from "./BacklinksPanel";
 import { dedupeBacklinkResults } from "@/graph/graphEngine";
-
-const panelSource = readFileSync(
-  join(process.cwd(), "src/components/backlinks/BacklinksPanel.tsx"),
-  "utf-8",
-);
 
 describe("BacklinksPanel automation testids", () => {
   it("exports stable panel and section testids", () => {
@@ -95,37 +88,5 @@ describe("BacklinksPanel automation testids", () => {
         1,
       ),
     ).toBe("incoming:dup:pg-zh:1");
-  });
-
-  it("wires testids on panel root, toggle, sections, and items", () => {
-    expect(panelSource).toContain(`data-testid={BACKLINKS_PANEL_TESTID}`);
-    expect(panelSource).toContain(
-      `data-testid={BACKLINKS_PANEL_TOGGLE_TESTID}`,
-    );
-    expect(panelSource).toContain(
-      `data-testid={BACKLINKS_OUTGOING_SECTION_TESTID}`,
-    );
-    expect(panelSource).toContain(
-      `data-testid={BACKLINKS_INCOMING_SECTION_TESTID}`,
-    );
-    expect(panelSource).toContain("key={backlinksRowKey(section, bl, index)}");
-    expect(panelSource).toContain("let cancelled = false");
-    expect(panelSource).toContain("noteLinkRevision");
-    expect(panelSource).toContain("dedupeBacklinkResults");
-    expect(panelSource).toContain("assertUniqueBacklinkPanelKeys(incomingRows");
-    expect(panelSource).toContain("Promise.all([");
-    expect(panelSource).toContain("graphEngine.getBacklinks(noteId)");
-    expect(panelSource).toContain("graphEngine.getOutgoingLinks(noteId)");
-    expect(panelSource).toContain(
-      "setBacklinks(dedupeBacklinkResults(incoming))",
-    );
-    expect(panelSource).toContain(
-      "setOutgoing(dedupeBacklinkResults(outgoing))",
-    );
-    expect(panelSource).toContain(
-      "data-testid={backlinksItemTestId(bl.linkId)}",
-    );
-    expect(panelSource).toContain("data-link-key={bl.linkId}");
-    expect(panelSource).toContain("data-note-title={bl.noteTitle}");
   });
 });

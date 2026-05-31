@@ -5,6 +5,7 @@ import { dedupeBacklinkResults, graphEngine } from "@/graph/graphEngine";
 import { useNoteStore } from "@/store/noteStore";
 import { Icon } from "@/components/common/Icon";
 import type { BacklinkResult } from "@/types/graph";
+import { formatBacklinkSnippet } from "./formatBacklinkSnippet";
 
 export const BACKLINKS_PANEL_TESTID = "backlinks-panel";
 export const BACKLINKS_PANEL_TOGGLE_TESTID = "backlinks-panel-toggle";
@@ -54,7 +55,7 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
   const { setActiveNote, notes } = useNoteStore();
   const [backlinks, setBacklinks] = useState<BacklinkResult[]>([]);
   const [outgoing, setOutgoing] = useState<BacklinkResult[]>([]);
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   const noteLinkRevision = useMemo(
     () => notes.find((n) => n.id === noteId)?.modifiedAt ?? 0,
     [notes, noteId],
@@ -135,7 +136,7 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
             lineHeight: 1.4,
           }}
         >
-          {bl.context}
+          {formatBacklinkSnippet(bl.context)}
         </div>
       )}
     </div>

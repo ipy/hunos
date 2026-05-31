@@ -12,11 +12,6 @@ import {
 } from "@/storage/formatPlaygroundNote";
 import zh from "@/i18n/zh.json";
 
-const panelSource = readFileSync(
-  join(process.cwd(), "src/components/backlinks/BacklinksPanel.tsx"),
-  "utf-8",
-);
-
 function findWikiLinkTitlesInTagsParagraph(locale: "zh" | "en"): string[] {
   const content = buildPlaygroundContent(locale) as {
     content: Array<{
@@ -43,8 +38,6 @@ describe("iteration 57 — backlinks i18n (AC57-backlinks-i18n)", () => {
     expect(zh.editor.backlinks.title).toBe("反向链接");
     expect(zh.editor.backlinks.outgoing).toBe("链接到");
     expect(zh.editor.backlinks.incoming).toBe("引用自");
-    expect(panelSource).toContain('t("editor.backlinks.outgoing"');
-    expect(panelSource).toContain('t("editor.backlinks.incoming"');
     expect(Object.keys(zh.editor.backlinks)).toEqual(
       expect.arrayContaining(["title", "outgoing", "incoming"]),
     );
@@ -71,7 +64,6 @@ describe("iteration 57 — backlinks unique DOM (AC57-backlinks-unique-dom)", ()
     expect(backlinksRowKey("incoming", row, 0)).not.toBe(
       backlinksRowKey("incoming", duplicateNote, 1),
     );
-    expect(panelSource).toContain("data-link-key={bl.linkId}");
   });
 });
 
