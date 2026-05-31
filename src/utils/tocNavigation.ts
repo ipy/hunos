@@ -5,7 +5,7 @@ import { findEditorScrollContainer } from "@/components/editor/wikiLinkPointerUt
 const TOC_SCROLL_TOP_PADDING_PX = 12;
 const TOC_SCROLL_BOTTOM_PADDING_PX = 8;
 /** Slop for panel TOC taps when an entry sits on the scroll viewport edge. */
-const PANEL_TOC_EDGE_SLOP_PX = 6;
+const PANEL_TOC_EDGE_SLOP_PX = 12;
 const PANEL_TOC_SCROLL_MARGIN_PX = 8;
 
 /** Visible editor viewport; shrinks when the info panel overlays the bottom. */
@@ -66,7 +66,9 @@ export function editorScrollDeltaForTocReveal(options: {
 /** Scroll a panel TOC button into the info-panel content viewport. */
 export function scrollPanelTocEntryIntoView(entryEl: HTMLElement): void {
   const list = entryEl.closest('[data-testid="info-panel-toc-list"]');
-  const scrollEl = list?.parentElement;
+  const scrollEl =
+    list?.closest('[data-testid="info-panel-content-scroll"]') ??
+    list?.parentElement;
   if (!scrollEl) return;
 
   const scrollRect = scrollEl.getBoundingClientRect();

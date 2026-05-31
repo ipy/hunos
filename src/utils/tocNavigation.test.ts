@@ -375,6 +375,7 @@ describe("panel TOC pointer helpers", () => {
 
     const list = {
       parentElement: scrollEl,
+      closest: () => null,
     } as unknown as HTMLElement;
     const entry = {
       closest: (selector: string) =>

@@ -170,9 +170,9 @@ describe("wikiLinkMatchAtScrollMappedPointer", () => {
     });
     const event = { clientX: 423, clientY: 1491 } as PointerEvent;
 
-    expect(
-      wikiLinkMatchAtScrollMappedPointer(view, event, links)?.title,
-    ).toBe("项目文档");
+    expect(wikiLinkMatchAtScrollMappedPointer(view, event, links)?.title).toBe(
+      "项目文档",
+    );
   });
 });
 
@@ -181,6 +181,26 @@ describe("findEditorScrollContainer", () => {
     const scroll = {
       parentElement: null,
       scrollHeight: 2000,
+      clientHeight: 600,
+    };
+    const editor = {
+      parentElement: scroll,
+    };
+
+    vi.stubGlobal(
+      "getComputedStyle",
+      vi.fn(() => ({ overflowY: "auto" }) as CSSStyleDeclaration),
+    );
+
+    expect(findEditorScrollContainer(editor as unknown as HTMLElement)).toBe(
+      scroll,
+    );
+  });
+
+  it("falls back to overflow auto ancestor when not yet scrollable", () => {
+    const scroll = {
+      parentElement: null,
+      scrollHeight: 600,
       clientHeight: 600,
     };
     const editor = {

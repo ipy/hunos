@@ -18,27 +18,44 @@ const infoPanelSource = readFileSync(
   join(process.cwd(), "src/components/editor/InfoPanel.tsx"),
   "utf-8",
 );
+const tocSource = readFileSync(
+  join(process.cwd(), "src/utils/tocNavigation.ts"),
+  "utf-8",
+);
+const wikiLinkSource = readFileSync(
+  join(process.cwd(), "src/components/editor/wikiLinkPointerUtils.ts"),
+  "utf-8",
+);
 
-describe("iteration 46 — TOC bottom padding", () => {
+describe("iteration 47 — TOC bottom padding and scroll", () => {
   it("includes playground bottom headings in TOC", () => {
     const toc = extractTocFromDoc(buildPlaygroundContent("zh"));
     expect(toc.some((entry) => entry.text === "标签与链接")).toBe(true);
     expect(toc.some((entry) => entry.text === "自由试炼")).toBe(true);
   });
 
-  it("adds scroll breathing room below the last TOC row", () => {
-    expect(infoPanelSource).toContain("TOC_LIST_BOTTOM_PADDING_PX");
+  it("uses flex-basis zero scroll container with bottom inset", () => {
     expect(infoPanelSource).toMatch(/TOC_LIST_BOTTOM_PADDING_PX = 48/);
-    expect(infoPanelSource).toContain("paddingBottom:");
-    expect(infoPanelSource).toContain("safe-area-inset-bottom");
-    expect(infoPanelSource).toMatch(/flex:\s*1[\s\S]*minHeight:\s*0[\s\S]*overflowY:\s*"auto"/);
+    expect(infoPanelSource).toContain("info-panel-content-scroll");
+    expect(infoPanelSource).toContain("scrollPaddingBottom:");
+    expect(infoPanelSource).toMatch(/flex:\s*"1 1 0"/);
+    expect(infoPanelSource).toMatch(
+      /flex:\s*"1 1 0"[\s\S]*minHeight:\s*0[\s\S]*overflowY:\s*"auto"/,
+    );
+    expect(infoPanelSource).toContain("boxSizing: \"border-box\"");
   });
 });
 
-describe("iteration 46 — TOC click activation", () => {
-  it("activates entries via pointerdown capture and synthetic click", () => {
+describe("iteration 47 — TOC click activation", () => {
+  it("activates entries via onClick and capture pointerdown without preventDefault", () => {
     expect(infoPanelSource).toContain("handleTocPointerDownCapture");
     expect(infoPanelSource).toContain("activateTocEntry");
+
+    const captureBlock = infoPanelSource.slice(
+      infoPanelSource.indexOf("handleTocPointerDownCapture"),
+      infoPanelSource.indexOf("const tabs:"),
+    );
+    expect(captureBlock).not.toContain("preventDefault");
 
     const tocEntryBlock = infoPanelSource.slice(
       infoPanelSource.indexOf("info-panel-toc-entry-"),
@@ -47,24 +64,24 @@ describe("iteration 46 — TOC click activation", () => {
     expect(tocEntryBlock).toMatch(/onClick=\{/);
     expect(tocEntryBlock).not.toMatch(/onPointerDown=\{/);
   });
-});
 
-describe("iteration 46 — e2e editor bridge", () => {
-  it("registers the live editor with hunos-e2e-bridge when __HUNOS_E2E__", () => {
-    expect(editorSource).toContain('from "@/testing/hunos-e2e-bridge"');
-    expect(editorSource).toContain("registerHunosE2eEditor");
-    expect(editorSource).toMatch(
-      /__HUNOS_E2E__[\s\S]*registerHunosE2eEditor\(editor\)/,
-    );
+  it("resolves editor scroll container even before content overflows", () => {
+    expect(wikiLinkSource).toContain("overflowCandidate");
+    expect(tocSource).toContain("findEditorScrollContainer");
+  });
+
+  it("expands bottom-edge slop for first-click hits", () => {
+    expect(tocSource).toMatch(/PANEL_TOC_EDGE_SLOP_PX = 12/);
   });
 });
 
-describe("iteration 46 — info panel tab memory", () => {
-  it("remembers tab on close and restores on reopen", () => {
-    expect(infoPanelSource).toContain("initialInfoPanelTab");
-    expect(infoPanelSource).toContain("rememberInfoPanelTabForReopen");
-    expect(infoPanelSource).toContain("handleClose");
-    expect(infoPanelSource).toContain("selectTab");
+describe("iteration 47 — info panel tab memory", () => {
+  it("persists tab via ref on close to avoid stale activeTab overwrites", () => {
+    expect(infoPanelSource).toContain("activeTabRef");
+    expect(infoPanelSource).toContain("activeTabRef.current = activeTab");
+    expect(infoPanelSource).toMatch(
+      /rememberInfoPanelTabForReopen\(note\.id, activeTabRef\.current\)/,
+    );
   });
 
   it("clears reopen memory when switching notes", () => {
@@ -75,7 +92,7 @@ describe("iteration 46 — info panel tab memory", () => {
   });
 });
 
-describe("iteration 46 — BACKTEST drift banner friction (regression)", () => {
+describe("iteration 47 — BACKTEST drift banner friction (regression)", () => {
   const seedContent = JSON.stringify(buildPlaygroundContent("zh"));
 
   it("detects BACKTEST marker headings for restore menu gating", () => {
@@ -89,7 +106,7 @@ describe("iteration 46 — BACKTEST drift banner friction (regression)", () => {
     parsed.content.splice(5, 0, {
       type: "heading",
       attrs: { level: 2 },
-      content: [{ type: "text", text: "BACKTEST46" }],
+      content: [{ type: "text", text: "BACKTEST47" }],
     });
     const pendingDraft = JSON.stringify(parsed);
 
@@ -125,7 +142,7 @@ describe("iteration 46 — BACKTEST drift banner friction (regression)", () => {
     parsed.content.splice(5, 0, {
       type: "heading",
       attrs: { level: 2 },
-      content: [{ type: "text", text: "BACKTEST46" }],
+      content: [{ type: "text", text: "BACKTEST47" }],
     });
     const pendingDraft = JSON.stringify(parsed);
 

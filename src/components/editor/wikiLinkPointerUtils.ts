@@ -15,19 +15,22 @@ export function findEditorScrollContainer(
   editorDom: HTMLElement,
 ): HTMLElement | null {
   let el: HTMLElement | null = editorDom.parentElement;
+  let overflowCandidate: HTMLElement | null = null;
   while (el) {
     const { overflowY } = getComputedStyle(el);
     if (
-      (overflowY === "auto" ||
-        overflowY === "scroll" ||
-        overflowY === "overlay") &&
-      el.scrollHeight > el.clientHeight + 1
+      overflowY === "auto" ||
+      overflowY === "scroll" ||
+      overflowY === "overlay"
     ) {
-      return el;
+      if (el.scrollHeight > el.clientHeight + 1) {
+        return el;
+      }
+      overflowCandidate ??= el;
     }
     el = el.parentElement;
   }
-  return null;
+  return overflowCandidate;
 }
 
 export function isPointerOverEditorColumn(
@@ -45,7 +48,13 @@ function pointerContentCoords(
   view: EditorView,
   clientX: number,
   clientY: number,
-): { contentX: number; contentY: number; rect: DOMRect; scrollTop: number; scrollLeft: number } {
+): {
+  contentX: number;
+  contentY: number;
+  rect: DOMRect;
+  scrollTop: number;
+  scrollLeft: number;
+} {
   const scrollEl = findEditorScrollContainer(view.dom);
   const measureEl = scrollEl ?? view.dom;
   const rect = measureEl.getBoundingClientRect();

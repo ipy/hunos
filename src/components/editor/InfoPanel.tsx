@@ -41,7 +41,7 @@ interface InfoPanelProps {
 
 const DRAG_CLOSE_THRESHOLD = 80;
 /** Breathing room below the last TOC row inside the panel scroll viewport. */
-const TOC_LIST_BOTTOM_PADDING_PX = 32;
+const TOC_LIST_BOTTOM_PADDING_PX = 48;
 
 function formatDateTime(ts: number): string {
   const d = new Date(ts);
@@ -75,6 +75,8 @@ export function InfoPanel({
   const dragOffsetRef = useRef(0);
   const panelRef = useRef<HTMLDivElement>(null);
   const noteIdRef = useRef(note.id);
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
   const lastTocActivateRef = useRef<{ index: number; time: number } | null>(
     null,
   );
@@ -87,9 +89,9 @@ export function InfoPanel({
   }, [note.id, note, editor]);
 
   const handleClose = useCallback(() => {
-    rememberInfoPanelTabForReopen(note.id, activeTab);
+    rememberInfoPanelTabForReopen(note.id, activeTabRef.current);
     onClose();
-  }, [note.id, activeTab, onClose]);
+  }, [note.id, onClose]);
 
   const selectTab = useCallback(
     (tab: InfoPanelTab) => {
@@ -172,7 +174,6 @@ export function InfoPanel({
     if (!entry) return;
     const index = panelTocEntryIndex(entry);
     if (index < 0 || index >= toc.length) return;
-    event.preventDefault();
     activateTocEntry(index, toc[index]?.docPos, entry);
   };
 
@@ -375,11 +376,13 @@ export function InfoPanel({
 
         {/* Content */}
         <div
+          data-testid="info-panel-content-scroll"
           onPointerDownCapture={handleTocPointerDownCapture}
           style={{
-            flex: 1,
+            flex: "1 1 0",
             minHeight: 0,
             overflowY: "auto",
+            scrollPaddingBottom: `max(${TOC_LIST_BOTTOM_PADDING_PX}px, env(safe-area-inset-bottom))`,
             padding: "0 20px max(20px, env(safe-area-inset-bottom))",
           }}
         >
@@ -463,6 +466,7 @@ export function InfoPanel({
               data-testid="info-panel-toc-list"
               style={{
                 paddingBottom: `max(${TOC_LIST_BOTTOM_PADDING_PX}px, env(safe-area-inset-bottom))`,
+                boxSizing: "border-box",
               }}
             >
               {toc.length === 0 ? (
