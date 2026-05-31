@@ -7,7 +7,12 @@ import { TableHeader } from "@tiptap/extension-table-header";
 import { TableRow } from "@tiptap/extension-table-row";
 import { Schema } from "@tiptap/pm/model";
 import { EditorState, TextSelection } from "@tiptap/pm/state";
-import { addColumnAfter, deleteColumn, tableNodes } from "@tiptap/pm/tables";
+import {
+  addColumnAfter,
+  deleteColumn,
+  selectedRect,
+  tableNodes,
+} from "@tiptap/pm/tables";
 import { describe, expect, it, vi } from "vitest";
 import { HunosTable } from "./HunosTable";
 import { withHeaderRowFix } from "./tableColumnCommandUtils";
@@ -72,6 +77,10 @@ function headerColumnCount(state: EditorState): number {
   return state.doc.firstChild?.firstChild?.childCount ?? 0;
 }
 
+function selectedColumnIndex(state: EditorState): number {
+  return selectedRect(state).left;
+}
+
 function runColumnCommand(
   state: EditorState,
   command: typeof addColumnAfter,
@@ -108,10 +117,7 @@ function buildPlaygroundTableState(
   let state = EditorState.create({ schema, doc });
   state = state.apply(
     state.tr.setSelection(
-      TextSelection.create(
-        state.doc,
-        findTextPos(state.doc, defaultAnchor),
-      ),
+      TextSelection.create(state.doc, findTextPos(state.doc, defaultAnchor)),
     ),
   );
   return state;
@@ -222,6 +228,44 @@ describe("HunosTable column commands (TipTap tableHeader schema)", () => {
     headerRow?.forEach((cell) => {
       expect(cell.type.name).toBe("tableHeader");
     });
+  });
+
+  it("AC4-header-round-trip: selection lands in inserted column after insert from 类型", () => {
+    let state = buildPlaygroundTableState(
+      tiptapTableSchema,
+      "tableHeader",
+      "tableCell",
+      "tableRow",
+      "类型",
+    );
+    expect(selectedColumnIndex(state)).toBe(1);
+
+    state = runColumnCommand(state, addColumnAfter, 1);
+    expect(headerColumnCount(state)).toBe(4);
+    expect(selectedColumnIndex(state)).toBe(2);
+    expect(headerTexts(state)).toEqual(["名称", "类型", "", "状态"]);
+
+    state = runColumnCommand(state, deleteColumn, null);
+    expect(headerTexts(state)).toEqual(["名称", "类型", "状态"]);
+    expect(headerColumnCount(state)).toBe(3);
+  });
+
+  it("AC4-header-round-trip: two insert-delete cycles from 类型 header preserve headers", () => {
+    let state = buildPlaygroundTableState(
+      tiptapTableSchema,
+      "tableHeader",
+      "tableCell",
+      "tableRow",
+      "类型",
+    );
+
+    for (let cycle = 0; cycle < 2; cycle += 1) {
+      state = runColumnCommand(state, addColumnAfter, 1);
+      state = runColumnCommand(state, deleteColumn, null);
+    }
+
+    expect(headerTexts(state)).toEqual(["名称", "类型", "状态"]);
+    expect(headerColumnCount(state)).toBe(3);
   });
 
   it("does not leave a trailing empty header column after insert/delete (AC4-table-header-delete)", () => {

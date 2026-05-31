@@ -14,6 +14,13 @@ function mockEditor(activeTypes: string[], canMap: Record<string, boolean>) {
     run: vi.fn(() => true),
   };
 
+  const commands = {
+    addRowAfter: vi.fn(() => true),
+    addColumnAfter: vi.fn(() => true),
+    deleteRow: vi.fn(() => true),
+    deleteColumn: vi.fn(() => true),
+  };
+
   return {
     isActive: vi.fn((type: string) => activeTypes.includes(type)),
     can: vi.fn(() => ({
@@ -23,6 +30,7 @@ function mockEditor(activeTypes: string[], canMap: Record<string, boolean>) {
       deleteColumn: () => canMap.deleteColumn ?? false,
     })),
     chain: vi.fn(() => chain),
+    commands,
     _chain: chain,
   };
 }
@@ -47,10 +55,11 @@ describe("tableControlActions", () => {
 
     expect(TABLE_CONTROL_ITEMS[0].canExecute(editor as never)).toBe(true);
     expect(TABLE_CONTROL_ITEMS[0].action(editor as never)).toBe(true);
-    expect(editor._chain.addRowAfter).toHaveBeenCalled();
+    expect(editor.commands.addRowAfter).toHaveBeenCalled();
 
     expect(TABLE_CONTROL_ITEMS[1].action(editor as never)).toBe(true);
-    expect(editor._chain.addColumnAfter).toHaveBeenCalled();
+    expect(editor.commands.addColumnAfter).toHaveBeenCalled();
+    expect(editor.chain).not.toHaveBeenCalled();
   });
 
   it("disables delete controls when the table cannot shrink", () => {
