@@ -1,10 +1,18 @@
+import { getSchema } from "@tiptap/core";
+import Document from "@tiptap/extension-document";
+import Paragraph from "@tiptap/extension-paragraph";
+import Text from "@tiptap/extension-text";
+import { TableCell } from "@tiptap/extension-table-cell";
+import { TableHeader } from "@tiptap/extension-table-header";
+import { TableRow } from "@tiptap/extension-table-row";
 import { Schema } from "@tiptap/pm/model";
 import { EditorState, TextSelection } from "@tiptap/pm/state";
 import { addColumnAfter, deleteColumn, tableNodes } from "@tiptap/pm/tables";
 import { describe, expect, it, vi } from "vitest";
+import { HunosTable } from "./HunosTable";
 import { withHeaderRowFix } from "./tableColumnCommandUtils";
 
-const schema = new Schema({
+const pmTablesSchema = new Schema({
   nodes: {
     doc: { content: "block+" },
     paragraph: { group: "block", content: "inline*" },
@@ -17,16 +25,28 @@ const schema = new Schema({
   },
 });
 
-function cell(type: "table_header" | "table_cell", text: string) {
+/** Production TipTap schema (colspan attrs + HunosTable commands). */
+const tiptapTableSchema = getSchema([
+  Document,
+  Paragraph,
+  Text,
+  HunosTable.configure({ resizable: true }),
+  TableRow,
+  TableHeader,
+  TableCell,
+]);
+
+function cell(
+  schema: Schema,
+  type: "table_header" | "table_cell" | "tableHeader" | "tableCell",
+  text: string,
+) {
   return schema.nodes[type]!.create({}, [
     schema.nodes.paragraph!.create({}, text ? [schema.text(text)] : undefined),
   ]);
 }
 
-function findTextPos(
-  doc: ReturnType<typeof schema.node>,
-  text: string,
-): number {
+function findTextPos(doc: Schema["node"], text: string): number {
   let found = -1;
   doc.descendants((node, pos) => {
     if (found >= 0) return false;
@@ -61,44 +81,79 @@ function runColumnCommand(
   return next;
 }
 
-function buildPlaygroundTableState() {
+function buildPlaygroundTableState(
+  schema: Schema,
+  headerType: "table_header" | "tableHeader",
+  bodyType: "table_cell" | "tableCell",
+  rowType: "table_row" | "tableRow",
+  defaultAnchor = "状态",
+) {
   const table = schema.nodes.table!.create({}, [
-    schema.nodes.table_row!.create({}, [
-      cell("table_header", "名称"),
-      cell("table_header", "类型"),
-      cell("table_header", "状态"),
+    schema.nodes[rowType]!.create({}, [
+      cell(schema, headerType, "名称"),
+      cell(schema, headerType, "类型"),
+      cell(schema, headerType, "状态"),
     ]),
-    schema.nodes.table_row!.create({}, [
-      cell("table_cell", "粗体"),
-      cell("table_cell", "样式"),
-      cell("table_cell", "就绪"),
+    schema.nodes[rowType]!.create({}, [
+      cell(schema, bodyType, "粗体"),
+      cell(schema, bodyType, "样式"),
+      cell(schema, bodyType, "就绪"),
     ]),
   ]);
   const doc = schema.nodes.doc.create({}, [table]);
   let state = EditorState.create({ schema, doc });
   state = state.apply(
     state.tr.setSelection(
-      TextSelection.create(state.doc, findTextPos(state.doc, "状态")),
+      TextSelection.create(
+        state.doc,
+        findTextPos(state.doc, defaultAnchor),
+      ),
     ),
   );
   return state;
 }
 
-describe("HunosTable column commands", () => {
-  it("preserves header labels through add/delete column cycles (AC4)", () => {
-    let state = buildPlaygroundTableState();
+describe("HunosTable column commands (prosemirror-tables schema)", () => {
+  function expectHeadersPreservedAfterInsertDeleteCycles(
+    anchorText: string,
+    cycles = 2,
+  ) {
+    let state = buildPlaygroundTableState(
+      pmTablesSchema,
+      "table_header",
+      "table_cell",
+      "table_row",
+      anchorText,
+    );
     expect(headerTexts(state)).toEqual(["名称", "类型", "状态"]);
 
-    for (let cycle = 0; cycle < 2; cycle += 1) {
+    for (let cycle = 0; cycle < cycles; cycle += 1) {
       state = runColumnCommand(state, addColumnAfter, 1);
       state = runColumnCommand(state, deleteColumn, null);
     }
 
     expect(headerTexts(state)).toEqual(["名称", "类型", "状态"]);
+  }
+
+  it("preserves header labels through add/delete column cycles from last header (AC4)", () => {
+    expectHeadersPreservedAfterInsertDeleteCycles("状态");
+  });
+
+  it("preserves header labels when inserting/deleting from middle header 类型 (AC4-table-header-delete)", () => {
+    expectHeadersPreservedAfterInsertDeleteCycles("类型");
+  });
+
+  it("preserves header labels when inserting/deleting from data row 样式 (AC4-table-header-strip)", () => {
+    expectHeadersPreservedAfterInsertDeleteCycles("样式");
   });
 
   it("dispatches the mutated transaction, not a stale tr from post-apply state (AC4-dispatch-mismatch)", () => {
-    const state = buildPlaygroundTableState();
+    const state = buildPlaygroundTableState(
+      pmTablesSchema,
+      "table_header",
+      "table_cell",
+      "table_row",
+    );
     const run = withHeaderRowFix(addColumnAfter, 1);
     let dispatchedTr: ReturnType<EditorState["tr"]> | null = null;
 
@@ -122,7 +177,12 @@ describe("HunosTable column commands", () => {
   });
 
   it("does not dispatch next.tr built from an intermediate EditorState", () => {
-    const state = buildPlaygroundTableState();
+    const state = buildPlaygroundTableState(
+      pmTablesSchema,
+      "table_header",
+      "table_cell",
+      "table_row",
+    );
     const run = withHeaderRowFix(addColumnAfter, 1);
     const dispatch = vi.fn((tr) => {
       expect(tr).not.toBe(state.tr);
@@ -133,4 +193,29 @@ describe("HunosTable column commands", () => {
     expect(run(state, dispatch)).toBe(true);
     expect(dispatch).toHaveBeenCalledTimes(1);
   });
+});
+
+describe("HunosTable column commands (TipTap tableHeader schema)", () => {
+  it("preserves header labels through add/delete cycles with header-row fix enabled (AC4)", () => {
+    let state = buildPlaygroundTableState(
+      tiptapTableSchema,
+      "tableHeader",
+      "tableCell",
+      "tableRow",
+      "类型",
+    );
+    expect(headerTexts(state)).toEqual(["名称", "类型", "状态"]);
+
+    for (let cycle = 0; cycle < 2; cycle += 1) {
+      state = runColumnCommand(state, addColumnAfter, 1);
+      state = runColumnCommand(state, deleteColumn, null);
+    }
+
+    expect(headerTexts(state)).toEqual(["名称", "类型", "状态"]);
+    const headerRow = state.doc.firstChild?.firstChild;
+    headerRow?.forEach((cell) => {
+      expect(cell.type.name).toBe("tableHeader");
+    });
+  });
+
 });

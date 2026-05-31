@@ -24,6 +24,7 @@ import {
   playgroundEditorMarkOnlyDriftFromStored,
   playgroundFormatQaDraftHidesRestoreChip,
   playgroundContentMatchesQaTableRowAppend,
+  playgroundPersistedContentForRow,
   playgroundFormatQaMarkOnlyDrift,
   playgroundFormatQaStructureMatchesCanonical,
   playgroundRestoreChipOverridesSuppress,
@@ -2972,5 +2973,36 @@ describe("iter 25 playground table QA drift", () => {
     expect(formatPlaygroundNeedsRestore("格式试炼场", stored, "zh")).toBe(
       false,
     );
+  });
+
+  it("hides restore chip when persisted stored row was sanitized like IDB write (AC5-spurious-restore-chip)", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          type: string;
+          content?: Array<{ type: string; content?: unknown[] }>;
+        }>;
+      }>;
+    };
+    const tableIndex = tableSectionIndex(parsed) + 1;
+    const table = parsed.content[tableIndex];
+    const templateRow = table?.content?.[1];
+    if (!table?.content || !templateRow) throw new Error("seed table missing");
+    table.content.push(
+      JSON.parse(JSON.stringify(templateRow)) as (typeof table.content)[number],
+    );
+    const stored = playgroundPersistedContentForRow(JSON.stringify(parsed));
+
+    expect(playgroundContentMatchesQaTableRowAppend(stored, "zh")).toBe(true);
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: stored,
+        pendingDraftContent: seed,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
   });
 });
