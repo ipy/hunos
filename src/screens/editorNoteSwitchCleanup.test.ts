@@ -8,19 +8,33 @@ const editorSource = readFileSync(
 );
 
 describe("EditorScreen note-switch autosave cleanup", () => {
-  it("skips effect-cleanup persist when active note already switched", () => {
-    expect(editorSource).toContain(
+  it("does not fire duplicate effect-cleanup persists on notes churn", () => {
+    expect(editorSource).not.toContain(
+      "void persistEditorContent(boundNoteId, json)",
+    );
+    expect(editorSource).not.toContain(
       "shouldPersistAutosaveOnEditorEffectCleanup",
     );
-    expect(editorSource).toContain("const boundNoteId = activeNoteId");
-    expect(editorSource).toContain("useNoteStore.getState().activeNoteId");
+  });
+
+  it("uses silent flush persist during note-switch autosave", () => {
+    expect(editorSource).toContain("notifyOnError: false");
     expect(editorSource).toContain(
-      "void persistEditorContent(boundNoteId, json)",
+      "await persistEditorContent(activeNoteId, json, undefined, {",
     );
   });
 
   it("guards debounced autosave against stale note id after switch", () => {
     expect(editorSource).toContain("isDebouncedAutosaveStillCurrent");
     expect(editorSource).toContain("const scheduledNoteId = activeNoteId");
+  });
+
+  it("hides restore chip for mark-only playground format QA drafts", () => {
+    expect(editorSource).toContain(
+      "playgroundEditorMarkOnlyDriftFromStored(\n          pendingDraftContent,",
+    );
+    expect(editorSource).toMatch(
+      /playgroundEditorMarkOnlyDriftFromStored\([\s\S]*return false;/,
+    );
   });
 });

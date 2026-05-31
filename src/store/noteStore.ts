@@ -13,6 +13,7 @@ import {
 } from "@/store/editorAutosaveRegistry";
 import { clearUnloadBackup } from "@/store/lifecycleUnload";
 import { isStalePlaygroundWrite } from "@/store/noteStorePlaygroundWriteEpoch";
+import { enqueueNoteContentSave } from "@/store/noteStoreContentSaveQueue";
 import { enqueueActiveNoteSwitch } from "@/store/noteStoreActiveNoteSwitch";
 import { useSettingsStore } from "@/store/settingsStore";
 import { useTagStore } from "@/store/tagStore";
@@ -73,38 +74,39 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     return note;
   },
 
-  saveNoteContent: async (id, content, writeEpoch) => {
-    if (isStalePlaygroundWrite(id, writeEpoch)) {
-      return false;
-    }
-    const existing =
-      get().notes.find((n) => n.id === id) ?? (await noteStorage.get(id));
-    if (
-      existing?.content &&
-      playgroundWriteRegressesCanonicalStored(
-        existing.title,
-        existing.content,
-        content,
-        useSettingsStore.getState().locale,
-      )
-    ) {
-      return false;
-    }
-    const applied = await noteStorage.update(id, { content });
-    const sanitized = applied?.content ?? content;
-    await graphEngine.syncNoteLinks(id, sanitized);
-    await useTagStore.getState().loadTags();
-    const updated = await noteStorage.get(id);
-    if (updated) {
-      const { notes } = get();
-      set({
-        notes: sortByModifiedDesc(
-          notes.map((n) => (n.id === id ? updated : n)),
-        ),
-      });
-    }
-    return true;
-  },
+  saveNoteContent: async (id, content, writeEpoch) =>
+    enqueueNoteContentSave(id, async () => {
+      if (isStalePlaygroundWrite(id, writeEpoch)) {
+        return false;
+      }
+      const existing =
+        get().notes.find((n) => n.id === id) ?? (await noteStorage.get(id));
+      if (
+        existing?.content &&
+        playgroundWriteRegressesCanonicalStored(
+          existing.title,
+          existing.content,
+          content,
+          useSettingsStore.getState().locale,
+        )
+      ) {
+        return false;
+      }
+      const applied = await noteStorage.update(id, { content });
+      const sanitized = applied?.content ?? content;
+      await graphEngine.syncNoteLinks(id, sanitized);
+      await useTagStore.getState().loadTags();
+      const updated = await noteStorage.get(id);
+      if (updated) {
+        const { notes } = get();
+        set({
+          notes: sortByModifiedDesc(
+            notes.map((n) => (n.id === id ? updated : n)),
+          ),
+        });
+      }
+      return true;
+    }),
 
   saveNoteTitle: async (id, title, writeEpoch) => {
     if (isStalePlaygroundWrite(id, writeEpoch)) {

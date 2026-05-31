@@ -76,7 +76,6 @@ import {
   createPlaygroundRestoreSession,
   finalizePlaygroundRestoreInEditor,
   shouldEndPlaygroundRestoreSession,
-  shouldStashAutosaveOnEffectCleanup,
 } from "@/screens/playgroundRestoreEditorSync";
 import {
   clearPendingTitleTimer,
@@ -87,11 +86,8 @@ import {
   persistNoteContent,
   persistNoteTitle,
 } from "@/screens/editorNotePersistence";
-import {
-  isDebouncedAutosaveStillCurrent,
-  shouldPersistAutosaveOnEditorEffectCleanup,
-} from "@/screens/editorAutosaveEffectCleanup";
-import type { EditorAutosaveFlushResult } from "@/store/editorAutosaveRegistry";
+import { isDebouncedAutosaveStillCurrent } from "@/screens/editorAutosaveEffectCleanup";
+import type { PersistNoteOptions } from "@/screens/editorNotePersistence";
 
 declare const __HUNOS_E2E__: boolean | undefined;
 
@@ -302,12 +298,14 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       noteId: string,
       json: string,
       writeEpoch = contentWriteEpochRef.current,
+      options: PersistNoteOptions = {},
     ): Promise<boolean> => {
       const saved = await persistNoteContent(
         saveNoteContent,
         noteId,
         json,
         writeEpoch,
+        options,
       );
       if (saved && pendingContentRef.current === json) {
         pendingContentRef.current = null;
@@ -548,7 +546,14 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         return { content: null, persisted: titleOk };
       }
 
-      const contentOk = await persistEditorContent(activeNoteId, json);
+      const contentOk = await persistEditorContent(
+        activeNoteId,
+        json,
+        undefined,
+        {
+          notifyOnError: false,
+        },
+      );
       if (contentOk) {
         pendingContentRef.current = null;
       } else {
@@ -564,45 +569,16 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     ]);
 
   useEffect(() => {
-    const boundNoteId = activeNoteId;
     registerEditorAutosaveFlush(flushPendingAutosave);
     registerUnloadDraftCollector(collectUnloadDraft);
     const unbindLifecycle = bindEditorLifecycleAutosaveFlush();
     return () => {
       persistUnloadDraftSync();
       unbindLifecycle();
-      const currentActiveNoteId = useNoteStore.getState().activeNoteId;
-      const mayPersistCleanup = shouldPersistAutosaveOnEditorEffectCleanup(
-        boundNoteId,
-        currentActiveNoteId,
-      );
-      if (
-        mayPersistCleanup &&
-        shouldStashAutosaveOnEffectCleanup(
-          playgroundRestoreSessionRef.current.isActive(),
-        )
-      ) {
-        const json = collectPendingAutosave();
-        if (json && boundNoteId) {
-          void persistEditorContent(boundNoteId, json);
-        }
-      }
       unregisterEditorAutosaveFlush(flushPendingAutosave);
       unregisterUnloadDraftCollector(collectUnloadDraft);
-      const pendingTitle = takePendingTitle(pendingTitleRef, titleTimeoutRef);
-      if (pendingTitle && boundNoteId && mayPersistCleanup) {
-        void persistEditorTitle(boundNoteId, pendingTitle);
-      }
     };
-  }, [
-    activeNoteId,
-    collectPendingAutosave,
-    collectUnloadDraft,
-    flushPendingAutosave,
-    notes,
-    persistEditorContent,
-    persistEditorTitle,
-  ]);
+  }, [collectUnloadDraft, flushPendingAutosave]);
 
   useEffect(() => {
     const session = playgroundRestoreSessionRef.current;
@@ -639,13 +615,23 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       const sanitized = sanitizeEditorStashContent(taken.content);
       pendingContentRef.current = sanitized;
       setEditorSeedContent(sanitized);
+      void persistEditorContent(note.id, sanitized, undefined, {
+        notifyOnError: false,
+      });
       return;
     }
 
     const sanitized = sanitizeEditorStashContent(taken.content);
     setEditorSeedContent(null);
     void saveNoteContent(note.id, sanitized);
-  }, [note?.id, note?.title, note?.content, saveNoteContent, settings.locale]);
+  }, [
+    note?.id,
+    note?.title,
+    note?.content,
+    persistEditorContent,
+    saveNoteContent,
+    settings.locale,
+  ]);
 
   useEffect(() => {
     if (!editorInstance) return;
@@ -933,6 +919,24 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         pendingDraftContent = JSON.stringify(editorInstance.getJSON());
       } catch {
         pendingDraftContent = null;
+      }
+    }
+    if (
+      pendingDraftContent &&
+      isFormatPlaygroundNote(note.title, noteContentForEditor)
+    ) {
+      const playgroundLocale = resolvePlaygroundSeedLocale(
+        noteContentForEditor,
+        settings.locale,
+      );
+      if (
+        playgroundEditorMarkOnlyDriftFromStored(
+          pendingDraftContent,
+          noteContentForEditor,
+          playgroundLocale,
+        )
+      ) {
+        return false;
       }
     }
     return shouldShowPlaygroundRestoreButton({
