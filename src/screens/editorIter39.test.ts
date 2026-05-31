@@ -45,6 +45,7 @@ describe("iteration 39 — wiki-link navigation", () => {
 describe("iteration 39 — search restore ghost", () => {
   it("merges pinned notes into filtered search results for the sidebar list", () => {
     expect(noteListSource).toContain("mergePinnedNotesForSearchDisplay");
+    expect(noteListSource).toContain("activeNoteId");
   });
 
   it("re-runs sidebar search after playground restore when query is active", () => {

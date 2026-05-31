@@ -329,7 +329,9 @@ export function NoteListScreen({ layout = "mobile" }: NoteListScreenProps) {
     : t("tags.sections.allNotes");
   const displayedNotes = filterNotesForPlaygroundList(
     searchQuery
-      ? mergePinnedNotesForSearchDisplay(searchResults, notes)
+      ? mergePinnedNotesForSearchDisplay(searchResults, notes, {
+          activeNoteId,
+        })
       : notes,
     locale,
   );

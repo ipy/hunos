@@ -61,10 +61,11 @@ describe("noteSearchRank", () => {
     expect(filterNotesByTitleFirstSearch([welcome], "   ")).toEqual([]);
   });
 
-  it("keeps pinned notes visible during active search (AC39-search-restore-ghost)", () => {
+  it("keeps the active pinned note visible during search (AC39-search-restore-ghost)", () => {
     const merged = mergePinnedNotesForSearchDisplay(
       [welcome],
       [playground, welcome],
+      { activeNoteId: playground.id },
     );
     expect(merged.map((n) => n.title)).toEqual([
       "格式试炼场",
@@ -72,11 +73,20 @@ describe("noteSearchRank", () => {
     ]);
   });
 
+  it("does not inject pinned notes that are not active (AC37-search-title-first)", () => {
+    const merged = mergePinnedNotesForSearchDisplay(
+      [welcome],
+      [playground, welcome],
+    );
+    expect(merged.map((n) => n.title)).toEqual(["欢迎使用 Hunos"]);
+  });
+
   it("does not duplicate pinned notes already in search results", () => {
     const pinnedPlayground = { ...playground, isPinned: true };
     const merged = mergePinnedNotesForSearchDisplay(
       [pinnedPlayground],
       [pinnedPlayground, welcome],
+      { activeNoteId: pinnedPlayground.id },
     );
     expect(merged).toHaveLength(1);
     expect(merged[0]?.title).toBe("格式试炼场");
