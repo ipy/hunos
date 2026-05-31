@@ -38,6 +38,7 @@ describe("iteration 47 — TOC bottom padding and scroll", () => {
     expect(infoPanelSource).toMatch(/TOC_LIST_BOTTOM_PADDING_PX = 48/);
     expect(infoPanelSource).toContain("info-panel-content-scroll");
     expect(infoPanelSource).toContain("scrollPaddingBottom:");
+    expect(infoPanelSource).toMatch(/height:\s*"60vh"/);
     expect(infoPanelSource).toMatch(/flex:\s*"1 1 0"/);
     expect(infoPanelSource).toMatch(
       /flex:\s*"1 1 0"[\s\S]*minHeight:\s*0[\s\S]*overflowY:\s*"auto"/,

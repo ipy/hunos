@@ -247,10 +247,12 @@ export function InfoPanel({
           boxShadow: theme.isDark
             ? "0 -4px 30px rgba(0,0,0,0.4)"
             : "0 -4px 30px rgba(0,0,0,0.08)",
+          height: "60vh",
           maxHeight: "60vh",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
+          boxSizing: "border-box",
           animation:
             dragOffset === 0 && !isDragging
               ? "sheetSlideUp 0.35s cubic-bezier(0.32, 0.72, 0, 1)"
