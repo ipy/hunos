@@ -45,8 +45,8 @@ describe("iteration 44 — TOC scroll alignment", () => {
 describe("iteration 44 — TOC first-click reliability", () => {
   it("handles TOC tap on pointerdown and click with toolbar-safe stacking", () => {
     expect(infoPanelSource).toContain("onPointerDownCapture");
-    expect(infoPanelSource).toContain("handleTocPointerDownCapture");
-    expect(infoPanelSource).toContain("findPanelTocEntryAtPointerY");
+    expect(infoPanelSource).toContain("handleTocListPointerDownCapture");
+    expect(infoPanelSource).toContain("panelTocEntryFromPointerY");
     expect(infoPanelSource).toContain("scrollPanelTocEntryIntoView");
     expect(infoPanelSource).toContain("onPointerDown");
     expect(infoPanelSource).toContain("onClick");

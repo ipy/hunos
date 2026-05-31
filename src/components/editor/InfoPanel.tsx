@@ -14,8 +14,10 @@ import type { Editor } from "@tiptap/react";
 import {
   handleInfoPanelTocTap,
   panelTocEntryFromPointerY,
+  requestPinPanelTocListScrollTop,
   resolvePanelTocScrollContainer,
   scrollPanelTocEntryIntoView,
+  shouldDeferPanelTocScrollIntoView,
 } from "@/utils/tocNavigation";
 import {
   editorHasTaskList,
@@ -157,11 +159,94 @@ export function InfoPanel({
     const last = lastTocActivateRef.current;
     if (last?.index === index && now - last.time < 300) return;
     lastTocActivateRef.current = { index, time: now };
+    if (!entryEl) {
+      handleInfoPanelTocTap(editor, index, docPos);
+      return;
+    }
+    const list = entryEl.closest<HTMLElement>(
+      '[data-testid="info-panel-toc-list"]',
+    );
+    const panelScrollEl = list
+      ? resolvePanelTocScrollContainer(list, contentScrollRef.current)
+      : null;
+    const deferPanelScroll = shouldDeferPanelTocScrollIntoView(entryEl, list);
+    if (deferPanelScroll) requestPinPanelTocListScrollTop();
     handleInfoPanelTocTap(editor, index, docPos);
-    if (entryEl) scrollPanelTocEntryIntoView(entryEl);
+    if (deferPanelScroll) {
+      if (panelScrollEl) {
+        panelScrollEl.scrollTop = 0;
+        panelScrollEl.scrollTo?.({ top: 0, left: 0 });
+      }
+      return;
+    }
+    scrollPanelTocEntryIntoView(entryEl);
   };
 
   const contentScrollRef = useRef<HTMLDivElement>(null);
+  const tocListRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const list = tocListRef.current;
+    if (!list || activeTab !== "toc") return;
+
+    const pinListScrollTop = (event: PointerEvent | MouseEvent) => {
+      if (event.button !== 0) return;
+      const panelScrollEl = resolvePanelTocScrollContainer(
+        list,
+        contentScrollRef.current,
+      );
+      const resolved = panelTocEntryFromPointerY(
+        list,
+        event.clientY,
+        panelScrollEl,
+      );
+      if (
+        !resolved ||
+        !shouldDeferPanelTocScrollIntoView(resolved.entry, list)
+      ) {
+        return;
+      }
+      event.preventDefault();
+      if (panelScrollEl) {
+        panelScrollEl.scrollTop = 0;
+        panelScrollEl.scrollTo?.({ top: 0, left: 0 });
+      }
+    };
+
+    const pinAfterPointer = (event: PointerEvent) => {
+      if (event.button !== 0) return;
+      const panelScrollEl = resolvePanelTocScrollContainer(
+        list,
+        contentScrollRef.current,
+      );
+      const resolved = panelTocEntryFromPointerY(
+        list,
+        event.clientY,
+        panelScrollEl,
+      );
+      if (
+        !resolved ||
+        !shouldDeferPanelTocScrollIntoView(resolved.entry, list)
+      ) {
+        return;
+      }
+      if (panelScrollEl) {
+        panelScrollEl.scrollTop = 0;
+        panelScrollEl.scrollTo?.({ top: 0, left: 0 });
+      }
+    };
+
+    list.addEventListener("pointerdown", pinListScrollTop, { capture: true });
+    list.addEventListener("pointerup", pinAfterPointer, { capture: true });
+    list.addEventListener("click", pinListScrollTop, { capture: true });
+    return () => {
+      list.removeEventListener("pointerdown", pinListScrollTop, {
+        capture: true,
+      });
+      list.removeEventListener("pointerup", pinAfterPointer, { capture: true });
+      list.removeEventListener("click", pinListScrollTop, { capture: true });
+    };
+  }, [activeTab, editor, toc.length]);
 
   const activateTocAtClientY = (clientY: number, listEl: HTMLElement) => {
     const resolved = panelTocEntryFromPointerY(
@@ -484,6 +569,7 @@ export function InfoPanel({
 
           {activeTab === "toc" && (
             <div
+              ref={tocListRef}
               data-testid="info-panel-toc-list"
               onPointerDownCapture={handleTocListPointerDownCapture}
               onClickCapture={handleTocListClickCapture}
@@ -492,6 +578,7 @@ export function InfoPanel({
                 flex: "1 1 0",
                 minHeight: 0,
                 overflowY: "auto",
+                overflowAnchor: "none",
                 WebkitOverflowScrolling: "touch",
                 scrollPaddingBottom: `max(${TOC_LIST_BOTTOM_PADDING_PX}px, env(safe-area-inset-bottom))`,
                 paddingBottom: `max(${TOC_LIST_BOTTOM_PADDING_PX}px, env(safe-area-inset-bottom))`,

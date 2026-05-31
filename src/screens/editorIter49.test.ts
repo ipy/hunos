@@ -182,7 +182,8 @@ describe("iteration 49 — AC46/AC43 toc click activation (behavioral)", () => {
       infoPanelSource.indexOf("handleTocListPointerDownCapture"),
       infoPanelSource.indexOf("const tabs:"),
     );
-    expect(captureBlock).not.toContain("preventDefault");
+    expect(infoPanelSource).toContain("addEventListener(\"pointerdown\", pinListScrollTop");
+    expect(infoPanelSource).toMatch(/event\.preventDefault\(\)/);
     expect(infoPanelSource).toContain('touchAction: "manipulation"');
   });
 });

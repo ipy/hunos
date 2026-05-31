@@ -48,12 +48,13 @@ describe("iteration 47 — TOC bottom padding and scroll", () => {
 });
 
 describe("iteration 47 — TOC click activation", () => {
-  it("activates entries via onClick and capture pointerdown without preventDefault", () => {
-    expect(infoPanelSource).toContain("handleTocPointerDownCapture");
+  it("activates entries via list capture handlers and entry onClick", () => {
+    expect(infoPanelSource).toContain("handleTocListPointerDownCapture");
     expect(infoPanelSource).toContain("activateTocEntry");
+    expect(infoPanelSource).toContain("panelTocEntryFromPointerY");
 
     const captureBlock = infoPanelSource.slice(
-      infoPanelSource.indexOf("handleTocPointerDownCapture"),
+      infoPanelSource.indexOf("handleTocListPointerDownCapture"),
       infoPanelSource.indexOf("const tabs:"),
     );
     expect(captureBlock).not.toContain("preventDefault");

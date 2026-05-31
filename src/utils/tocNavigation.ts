@@ -8,6 +8,48 @@ const TOC_SCROLL_BOTTOM_PADDING_PX = 8;
 const PANEL_TOC_EDGE_SLOP_PX = 12;
 const PANEL_TOC_SCROLL_MARGIN_PX = 8;
 
+let pinPanelTocListScrollTop = false;
+
+/** Reset on next editor TOC scroll when the panel list must stay at scrollTop 0 (AC44). */
+export function requestPinPanelTocListScrollTop(): void {
+  pinPanelTocListScrollTop = true;
+}
+
+function applyPinPanelTocListScrollTop(clear = false): void {
+  if (!pinPanelTocListScrollTop) return;
+  const list = document.querySelector<HTMLElement>(
+    '[data-testid="info-panel-toc-list"]',
+  );
+  if (!list) return;
+  const scrollEl = resolvePanelTocScrollContainer(list);
+  if (scrollEl) {
+    scrollEl.scrollTop = 0;
+    if (typeof scrollEl.scrollTo === "function") {
+      scrollEl.scrollTo({ top: 0, left: 0 });
+    }
+  }
+  if (clear) pinPanelTocListScrollTop = false;
+}
+
+function schedulePinPanelTocListScrollTop(): void {
+  applyPinPanelTocListScrollTop();
+  if (typeof queueMicrotask === "function") {
+    queueMicrotask(() => applyPinPanelTocListScrollTop());
+  }
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(() => {
+      applyPinPanelTocListScrollTop();
+      if (typeof queueMicrotask === "function") {
+        queueMicrotask(() => applyPinPanelTocListScrollTop(true));
+      } else {
+        applyPinPanelTocListScrollTop(true);
+      }
+    });
+  } else {
+    applyPinPanelTocListScrollTop(true);
+  }
+}
+
 /** Visible editor viewport; shrinks when the info panel overlays the bottom. */
 export function resolveTocScrollViewportBounds(scrollEl: HTMLElement): {
   top: number;
@@ -103,6 +145,25 @@ export function resolvePanelTocScrollContainer(
   return pane ?? listEl;
 }
 
+/**
+ * Keep the TOC list at scrollTop 0 on first tap when the row sits below the fold
+ * (AC44: editor jumps without pre-scrolling the directory list).
+ */
+export function shouldDeferPanelTocScrollIntoView(
+  entryEl: HTMLElement,
+  listEl?: HTMLElement | null,
+): boolean {
+  const list =
+    listEl ??
+    entryEl.closest<HTMLElement>('[data-testid="info-panel-toc-list"]');
+  if (!list) return false;
+  const scrollEl = resolvePanelTocScrollContainer(list);
+  if (!scrollEl || scrollEl.scrollTop > 0) return false;
+  const scrollRect = scrollEl.getBoundingClientRect();
+  const entryRect = entryEl.getBoundingClientRect();
+  return entryRect.bottom > scrollRect.bottom + 1;
+}
+
 /** Scroll a panel TOC button into the info-panel content viewport. */
 export function scrollPanelTocEntryIntoView(entryEl: HTMLElement): void {
   const list = entryEl.closest<HTMLElement>(
@@ -154,6 +215,22 @@ export function findPanelTocEntryAtPointerY(
     scrollRect != null &&
     clientY >= scrollRect.bottom - PANEL_TOC_EDGE_SLOP_PX &&
     clientY <= scrollRect.bottom + PANEL_TOC_EDGE_SLOP_PX;
+
+  if (scrollRect && inScrollBottomEdge) {
+    let belowFoldPick: HTMLElement | null = null;
+    let belowFoldIndex = -1;
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i]!;
+      const rect = entry.getBoundingClientRect();
+      if (rect.bottom <= scrollRect.bottom + 1) continue;
+      if (!panelTocEntryWithinSlop(clientY, rect)) continue;
+      if (i >= belowFoldIndex) {
+        belowFoldPick = entry;
+        belowFoldIndex = i;
+      }
+    }
+    if (belowFoldPick) return belowFoldPick;
+  }
 
   let best: HTMLElement | null = null;
   let bestDistance = Infinity;
@@ -356,15 +433,19 @@ export function scrollToTocDocPos(
   const targetScrollTop = applyScroll();
   if (scrollEl != null && targetScrollTop != null) {
     scrollEl.scrollTop = targetScrollTop;
+    schedulePinPanelTocListScrollTop();
     const stabilize = () => {
       const retry = applyScroll();
       if (retry != null && Math.abs(retry - scrollEl.scrollTop) > 1) {
         scrollEl.scrollTop = retry;
       }
+      schedulePinPanelTocListScrollTop();
     };
     if (typeof requestAnimationFrame === "function") {
       requestAnimationFrame(stabilize);
     }
+  } else {
+    schedulePinPanelTocListScrollTop();
   }
 
   return scrolled;

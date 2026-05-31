@@ -49,7 +49,7 @@ describe("iteration 48 — TOC first-click editor jump", () => {
   it("scrolls the editor before panel list scroll on activation", () => {
     const activateBlock = infoPanelSource.slice(
       infoPanelSource.indexOf("const activateTocEntry"),
-      infoPanelSource.indexOf("const handleTocPointerDownCapture"),
+      infoPanelSource.indexOf("const handleTocListPointerDownCapture"),
     );
     expect(activateBlock).toMatch(
       /handleInfoPanelTocTap\([\s\S]*scrollPanelTocEntryIntoView/,
@@ -62,13 +62,14 @@ describe("iteration 48 — TOC first-click editor jump", () => {
     expect(tocSource).toMatch(/PANEL_TOC_EDGE_SLOP_PX = 12/);
   });
 
-  it("activates entries via onClick and capture pointerdown without preventDefault", () => {
-    expect(infoPanelSource).toContain("handleTocPointerDownCapture");
+  it("activates entries via list capture handlers without React preventDefault", () => {
+    expect(infoPanelSource).toContain("handleTocListPointerDownCapture");
     const captureBlock = infoPanelSource.slice(
-      infoPanelSource.indexOf("handleTocPointerDownCapture"),
+      infoPanelSource.indexOf("handleTocListPointerDownCapture"),
       infoPanelSource.indexOf("const tabs:"),
     );
     expect(captureBlock).not.toContain("preventDefault");
+    expect(infoPanelSource).toMatch(/event\.preventDefault\(\)/);
   });
 });
 

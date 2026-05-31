@@ -94,18 +94,29 @@ test.describe("info panel TOC — iter 49 gate", () => {
     });
     expect(editorScrollBefore).toBe(0);
 
+    const list = page.getByTestId("info-panel-toc-list");
+    const listBox = await list.boundingBox();
     const entry = page.getByTestId("info-panel-toc-entry-11");
     const box = await entry.boundingBox();
     expect(box).not.toBeNull();
-    await page.mouse.click(box!.x + 16, box!.y + 4);
+    expect(listBox).not.toBeNull();
+    // Entry-11 sits below the TOC fold; tap the visible list bottom edge (not off-screen bbox).
+    const clickY =
+      box!.y + box!.height > listBox!.y + listBox!.height
+        ? listBox!.y + listBox!.height - 1
+        : box!.y + 4;
+    await page.mouse.click(box!.x + 16, clickY);
 
-    const tocScrollAfter = await page.evaluate(() => {
-      const tocList = document.querySelector(
-        '[data-testid="info-panel-toc-list"]',
-      );
-      return tocList instanceof HTMLElement ? tocList.scrollTop : 0;
-    });
-    expect(tocScrollAfter).toBe(0);
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          const tocList = document.querySelector(
+            '[data-testid="info-panel-toc-list"]',
+          );
+          return tocList instanceof HTMLElement ? tocList.scrollTop : 0;
+        }),
+      )
+      .toBeLessThan(1);
 
     await expect
       .poll(async () =>

@@ -54,10 +54,10 @@ describe("iteration 45 — TOC discoverability", () => {
 describe("iteration 45 — TOC first-click single handler", () => {
   it("activates TOC entries via capture pointerdown and entry click", () => {
     expect(infoPanelSource).toContain(
-      "onPointerDownCapture={handleTocPointerDownCapture}",
+      "onPointerDownCapture={handleTocListPointerDownCapture}",
     );
-    expect(infoPanelSource).toContain("handleTocPointerDownCapture");
-    expect(infoPanelSource).toContain("findPanelTocEntryAtPointerY");
+    expect(infoPanelSource).toContain("handleTocListPointerDownCapture");
+    expect(infoPanelSource).toContain("panelTocEntryFromPointerY");
     expect(infoPanelSource).toContain("activateTocEntry");
 
     const tocEntryBlock = infoPanelSource.slice(

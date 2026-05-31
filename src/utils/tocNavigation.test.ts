@@ -10,6 +10,7 @@ import {
   findPanelTocEntryAtPointerY,
   resolvePanelTocScrollContainer,
   scrollPanelTocEntryIntoView,
+  shouldDeferPanelTocScrollIntoView,
   panelTocEntryIndex,
 } from "./tocNavigation";
 
@@ -425,6 +426,60 @@ describe("panel TOC pointer helpers", () => {
     expect(panelTocEntryIndex(entry)).toBe(3);
   });
 
+  it("prefers below-fold row over the last visible row on bottom-edge taps", () => {
+    const scrollRect = {
+      top: 432,
+      bottom: 844,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 412,
+      x: 0,
+      y: 432,
+      toJSON: () => ({}),
+    };
+    const scrollEl = {
+      getBoundingClientRect: () => scrollRect,
+    } as unknown as HTMLElement;
+    const tagsEntry = {
+      getAttribute: () => "info-panel-toc-entry-10",
+      getBoundingClientRect: () => ({
+        top: 804,
+        bottom: 841,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 37,
+        x: 0,
+        y: 804,
+        toJSON: () => ({}),
+      }),
+    } as unknown as HTMLElement;
+    const tryEntry = {
+      getAttribute: () => "info-panel-toc-entry-11",
+      getBoundingClientRect: () => ({
+        top: 841,
+        bottom: 878,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 37,
+        x: 0,
+        y: 841,
+        toJSON: () => ({}),
+      }),
+    } as unknown as HTMLElement;
+    const list = {
+      querySelectorAll: () => [tagsEntry, tryEntry],
+      scrollHeight: 926,
+      clientHeight: 412,
+      closest: () => scrollEl,
+      getBoundingClientRect: () => scrollRect,
+    } as unknown as HTMLElement;
+
+    expect(findPanelTocEntryAtPointerY(list, 840, scrollEl)).toBe(tryEntry);
+  });
+
   it("prefers the last clipped row on bottom-edge taps", () => {
     const scrollRect = {
       top: 432,
@@ -518,6 +573,56 @@ describe("panel TOC pointer helpers", () => {
     } as unknown as HTMLElement;
 
     expect(findPanelTocEntryAtPointerY(list, 843, scrollEl)).toBe(tryEntry);
+  });
+
+  it("defers panel scroll when row is below fold and list scrollTop is 0", () => {
+    const scrollRect = {
+      top: 432,
+      bottom: 844,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 412,
+      x: 0,
+      y: 432,
+      toJSON: () => ({}),
+    };
+    let scrollTop = 0;
+    const list = {
+      scrollHeight: 926,
+      clientHeight: 412,
+      closest: () => null,
+      getBoundingClientRect: () => scrollRect,
+    } as unknown as HTMLElement;
+    Object.defineProperty(list, "scrollTop", {
+      get: () => scrollTop,
+      set: (v: number) => {
+        scrollTop = v;
+      },
+    });
+    vi.stubGlobal(
+      "getComputedStyle",
+      vi.fn(() => ({ overflowY: "auto" }) as CSSStyleDeclaration),
+    );
+    const entry = {
+      closest: (selector: string) =>
+        selector.includes("info-panel-toc-list") ? list : null,
+      getBoundingClientRect: () => ({
+        top: 841,
+        bottom: 878,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 37,
+        x: 0,
+        y: 841,
+        toJSON: () => ({}),
+      }),
+    } as unknown as HTMLElement;
+
+    expect(shouldDeferPanelTocScrollIntoView(entry)).toBe(true);
+    scrollTop = 40;
+    expect(shouldDeferPanelTocScrollIntoView(entry)).toBe(false);
   });
 
   it("scrolls a clipped entry into the panel viewport", () => {

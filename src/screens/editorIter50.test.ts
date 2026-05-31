@@ -63,6 +63,10 @@ describe("iteration 50 — TOC list capture and e2e open path", () => {
     expect(contentScrollBlock).not.toContain("onPointerDownCapture");
   });
 
+  it("defers TOC list scroll-in when entry-11 is below the fold at scrollTop 0", () => {
+    expect(infoPanelSource).toContain("shouldDeferPanelTocScrollIntoView");
+  });
+
   it("uses panelTocEntryFromPointerY for bottom-edge activation at scrollTop 0", () => {
     vi.stubGlobal(
       "getComputedStyle",
