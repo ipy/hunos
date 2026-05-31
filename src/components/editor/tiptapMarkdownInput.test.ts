@@ -8,6 +8,7 @@ import {
   MarkdownItalic,
   MarkdownStrike,
 } from "./MarkdownShortcuts";
+import { MarkdownStarDebrisCleanup } from "./MarkdownStarDebrisCleanup";
 
 describe("TiptapEditor inline markdown wiring", () => {
   it("registers bold, italic, code, strike, and highlight input extensions", () => {
@@ -20,7 +21,8 @@ describe("TiptapEditor inline markdown wiring", () => {
     expect(source).toContain("MarkdownItalic");
     expect(source).toContain("MarkdownCode");
     expect(source).toContain("MarkdownStrike");
-    expect(source).toContain("MarkdownHighlight");
+    expect(source).toContain("MarkdownStarDebrisCleanup");
+    expect(source).toContain("DocumentEndKeyboardShortcuts");
     expect(source).toContain("code: false");
   });
 
@@ -31,6 +33,7 @@ describe("TiptapEditor inline markdown wiring", () => {
       MarkdownCode,
       MarkdownStrike,
       MarkdownHighlight,
+      MarkdownStarDebrisCleanup,
     ]) {
       expect(extension.name).toBeTruthy();
     }

@@ -23,6 +23,8 @@ import {
   MarkdownStrike,
   MarkdownTaskItem,
 } from "./MarkdownShortcuts";
+import { MarkdownStarDebrisCleanup } from "./MarkdownStarDebrisCleanup";
+import { DocumentEndKeyboardShortcuts } from "./DocumentEndKeyboardShortcuts";
 import { TASK_LIST_TOGGLE_REORDER_META } from "./taskSinkUtils";
 import { applyHideCompletedTasksDomAttribute } from "@/utils/hideCompletedTasksDom";
 import { WikiLinkDecoration } from "./WikiLinkDecoration";
@@ -187,6 +189,7 @@ export function TiptapEditor({
           };
         },
       }),
+      MarkdownStarDebrisCleanup,
       MarkdownStrike,
       MarkdownItalic,
       MarkdownCode,
@@ -287,6 +290,7 @@ export function TiptapEditor({
       SketchResize,
       FocusModeShortcuts,
       EditorKeyboardShortcuts,
+      DocumentEndKeyboardShortcuts,
       ListOutlineShortcuts,
       TableKeyboardShortcuts,
       HeadingListBoundaryShortcuts,

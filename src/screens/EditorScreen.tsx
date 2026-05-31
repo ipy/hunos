@@ -11,6 +11,7 @@ import { useNoteStore } from "@/store/noteStore";
 import { useUIStore } from "@/store/uiStore";
 import { useSettingsStore } from "@/store/settingsStore";
 import { Icon } from "@/components/common/Icon";
+import { syncPlaygroundDocumentH1WithTitle } from "@/components/editor/playgroundTitleH1Sync";
 import { TiptapEditor } from "@/components/editor/TiptapEditor";
 import { editorContentMatchesStoredJson } from "@/components/editor/noteSwitchContentUtils";
 import { EditorStatusBar } from "@/components/editor/EditorStatusBar";
@@ -328,25 +329,6 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     [saveNoteContent],
   );
 
-  const handleTitleChange = (newTitle: string) => {
-    applyRestoreChipSuppressed(false);
-    setTitleValue(newTitle);
-    const noteId = activeNoteId;
-    if (!noteId) return;
-    markPendingTitle(
-      pendingTitleRef,
-      titleTimeoutRef,
-      newTitle,
-      (title, writeEpoch) => persistEditorTitle(noteId, title, writeEpoch),
-      contentWriteEpochRef.current,
-      () =>
-        isDebouncedAutosaveStillCurrent(
-          noteId,
-          useNoteStore.getState().activeNoteId,
-        ),
-    );
-  };
-
   const scheduleContentPersist = useCallback(
     (noteId: string, json: string, writeEpoch: number, flushSave?: boolean) => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -371,6 +353,53 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       }, 400);
     },
     [persistEditorContent],
+  );
+
+  const handleTitleChange = useCallback(
+    (newTitle: string) => {
+      applyRestoreChipSuppressed(false);
+      setTitleValue(newTitle);
+      const noteId = activeNoteId;
+      if (!noteId) return;
+
+      const editor = editorInstanceRef.current;
+      if (
+        editor &&
+        note &&
+        isFormatPlaygroundNote(note.title, noteContentForEditor) &&
+        syncPlaygroundDocumentH1WithTitle(editor, newTitle)
+      ) {
+        const json = JSON.stringify(editor.getJSON());
+        pendingContentRef.current = json;
+        scheduleContentPersist(
+          noteId,
+          json,
+          contentWriteEpochRef.current,
+          false,
+        );
+      }
+
+      markPendingTitle(
+        pendingTitleRef,
+        titleTimeoutRef,
+        newTitle,
+        (title, writeEpoch) => persistEditorTitle(noteId, title, writeEpoch),
+        contentWriteEpochRef.current,
+        () =>
+          isDebouncedAutosaveStillCurrent(
+            noteId,
+            useNoteStore.getState().activeNoteId,
+          ),
+      );
+    },
+    [
+      activeNoteId,
+      applyRestoreChipSuppressed,
+      note,
+      noteContentForEditor,
+      persistEditorTitle,
+      scheduleContentPersist,
+    ],
   );
 
   const handleContentChange = useCallback(

@@ -1890,6 +1890,34 @@ describe("restoreFormatPlaygroundContent", () => {
     );
   });
 
+  it("restores canonical title and body H1 after title drift (AC33-restore-title-h1)", async () => {
+    const seed = buildPlaygroundContent("zh");
+    const drifted = JSON.parse(JSON.stringify(seed)) as typeof seed;
+    drifted.content[0] = {
+      type: "heading",
+      attrs: { level: 1 },
+      content: [{ type: "text", text: "T33-Drift" }],
+    };
+    noteStorageGet.mockResolvedValue({
+      id: "playground-id",
+      title: "T33-Drift",
+      content: JSON.stringify(drifted),
+    });
+    noteStorageUpdate.mockClear();
+
+    await restoreFormatPlaygroundContent("playground-id", "zh");
+
+    const [, payload] = noteStorageUpdate.mock.calls[0] as [
+      string,
+      { title: string; content: string },
+    ];
+    expect(payload.title).toBe("格式试炼场");
+    const parsed = JSON.parse(payload.content) as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    expect(parsed.content[0]?.content?.[0]?.text).toBe("格式试炼场");
+  });
+
   it("uses English title when locale is en", async () => {
     noteStorageUpdate.mockClear();
     noteStorageGet.mockResolvedValue(undefined);

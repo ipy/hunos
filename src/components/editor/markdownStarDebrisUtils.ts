@@ -1,16 +1,48 @@
-import type { EditorState } from "@tiptap/pm/state";
+import type { MarkType, Schema } from "@tiptap/pm/model";
+import type { EditorState, Transaction } from "@tiptap/pm/state";
 
 /** Trailing single-asterisk opener without a closer (e.g. `*未闭合` before Space). */
-export const UNCLOSED_SINGLE_STAR_INPUT_RE =
-  /(?:^|[^\s*])(\*(?!\*)([^*\s]+))$/;
+export const UNCLOSED_SINGLE_STAR_INPUT_RE = /(\*(?!\*)([^*\s]+))$/;
 
-export function tryTrimUnclosedSingleStarOnSpace(editor: {
-  state: EditorState;
-  view: { dispatch: (tr: import("@tiptap/pm/state").Transaction) => void };
-}): boolean {
-  const { state } = editor;
-  const { $from } = state.selection;
-  if (!$from.parent.isTextblock || !state.selection.empty) {
+/** Same pattern when Space is the trigger character for input rules. */
+export const UNCLOSED_SINGLE_STAR_SPACE_INPUT_RE =
+  /(\*(?!\*)([^*\s]+)) $/;
+
+const INLINE_MARK_NAMES = [
+  "bold",
+  "italic",
+  "strike",
+  "code",
+  "underline",
+  "highlight",
+  "link",
+] as const;
+
+function clearInlineMarksInRange(
+  tr: Transaction,
+  from: number,
+  to: number,
+  schema: Schema,
+) {
+  if (from >= to) {
+    return tr;
+  }
+  for (const markName of INLINE_MARK_NAMES) {
+    const markType = schema.marks[markName] as MarkType | undefined;
+    if (markType) {
+      tr = tr.removeMark(from, to, markType);
+    }
+  }
+  return tr;
+}
+
+export function applyUnclosedSingleStarCleanupToTransaction(
+  state: EditorState,
+  tr: Transaction,
+  cursorPos: number,
+): boolean {
+  const $from = state.doc.resolve(cursorPos);
+  if (!$from.parent.isTextblock) {
     return false;
   }
 
@@ -26,9 +58,57 @@ export function tryTrimUnclosedSingleStarOnSpace(editor: {
   }
 
   const opener = match[1];
-  const starFrom = $from.pos - opener.length;
-  let tr = state.tr.delete(starFrom, starFrom + 1);
-  tr = tr.insertText(" ", tr.selection.from);
-  editor.view.dispatch(tr);
+  const starFrom = cursorPos - opener.length;
+  const wordFrom = starFrom + 1;
+  const wordTo = cursorPos;
+
+  tr.delete(starFrom, starFrom + 1);
+  const mappedWordFrom = tr.mapping.map(wordFrom);
+  const mappedWordTo = tr.mapping.map(wordTo);
+  clearInlineMarksInRange(tr, mappedWordFrom, mappedWordTo, state.schema);
+  tr.insertText(" ", mappedWordTo);
   return true;
+}
+
+export function buildUnclosedSingleStarCleanupTransaction(
+  state: EditorState,
+  cursorPos: number,
+): Transaction | null {
+  const tr = state.tr;
+  if (!applyUnclosedSingleStarCleanupToTransaction(state, tr, cursorPos)) {
+    return null;
+  }
+  return tr;
+}
+
+export function tryTrimUnclosedSingleStarOnSpace(editor: {
+  state: EditorState;
+  view: { dispatch: (tr: Transaction) => void };
+}): boolean {
+  if (!editor.state.selection.empty) {
+    return false;
+  }
+
+  const tr = buildUnclosedSingleStarCleanupTransaction(
+    editor.state,
+    editor.state.selection.from,
+  );
+  if (!tr) {
+    return false;
+  }
+
+  editor.view.dispatch(tr.scrollIntoView());
+  return true;
+}
+
+export function applyUnclosedSingleStarSpaceInputRule(options: {
+  state: EditorState;
+  tr: Transaction;
+  range: { from: number; to: number };
+}): boolean {
+  return applyUnclosedSingleStarCleanupToTransaction(
+    options.state,
+    options.tr,
+    options.range.to,
+  );
 }
