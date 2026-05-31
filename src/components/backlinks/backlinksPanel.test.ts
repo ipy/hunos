@@ -92,8 +92,11 @@ describe("BacklinksPanel automation testids", () => {
     expect(panelSource).toContain("noteLinkRevision");
     expect(panelSource).toContain("dedupeBacklinkResults");
     expect(panelSource).toContain("assertUniqueBacklinkPanelKeys(incomingRows");
-    expect(panelSource).toContain("setBacklinks(dedupeBacklinkResults(rows))");
-    expect(panelSource).toContain("setOutgoing(dedupeBacklinkResults(rows))");
+    expect(panelSource).toContain("Promise.all([");
+    expect(panelSource).toContain("graphEngine.getBacklinks(noteId)");
+    expect(panelSource).toContain("graphEngine.getOutgoingLinks(noteId)");
+    expect(panelSource).toContain("setBacklinks(dedupeBacklinkResults(incoming))");
+    expect(panelSource).toContain("setOutgoing(dedupeBacklinkResults(outgoing))");
     expect(panelSource).toContain(
       "data-testid={backlinksItemTestId(bl.noteId)}",
     );

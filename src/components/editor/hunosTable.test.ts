@@ -238,4 +238,17 @@ describe("HunosTable column commands (TipTap tableHeader schema)", () => {
     expect(headerColumnCount(state)).toBe(3);
     expect(headerTexts(state)).toEqual(["名称", "类型", "状态"]);
   });
+
+  it("deleteColumn alone removes focused column without blanking sibling headers", () => {
+    let state = buildPlaygroundTableState(
+      tiptapTableSchema,
+      "tableHeader",
+      "tableCell",
+      "tableRow",
+      "类型",
+    );
+    state = runColumnCommand(state, deleteColumn, null);
+    expect(headerTexts(state)).toEqual(["名称", "状态"]);
+    expect(headerColumnCount(state)).toBe(2);
+  });
 });

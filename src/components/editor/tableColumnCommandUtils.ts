@@ -3,7 +3,7 @@ import { TextSelection } from "@tiptap/pm/state";
 import { goToNextCell, selectedRect } from "@tiptap/pm/tables";
 import { fixTableHeaderRowInTransaction } from "./tableHeaderPreserve";
 
-/** Place selection in the column just inserted by addColumnBefore/After. */
+/** Place selection in the column just inserted by addColumnBefore/After (before header-row normalization). */
 function moveSelectionToInsertedColumn(
   tr: Transaction,
   state: EditorState,
@@ -28,7 +28,7 @@ function moveSelectionToInsertedColumn(
   tr.setSelection(TextSelection.create(afterFix.doc, $cell.pos + 1));
 }
 
-/** Run a prosemirror-tables column command, fix header row types, and optionally move selection in the same tr. */
+/** Run a prosemirror-tables column command, move selection into inserted columns, then fix header row types. */
 export function withHeaderRowFix(
   command: (
     state: EditorState,
@@ -42,10 +42,10 @@ export function withHeaderRowFix(
     }
 
     return command(state, (tr) => {
-      fixTableHeaderRowInTransaction(tr, state);
       if (moveSelection != null) {
         moveSelectionToInsertedColumn(tr, state, moveSelection);
       }
+      fixTableHeaderRowInTransaction(tr, state);
       dispatch(tr);
     });
   };

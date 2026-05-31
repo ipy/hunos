@@ -72,11 +72,13 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
     setBacklinks([]);
     setOutgoing([]);
 
-    void graphEngine.getBacklinks(noteId).then((rows) => {
-      if (!cancelled) setBacklinks(dedupeBacklinkResults(rows));
-    });
-    void graphEngine.getOutgoingLinks(noteId).then((rows) => {
-      if (!cancelled) setOutgoing(dedupeBacklinkResults(rows));
+    void Promise.all([
+      graphEngine.getBacklinks(noteId),
+      graphEngine.getOutgoingLinks(noteId),
+    ]).then(([incoming, outgoing]) => {
+      if (cancelled) return;
+      setBacklinks(dedupeBacklinkResults(incoming));
+      setOutgoing(dedupeBacklinkResults(outgoing));
     });
 
     return () => {
