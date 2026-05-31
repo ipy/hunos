@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  attachEditorOverlaySelectionSync,
   captureEditorOverlaySelection,
   clearEditorOverlaySelection,
   focusEditorWithOverlaySelection,
@@ -9,6 +10,7 @@ import {
   runToolbarActionWithOverlaySelection,
   getOverlayToolbarAnchorPos,
   runToolbarChain,
+  shouldUseSavedToolbarSelection,
   syncEditorOverlaySelectionBeforeToolbarCommand,
 } from "./editorOverlaySelection";
 
@@ -97,7 +99,7 @@ describe("editorOverlaySelection", () => {
     expect(getSavedEditorOverlaySelection()).toBeNull();
   });
 
-  it("restores bookmark into the editor on overlay dismiss and clears it", () => {
+  it("restores bookmark into the editor on overlay dismiss and keeps it for blur sync", () => {
     clearEditorOverlaySelection();
     const editor = mockEditor({ from: 42, to: 58 });
 
@@ -107,7 +109,67 @@ describe("editorOverlaySelection", () => {
       from: 42,
       to: 58,
     });
-    expect(getSavedEditorOverlaySelection()).toBeNull();
+    expect(getSavedEditorOverlaySelection()).toEqual({ from: 42, to: 58 });
+  });
+
+  it("uses saved non-empty bookmark when live selection collapsed after overlay close", () => {
+    clearEditorOverlaySelection();
+    const editor = mockEditor({ from: 0, to: 0 });
+    captureEditorOverlaySelection({
+      state: {
+        selection: { from: 42, to: 58 },
+        doc: { content: { size: 100 } },
+      },
+    } as never);
+
+    expect(shouldUseSavedToolbarSelection(editor as never)).toBe(true);
+    expect(getOverlayToolbarAnchorPos(editor as never)).toBe(42);
+
+    runToolbarChain(editor as never, false, (chain) => chain.toggleBold());
+    expect(editor._chain.setTextSelection).toHaveBeenCalledWith({
+      from: 42,
+      to: 58,
+    });
+  });
+
+  it("captures non-empty selections via selectionUpdate listener", () => {
+    clearEditorOverlaySelection();
+    const handlers: Record<string, () => void> = {};
+    const editor = {
+      isDestroyed: false,
+      state: {
+        selection: { from: 1, to: 1 },
+        doc: { content: { size: 100 } },
+      },
+      on: vi.fn((event: string, handler: () => void) => {
+        handlers[event] = handler;
+      }),
+      off: vi.fn(),
+    };
+
+    const detach = attachEditorOverlaySelectionSync(editor as never);
+    editor.state.selection = { from: 20, to: 35 };
+    handlers.selectionUpdate();
+
+    expect(getSavedEditorOverlaySelection()).toEqual({ from: 20, to: 35 });
+    detach();
+    expect(editor.off).toHaveBeenCalledWith(
+      "selectionUpdate",
+      handlers.selectionUpdate,
+    );
+  });
+
+  it("syncs before toolbar actions even when format overlay is closed", () => {
+    clearEditorOverlaySelection();
+    const editor = mockEditor({ from: 1, to: 2 });
+    captureEditorOverlaySelection(editor as never);
+    editor.state.selection = { from: 40, to: 55 };
+    const action = vi.fn();
+
+    runToolbarActionWithOverlaySelection(editor as never, false, action);
+
+    expect(getSavedEditorOverlaySelection()).toEqual({ from: 40, to: 55 });
+    expect(action).toHaveBeenCalled();
   });
 
   it("returns saved overlay anchor while toolbar overlay context is open", () => {

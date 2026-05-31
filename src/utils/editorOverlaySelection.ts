@@ -13,6 +13,33 @@ export function captureEditorOverlaySelection(editor: Editor): void {
   savedSelection = { from, to };
 }
 
+function isEditorSelectionCollapsed(editor: Editor): boolean {
+  const { from, to } = editor.state.selection;
+  return from === to;
+}
+
+/** Use the overlay bookmark when the live range collapsed (e.g. toolbar blur). */
+export function shouldUseSavedToolbarSelection(editor: Editor): boolean {
+  return (
+    hasNonEmptySavedEditorOverlaySelection() &&
+    isEditorSelectionCollapsed(editor)
+  );
+}
+
+/** Keep the toolbar bookmark aligned with non-empty editor selections. */
+export function attachEditorOverlaySelectionSync(editor: Editor): () => void {
+  const onSelectionUpdate = () => {
+    const { from, to } = editor.state.selection;
+    if (from !== to) {
+      savedSelection = { from, to };
+    }
+  };
+  editor.on("selectionUpdate", onSelectionUpdate);
+  return () => {
+    editor.off("selectionUpdate", onSelectionUpdate);
+  };
+}
+
 /** Prefer a live non-empty range; keep the overlay bookmark when the editor blurred. */
 export function syncEditorOverlaySelectionBeforeToolbarCommand(
   editor: Editor,
@@ -52,7 +79,7 @@ export function isToolbarFormatOverlayOpen(): boolean {
 
 /** Document position for toolbar list/mark commands while an overlay has focus. */
 export function getOverlayToolbarAnchorPos(editor: Editor): number {
-  if (isToolbarFormatOverlayOpen()) {
+  if (isToolbarFormatOverlayOpen() || shouldUseSavedToolbarSelection(editor)) {
     const selection = clampSavedSelection(editor);
     if (selection) {
       return selection.from;
@@ -72,7 +99,7 @@ function clampSavedSelection(editor: Editor): SavedEditorSelection | null {
 
 /**
  * Push the overlay bookmark into the editor before the panel closes.
- * Clears the bookmark so post-dismiss toolbar commands use the live selection.
+ * Keeps the bookmark so post-dismiss toolbar commands survive editor blur.
  */
 export function restoreEditorSelectionOnOverlayDismiss(
   editor: Editor,
@@ -82,8 +109,8 @@ export function restoreEditorSelectionOnOverlayDismiss(
   }
 
   const selection = clampSavedSelection(editor);
-  clearEditorOverlaySelection();
   if (!selection) {
+    clearEditorOverlaySelection();
     return false;
   }
 
@@ -129,7 +156,10 @@ export function runToolbarChain(
   if (editor.isDestroyed) return false;
 
   let chain = editor.chain();
-  if (formatOverlayOpen && hasSavedEditorOverlaySelection()) {
+  const useSavedSelection =
+    (formatOverlayOpen && hasSavedEditorOverlaySelection()) ||
+    shouldUseSavedToolbarSelection(editor);
+  if (useSavedSelection) {
     const selection = clampSavedSelection(editor);
     if (selection) {
       return build(
@@ -151,9 +181,7 @@ export function runToolbarActionWithOverlaySelection(
 ): void {
   toolbarFormatOverlayOpen = formatOverlayOpen;
   try {
-    if (formatOverlayOpen) {
-      syncEditorOverlaySelectionBeforeToolbarCommand(editor);
-    }
+    syncEditorOverlaySelectionBeforeToolbarCommand(editor);
     action(editor);
   } finally {
     toolbarFormatOverlayOpen = false;

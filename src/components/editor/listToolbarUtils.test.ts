@@ -1,9 +1,10 @@
 import { Schema } from "prosemirror-model";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { applyBulletListToolbarCommand } from "./listToolbarUtils";
 import {
   captureEditorOverlaySelection,
   clearEditorOverlaySelection,
+  restoreEditorSelectionOnOverlayDismiss,
   runToolbarActionWithOverlaySelection,
 } from "@/utils/editorOverlaySelection";
 
@@ -79,6 +80,54 @@ describe("applyBulletListToolbarCommand", () => {
 
     expect(chainSteps).toEqual(["setNodeMarkup"]);
     expect(chainSteps).not.toContain("toggleBulletList");
+  });
+
+  it("uses saved overlay anchor after stats dismiss without re-clicking the editor", () => {
+    clearEditorOverlaySelection();
+    const document = buildOrderedSecondItemDoc();
+    const { from, to } = findSecondItemTextPos(document);
+    const chainSteps: string[] = [];
+    const stale$from = document.resolve(1);
+
+    const editor = {
+      state: {
+        schema,
+        doc: document,
+        selection: { from: 1, to: 1, empty: true, $from: stale$from },
+      },
+      chain: vi.fn(),
+    };
+
+    captureEditorOverlaySelection({
+      state: { selection: { from, to }, doc: document },
+    } as never);
+    restoreEditorSelectionOnOverlayDismiss({
+      isDestroyed: false,
+      state: editor.state,
+      chain: vi.fn(() => ({
+        focus: () => ({ setTextSelection: () => ({ run: () => true }) }),
+      })),
+    } as never);
+
+    const chain = {
+      toggleBulletList: () => {
+        chainSteps.push("toggleBulletList");
+        return chain;
+      },
+      command: (
+        fn: (ctx: { tr: { setNodeMarkup: () => void } }) => boolean,
+      ) => {
+        chainSteps.push("setNodeMarkup");
+        fn({ tr: { setNodeMarkup: () => {} } });
+        return chain;
+      },
+    };
+
+    runToolbarActionWithOverlaySelection(editor as never, false, (ed) =>
+      applyBulletListToolbarCommand(ed, chain as never),
+    );
+
+    expect(chainSteps).toEqual(["setNodeMarkup"]);
   });
 
   it("uses saved overlay anchor when editor selection is stale at document start", () => {

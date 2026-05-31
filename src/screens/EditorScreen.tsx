@@ -25,6 +25,7 @@ import type { LayoutMode } from "@/hooks/useAdaptiveLayout";
 import { registerHunosE2eEditor } from "@/testing/hunos-e2e-bridge";
 import { dismissEditorOverlayOnEscape } from "@/utils/editorOverlayEscape";
 import {
+  attachEditorOverlaySelectionSync,
   captureEditorOverlaySelection,
   clearEditorOverlaySelection,
   restoreEditorSelectionOnOverlayDismiss,
@@ -175,7 +176,6 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
   useEffect(() => {
     if (!showActions && !showStats) {
-      clearEditorOverlaySelection();
       return;
     }
     const editor = editorInstanceRef.current;
@@ -204,6 +204,11 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   }, []);
 
   useEffect(() => {
+    if (!editorInstance) return;
+    return attachEditorOverlaySelectionSync(editorInstance);
+  }, [editorInstance]);
+
+  useEffect(() => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = undefined;
@@ -214,6 +219,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     }
     setRestoreChipSuppressed(false);
     pendingContentRef.current = null;
+    clearEditorOverlaySelection();
     setTitleValue(note?.title ?? "");
     if (note?.id) {
       contentWriteEpochRef.current = getPlaygroundWriteEpoch(note.id);

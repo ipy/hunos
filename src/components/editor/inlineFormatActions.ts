@@ -4,6 +4,7 @@ import {
   hasSavedEditorOverlaySelection,
   isToolbarFormatOverlayOpen,
   runToolbarChain,
+  shouldUseSavedToolbarSelection,
 } from "@/utils/editorOverlaySelection";
 import type { ChainedCommands, Editor } from "@tiptap/react";
 import {
@@ -26,7 +27,8 @@ export function toggleMark(
 ) {
   const overlayOpen = isToolbarFormatOverlayOpen();
   const useSavedOverlaySelection =
-    overlayOpen && hasSavedEditorOverlaySelection();
+    shouldUseSavedToolbarSelection(editor) ||
+    (overlayOpen && hasSavedEditorOverlaySelection());
 
   if (useSavedOverlaySelection) {
     runToolbarChain(editor, true, (chain) => applyMark(chain));

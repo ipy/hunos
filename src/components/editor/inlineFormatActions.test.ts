@@ -290,7 +290,7 @@ describe("toggleMark with overlay selection", () => {
     expect(chain.toggleBold).toHaveBeenCalled();
   });
 
-  it("applies bold after stats dismiss restored the list selection into the editor", () => {
+  it("applies bold after stats dismiss when toolbar blur collapses live selection", () => {
     clearEditorOverlaySelection();
     const chain = {
       focus: vi.fn().mockReturnThis(),
@@ -326,29 +326,18 @@ describe("toggleMark with overlay selection", () => {
     } as never);
 
     restoreEditorSelectionOnOverlayDismiss(editor as never);
-    expect(editor._chain.setTextSelection).toHaveBeenCalledWith({
-      from: 80,
-      to: 95,
-    });
-
     editor.state.selection = {
-      empty: false,
-      from: 80,
-      to: 95,
-      $from: { start: () => 80, end: () => 95 },
+      empty: true,
+      from: 1,
+      to: 1,
+      $from: { start: () => 1, end: () => 5 },
     };
 
-    const postDismissChain = {
-      focus: vi.fn().mockReturnThis(),
-      setTextSelection: vi.fn().mockReturnThis(),
-      toggleBold: vi.fn().mockReturnThis(),
-      run: vi.fn(() => true),
-    };
-    editor.chain = vi.fn(() => postDismissChain);
+    runToolbarActionWithOverlaySelection(editor as never, false, (ed) =>
+      toggleMark(ed, "bold", (c) => c.toggleBold()),
+    );
 
-    toggleMark(editor as never, "bold", (c) => c.toggleBold());
-
-    expect(postDismissChain.toggleBold).toHaveBeenCalled();
-    expect(postDismissChain.setTextSelection).not.toHaveBeenCalled();
+    expect(chain.setTextSelection).toHaveBeenCalledWith({ from: 80, to: 95 });
+    expect(chain.toggleBold).toHaveBeenCalled();
   });
 });
