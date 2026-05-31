@@ -378,6 +378,7 @@ export function InfoPanel({
           onPointerDownCapture={handleTocPointerDownCapture}
           style={{
             flex: 1,
+            minHeight: 0,
             overflowY: "auto",
             padding: "0 20px max(20px, env(safe-area-inset-bottom))",
           }}

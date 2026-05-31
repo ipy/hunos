@@ -31,6 +31,7 @@ describe("iteration 46 — TOC bottom padding", () => {
     expect(infoPanelSource).toMatch(/TOC_LIST_BOTTOM_PADDING_PX = 32/);
     expect(infoPanelSource).toContain("paddingBottom:");
     expect(infoPanelSource).toContain("safe-area-inset-bottom");
+    expect(infoPanelSource).toMatch(/flex:\s*1[\s\S]*minHeight:\s*0[\s\S]*overflowY:\s*"auto"/);
   });
 });
 
