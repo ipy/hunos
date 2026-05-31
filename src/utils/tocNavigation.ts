@@ -63,12 +63,33 @@ export function editorScrollDeltaForTocReveal(options: {
   return Math.min(delta, options.headingTop - targetTop);
 }
 
+/** Scrollport for the TOC list (list itself, else the panel content pane). */
+export function resolvePanelTocScrollContainer(
+  listEl: HTMLElement,
+  preferredScrollEl?: HTMLElement | null,
+): HTMLElement | null {
+  if (
+    preferredScrollEl &&
+    preferredScrollEl.scrollHeight > preferredScrollEl.clientHeight + 1
+  ) {
+    return preferredScrollEl;
+  }
+  if (listEl.scrollHeight > listEl.clientHeight + 1) {
+    return listEl;
+  }
+  return (
+    listEl.closest<HTMLElement>('[data-testid="info-panel-content-scroll"]') ??
+    listEl.parentElement
+  );
+}
+
 /** Scroll a panel TOC button into the info-panel content viewport. */
 export function scrollPanelTocEntryIntoView(entryEl: HTMLElement): void {
-  const list = entryEl.closest('[data-testid="info-panel-toc-list"]');
-  const scrollEl =
-    list?.closest('[data-testid="info-panel-content-scroll"]') ??
-    list?.parentElement;
+  const list = entryEl.closest<HTMLElement>(
+    '[data-testid="info-panel-toc-list"]',
+  );
+  if (!list) return;
+  const scrollEl = resolvePanelTocScrollContainer(list);
   if (!scrollEl) return;
 
   const scrollRect = scrollEl.getBoundingClientRect();
@@ -107,9 +128,7 @@ export function findPanelTocEntryAtPointerY(
       '[data-testid^="info-panel-toc-entry-"]',
     ),
   ];
-  const scroll =
-    scrollEl ??
-    listEl.closest<HTMLElement>('[data-testid="info-panel-content-scroll"]');
+  const scroll = resolvePanelTocScrollContainer(listEl, scrollEl);
   const scrollRect = scroll?.getBoundingClientRect();
   const inScrollBottomEdge =
     scrollRect != null &&

@@ -7,6 +7,7 @@ import {
   scrollToTocIndex,
   handleInfoPanelTocTap,
   findPanelTocEntryAtPointerY,
+  resolvePanelTocScrollContainer,
   scrollPanelTocEntryIntoView,
   panelTocEntryIndex,
 } from "./tocNavigation";
@@ -326,6 +327,21 @@ describe("handleInfoPanelTocTap", () => {
 });
 
 describe("panel TOC pointer helpers", () => {
+  it("prefers the TOC list as scrollport when it overflows", () => {
+    const list = {
+      scrollHeight: 500,
+      clientHeight: 300,
+      closest: () => null,
+      parentElement: null,
+    } as unknown as HTMLElement;
+    const pane = {
+      scrollHeight: 300,
+      clientHeight: 300,
+    } as unknown as HTMLElement;
+
+    expect(resolvePanelTocScrollContainer(list, pane)).toBe(list);
+  });
+
   it("finds entries within bottom-edge slop", () => {
     const entry = {
       getAttribute: () => "info-panel-toc-entry-3",

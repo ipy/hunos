@@ -15,6 +15,7 @@ import {
   findPanelTocEntryAtPointerY,
   handleInfoPanelTocTap,
   panelTocEntryIndex,
+  resolvePanelTocScrollContainer,
   scrollPanelTocEntryIntoView,
 } from "@/utils/tocNavigation";
 import {
@@ -157,8 +158,8 @@ export function InfoPanel({
     const last = lastTocActivateRef.current;
     if (last?.index === index && now - last.time < 300) return;
     lastTocActivateRef.current = { index, time: now };
-    if (entryEl) scrollPanelTocEntryIntoView(entryEl);
     handleInfoPanelTocTap(editor, index, docPos);
+    if (entryEl) scrollPanelTocEntryIntoView(entryEl);
   };
 
   const handleTocPointerDownCapture = (event: React.PointerEvent) => {
@@ -167,10 +168,14 @@ export function InfoPanel({
       '[data-testid="info-panel-toc-list"]',
     );
     if (!list) return;
+    const listEl = list as HTMLElement;
     const entry = findPanelTocEntryAtPointerY(
-      list as HTMLElement,
+      listEl,
       event.clientY,
-      event.currentTarget as HTMLElement,
+      resolvePanelTocScrollContainer(
+        listEl,
+        event.currentTarget as HTMLElement,
+      ),
     );
     if (!entry) return;
     const index = panelTocEntryIndex(entry);
@@ -384,9 +389,13 @@ export function InfoPanel({
           style={{
             flex: "1 1 0",
             minHeight: 0,
-            overflowY: "auto",
-            scrollPaddingBottom: `max(${TOC_LIST_BOTTOM_PADDING_PX}px, env(safe-area-inset-bottom))`,
-            padding: "0 20px max(20px, env(safe-area-inset-bottom))",
+            display: activeTab === "toc" ? "flex" : "block",
+            flexDirection: activeTab === "toc" ? "column" : undefined,
+            overflowY: activeTab === "stats" ? "auto" : "hidden",
+            padding:
+              activeTab === "toc"
+                ? "0 20px 0"
+                : "0 20px max(20px, env(safe-area-inset-bottom))",
           }}
         >
           {activeTab === "stats" && (
@@ -468,6 +477,11 @@ export function InfoPanel({
             <div
               data-testid="info-panel-toc-list"
               style={{
+                flex: "1 1 0",
+                minHeight: 0,
+                overflowY: "auto",
+                WebkitOverflowScrolling: "touch",
+                scrollPaddingBottom: `max(${TOC_LIST_BOTTOM_PADDING_PX}px, env(safe-area-inset-bottom))`,
                 paddingBottom: `max(${TOC_LIST_BOTTOM_PADDING_PX}px, env(safe-area-inset-bottom))`,
                 boxSizing: "border-box",
               }}
