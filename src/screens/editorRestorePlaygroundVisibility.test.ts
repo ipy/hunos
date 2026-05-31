@@ -308,6 +308,58 @@ describe("playground restore visibility", () => {
     ).toBe(false);
   });
 
+  it("hides restore when italic is applied to list text (Meta+I)", () => {
+    const parsed = JSON.parse(seedContent) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          content?: Array<{
+            content?: Array<{ text?: string; marks?: Array<{ type: string }> }>;
+          }>;
+        }>;
+      }>;
+    };
+    const listsIndex = parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
+    );
+    const firstItemText =
+      parsed.content[listsIndex + 1]?.content?.[0]?.content?.[0]?.content?.[0];
+    if (firstItemText) {
+      firstItemText.marks = [{ type: "italic" }];
+    }
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seedContent,
+        pendingDraftContent: JSON.stringify(parsed),
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
+
+  it("shows restore when T19-MIXED marker is inserted in Lists section", () => {
+    const parsed = JSON.parse(seedContent) as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    const listsIndex = parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
+    );
+    parsed.content.splice(listsIndex + 1, 0, {
+      type: "paragraph",
+      content: [{ type: "text", text: "T19-MIXED-lists" }],
+    });
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seedContent,
+        pendingDraftContent: JSON.stringify(parsed),
+        fallbackLocale: "zh",
+      }),
+    ).toBe(true);
+  });
+
   it("hides restore after autosave when persisted row only adds inline marks", () => {
     const parsed = JSON.parse(seedContent) as {
       content: Array<{

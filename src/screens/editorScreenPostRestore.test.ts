@@ -26,5 +26,8 @@ describe("EditorScreen post-restore AC1 fixes", () => {
       /setRestoreChipSuppressed\(true\)[\s\S]*finalizePlaygroundRestoreInEditor/,
     );
     expect(source).toContain("playgroundEditorMarkOnlyDriftFromStored");
+    expect(source).toContain(
+      "setRestoreEditorSyncTick((tick) => tick + 1);\n          const writeEpoch = contentWriteEpochRef.current;",
+    );
   });
 });

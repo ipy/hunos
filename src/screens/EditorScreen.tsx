@@ -347,6 +347,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           )
         ) {
           pendingContentRef.current = json;
+          setRestoreEditorSyncTick((tick) => tick + 1);
           const writeEpoch = contentWriteEpochRef.current;
           if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
           if (flushSave) {
@@ -388,7 +389,6 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         }
       }
 
-      const hadNoPending = pendingContentRef.current == null;
       let clearRestoreSuppress = true;
       if (restoreChipSuppressedRef.current && note) {
         const playgroundLocale = resolvePlaygroundSeedLocale(
@@ -415,11 +415,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         setRestoreChipSuppressed(false);
       }
       pendingContentRef.current = json;
-      if (
-        hadNoPending &&
-        note &&
-        isFormatPlaygroundNote(note.title, noteContentForEditor)
-      ) {
+      if (note && isFormatPlaygroundNote(note.title, noteContentForEditor)) {
         setRestoreEditorSyncTick((tick) => tick + 1);
       }
       const writeEpoch = contentWriteEpochRef.current;
