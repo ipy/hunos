@@ -1,6 +1,7 @@
 import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
+import type { EditorView } from "@tiptap/pm/view";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import type { EditorState } from "@tiptap/pm/state";
 import { suppressWikiLinkSuggestionBriefly } from "./wikiLinkEditGuard";
@@ -71,6 +72,45 @@ export function buildWikiLinkDecorations(state: EditorState): DecorationSet {
   return DecorationSet.create(doc, decorations);
 }
 
+function captureWikiLinkPreClick(
+  view: EditorView,
+  event: MouseEvent | PointerEvent,
+  setPreClick: (from: number, span: { start: number; end: number }) => void,
+  clearPreClick: () => void,
+): void {
+  const target = event.target as HTMLElement;
+  const linkEl = target.closest(".wiki-link-content");
+  if (!linkEl) {
+    clearPreClick();
+    return;
+  }
+
+  suppressWikiLinkSuggestionBriefly();
+
+  const coords = view.posAtCoords({
+    left: event.clientX,
+    top: event.clientY,
+  });
+  if (!coords) {
+    clearPreClick();
+    return;
+  }
+
+  const wikiLinks = findWikiLinks(view.state.doc);
+  const linkAtPos = wikiLinks.find(
+    (wl) => coords.pos >= wl.start && coords.pos <= wl.end,
+  );
+  if (!linkAtPos) {
+    clearPreClick();
+    return;
+  }
+
+  setPreClick(view.state.selection.from, {
+    start: linkAtPos.start,
+    end: linkAtPos.end,
+  });
+}
+
 export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
   name: "wikiLinkDecoration",
 
@@ -91,42 +131,20 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
       new Plugin({
         key: wikiLinkKey,
         view(view) {
+          const setPreClick = (
+            from: number,
+            span: { start: number; end: number },
+          ) => {
+            preClickSelectionFrom = from;
+            preClickLinkSpan = span;
+          };
+          const clearPreClick = () => {
+            preClickSelectionFrom = null;
+            preClickLinkSpan = null;
+          };
+
           const onPointerDownCapture = (event: PointerEvent) => {
-            const target = event.target as HTMLElement;
-            const linkEl = target.closest(".wiki-link-content");
-            if (!linkEl) {
-              preClickSelectionFrom = null;
-              preClickLinkSpan = null;
-              return;
-            }
-
-            suppressWikiLinkSuggestionBriefly();
-
-            const coords = view.posAtCoords({
-              left: event.clientX,
-              top: event.clientY,
-            });
-            if (!coords) {
-              preClickSelectionFrom = null;
-              preClickLinkSpan = null;
-              return;
-            }
-
-            const wikiLinks = findWikiLinks(view.state.doc);
-            const linkAtPos = wikiLinks.find(
-              (wl) => coords.pos >= wl.start && coords.pos <= wl.end,
-            );
-            if (!linkAtPos) {
-              preClickSelectionFrom = null;
-              preClickLinkSpan = null;
-              return;
-            }
-
-            preClickSelectionFrom = view.state.selection.from;
-            preClickLinkSpan = {
-              start: linkAtPos.start,
-              end: linkAtPos.end,
-            };
+            captureWikiLinkPreClick(view, event, setPreClick, clearPreClick);
           };
 
           view.dom.addEventListener("pointerdown", onPointerDownCapture, true);
@@ -146,6 +164,18 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
           },
           handleDOMEvents: {
             mousedown(view, event) {
+              captureWikiLinkPreClick(
+                view,
+                event,
+                (from, span) => {
+                  preClickSelectionFrom = from;
+                  preClickLinkSpan = span;
+                },
+                () => {
+                  preClickSelectionFrom = null;
+                  preClickLinkSpan = null;
+                },
+              );
               return false;
             },
           },

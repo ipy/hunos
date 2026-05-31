@@ -197,17 +197,17 @@ describe("buildPlaygroundContent", () => {
     }
   });
 
-  it("keeps the seed wiki link in the tags section", () => {
+  it("keeps the seed wiki links in the tags section", () => {
     expect(
       findWikiLinkTitlesInText(
         findTagsParagraphText(buildPlaygroundContent("en"), "en"),
       ),
-    ).toEqual(["Welcome to Hunos"]);
+    ).toEqual(["Welcome to Hunos", "project docs"]);
     expect(
       findWikiLinkTitlesInText(
         findTagsParagraphText(buildPlaygroundContent("zh"), "zh"),
       ),
-    ).toEqual(["欢迎使用 Hunos"]);
+    ).toEqual(["欢迎使用 Hunos", "项目文档"]);
   });
 });
 
@@ -617,14 +617,11 @@ describe("migratePlaygroundContentIfStale", () => {
     expect(migratedImage?.attrs?.height).toBe(215);
   });
 
-  it("includes external link sample in tags section", () => {
+  it("includes project docs wiki link in tags section", () => {
     const content = buildPlaygroundContent("en") as {
       content: Array<{
         type: string;
-        content?: Array<{
-          text?: string;
-          marks?: Array<{ type: string; attrs?: { href?: string } }>;
-        }>;
+        content?: Array<{ text?: string }>;
       }>;
     };
     const tagsSectionIndex = content.content.findIndex(
@@ -632,11 +629,28 @@ describe("migratePlaygroundContentIfStale", () => {
         node.type === "heading" && node.content?.[0]?.text === "Tags & Links",
     );
     const tagsParagraph = content.content[tagsSectionIndex + 1];
-    const linkNode = tagsParagraph?.content?.find((node) =>
-      node.marks?.some((mark) => mark.type === "link"),
+    const wikiLinkNode = tagsParagraph?.content?.find((node) =>
+      node.text?.includes("[[project docs]]"),
     );
-    expect(linkNode?.text).toBe("project docs");
-    expect(linkNode?.marks?.[0]?.attrs?.href).toBe("https://example.com");
+    expect(wikiLinkNode?.text).toBe("[[project docs]]");
+  });
+
+  it("includes 项目文档 wiki link in zh tags section", () => {
+    const content = buildPlaygroundContent("zh") as {
+      content: Array<{
+        type: string;
+        content?: Array<{ text?: string }>;
+      }>;
+    };
+    const tagsSectionIndex = content.content.findIndex(
+      (node) =>
+        node.type === "heading" && node.content?.[0]?.text === "标签与链接",
+    );
+    const tagsParagraph = content.content[tagsSectionIndex + 1];
+    const wikiLinkNode = tagsParagraph?.content?.find((node) =>
+      node.text?.includes("[[项目文档]]"),
+    );
+    expect(wikiLinkNode?.text).toBe("[[项目文档]]");
   });
 
   it("updates tryHint and tags section for stale playground notes", () => {
@@ -676,7 +690,7 @@ describe("migratePlaygroundContentIfStale", () => {
     const tagsParagraph = parsed.content[tagsSectionIndex + 1];
     expect(
       tagsParagraph?.content?.some((node) =>
-        node.marks?.some((mark) => mark.type === "link"),
+        node.text?.includes("[[project docs]]"),
       ),
     ).toBe(true);
   });

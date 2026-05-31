@@ -13,7 +13,7 @@ import { sanitizeBlockImageNoteContent } from "@/utils/migrateBlockImageFloor";
 
 type PlaygroundLocale = "en" | "zh";
 
-export const PLAYGROUND_CONTENT_VERSION = 23;
+export const PLAYGROUND_CONTENT_VERSION = 24;
 
 export const FORMAT_PLAYGROUND_TITLES: readonly string[] = [
   "Format Playground",
@@ -216,19 +216,6 @@ function text(
     : { type: "text", text: value };
 }
 
-function externalLinkText(label: string, href: string) {
-  return text(label, [
-    {
-      type: "link",
-      attrs: {
-        href,
-        target: "_blank",
-        rel: "noopener noreferrer",
-      },
-    },
-  ]);
-}
-
 function heading(level: number, value: string) {
   return { type: "heading", attrs: { level }, content: [text(value)] };
 }
@@ -400,7 +387,7 @@ export function buildPlaygroundContent(locale: Locale) {
         text(s.wikiLink),
         text(s.tagsWikiLinkEnd),
         text(s.tagsExternalPrefix),
-        externalLinkText(s.tagsExternalLabel, "https://example.com"),
+        text(`[[${s.tagsExternalLabel}]]`),
         text(s.tagsExternalSuffix),
       ),
 
@@ -2274,7 +2261,7 @@ export function migratePlaygroundContentIfStale(
           text(s.wikiLink),
           text(s.tagsWikiLinkEnd),
           text(s.tagsExternalPrefix),
-          externalLinkText(s.tagsExternalLabel, "https://example.com"),
+          text(`[[${s.tagsExternalLabel}]]`),
           text(s.tagsExternalSuffix),
         );
       }

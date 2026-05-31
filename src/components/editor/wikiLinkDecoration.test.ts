@@ -78,6 +78,14 @@ describe("buildWikiLinkDecorations", () => {
     expect(attrs?.["data-wiki-title"]).toBe("欢迎使用 Hunos");
   });
 
+  it("captures pre-click on pointerdown and mousedown for navigation", () => {
+    expect(wikiLinkSource).toContain("captureWikiLinkPreClick");
+    expect(wikiLinkSource).toContain("mousedown(view, event)");
+    expect(wikiLinkSource).toContain(
+      'addEventListener("pointerdown", onPointerDownCapture, true)',
+    );
+  });
+
   it("wires wiki-link target testid on content decoration", () => {
     expect(wikiLinkSource).toContain(`export const WIKI_LINK_TARGET_TESTID`);
     expect(wikiLinkSource).toContain(`"data-testid": WIKI_LINK_TARGET_TESTID`);

@@ -36,9 +36,8 @@ describe("iteration 39 — wiki-link navigation", () => {
     expect(wikiLinkDecorationSource).toContain(
       'addEventListener("pointerdown", onPointerDownCapture, true)',
     );
-    expect(wikiLinkDecorationSource).toContain(
-      "preClickSelectionFrom = view.state.selection.from",
-    );
+    expect(wikiLinkDecorationSource).toContain("captureWikiLinkPreClick");
+    expect(wikiLinkDecorationSource).toContain("mousedown(view, event)");
   });
 });
 

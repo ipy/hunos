@@ -13,6 +13,8 @@ export const WELCOME_NOTE_TITLES = [
   "欢迎使用 Hunos",
 ] as const;
 
+export const PROJECT_DOCS_NOTE_TITLES = ["project docs", "项目文档"] as const;
+
 export type WelcomeSeedLocale = "en" | "zh";
 
 const WELCOME_CONTENT_EN = {
@@ -295,8 +297,93 @@ async function ensureFormatPlaygroundNote(locale: Locale): Promise<void> {
   await createFormatPlaygroundNote(locale);
 }
 
+export function getProjectDocsSeed(locale: Locale): {
+  title: string;
+  content: { type: "doc"; content: unknown[] };
+  contentPlain: string;
+} {
+  const seedLocale = resolveWelcomeSeedLocale(locale);
+  if (seedLocale === "zh") {
+    return {
+      title: "项目文档",
+      content: {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [
+              {
+                type: "text",
+                text: "格式试炼场中的示例笔记，用于测试双向链接导航。",
+              },
+            ],
+          },
+        ],
+      },
+      contentPlain: "格式试炼场中的示例笔记，用于测试双向链接导航。",
+    };
+  }
+  return {
+    title: "project docs",
+    content: {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "Sample note linked from the format playground for wiki-link navigation tests.",
+            },
+          ],
+        },
+      ],
+    },
+    contentPlain:
+      "Sample note linked from the format playground for wiki-link navigation tests.",
+  };
+}
+
+async function ensureProjectDocsNote(locale: Locale): Promise<void> {
+  const { title, content, contentPlain } = getProjectDocsSeed(locale);
+  const contentStr = JSON.stringify(content);
+  const existing = await db.notes.where("title").equals(title).first();
+
+  if (existing) {
+    if (existing.content !== contentStr) {
+      await noteStorage.update(existing.id, {
+        content: contentStr,
+        contentPlain,
+      });
+      await graphEngine.syncNoteLinks(existing.id, contentStr);
+    }
+    return;
+  }
+
+  for (const altTitle of PROJECT_DOCS_NOTE_TITLES) {
+    if (altTitle === title) continue;
+    const alt = await db.notes.where("title").equals(altTitle).first();
+    if (!alt) continue;
+    await noteStorage.update(alt.id, {
+      title,
+      content: contentStr,
+      contentPlain,
+    });
+    await graphEngine.syncNoteLinks(alt.id, contentStr);
+    return;
+  }
+
+  const note = await noteStorage.create({
+    content: contentStr,
+    title,
+    contentPlain,
+  });
+  await graphEngine.syncNoteLinks(note.id, note.content);
+}
+
 async function runBootstrapSeed(locale: Locale): Promise<void> {
   await ensureWelcomeNote(locale);
+  await ensureProjectDocsNote(locale);
   await ensureFormatPlaygroundNote(locale);
 }
 

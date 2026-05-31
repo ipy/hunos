@@ -110,23 +110,25 @@ describe("createWelcomeNotesIfNeeded", () => {
     noteStorageUpdate.mockResolvedValue(undefined);
   });
 
-  it("creates exactly one welcome row for en locale on empty store", async () => {
+  it("creates welcome and project docs rows for en locale on empty store", async () => {
     const { createWelcomeNotesIfNeeded } = await import("./welcomeNotes");
     await createWelcomeNotesIfNeeded("en");
 
-    expect(noteStorageCreate).toHaveBeenCalledTimes(1);
+    expect(noteStorageCreate).toHaveBeenCalledTimes(2);
     expect(noteStorageCreate.mock.calls[0]?.[0]?.title).toBe(
       "Welcome to Hunos",
     );
+    expect(noteStorageCreate.mock.calls[1]?.[0]?.title).toBe("project docs");
     expect(createFormatPlaygroundNote).toHaveBeenCalledWith("en");
   });
 
-  it("creates exactly one welcome row for zh locale on empty store", async () => {
+  it("creates welcome and project docs rows for zh locale on empty store", async () => {
     const { createWelcomeNotesIfNeeded } = await import("./welcomeNotes");
     await createWelcomeNotesIfNeeded("zh");
 
-    expect(noteStorageCreate).toHaveBeenCalledTimes(1);
+    expect(noteStorageCreate).toHaveBeenCalledTimes(2);
     expect(noteStorageCreate.mock.calls[0]?.[0]?.title).toBe("欢迎使用 Hunos");
+    expect(noteStorageCreate.mock.calls[1]?.[0]?.title).toBe("项目文档");
     expect(createFormatPlaygroundNote).toHaveBeenCalledWith("zh");
   });
 
@@ -137,28 +139,38 @@ describe("createWelcomeNotesIfNeeded", () => {
       createWelcomeNotesIfNeeded("en"),
     ]);
 
-    expect(noteStorageCreate).toHaveBeenCalledTimes(1);
+    expect(noteStorageCreate).toHaveBeenCalledTimes(2);
     expect(createFormatPlaygroundNote).toHaveBeenCalledTimes(1);
   });
 
   it("migrates a sibling-locale welcome row to the bootstrap locale seed", async () => {
-    notesWhereEquals.mockImplementation(async (title: string) =>
-      title === "Welcome to Hunos"
-        ? {
-            id: "welcome-en",
-            title: "Welcome to Hunos",
-            content: JSON.stringify({
-              type: "doc",
-              content: [
-                {
-                  type: "paragraph",
-                  content: [{ type: "text", text: "#hunos/welcome" }],
-                },
-              ],
-            }),
-          }
-        : undefined,
-    );
+    const { getProjectDocsSeed } = await import("./welcomeNotes");
+    const projectDocs = getProjectDocsSeed("zh");
+    notesWhereEquals.mockImplementation(async (title: string) => {
+      if (title === "Welcome to Hunos") {
+        return {
+          id: "welcome-en",
+          title: "Welcome to Hunos",
+          content: JSON.stringify({
+            type: "doc",
+            content: [
+              {
+                type: "paragraph",
+                content: [{ type: "text", text: "#hunos/welcome" }],
+              },
+            ],
+          }),
+        };
+      }
+      if (title === projectDocs.title) {
+        return {
+          id: "docs-zh",
+          title: projectDocs.title,
+          content: JSON.stringify(projectDocs.content),
+        };
+      }
+      return undefined;
+    });
 
     const { createWelcomeNotesIfNeeded } = await import("./welcomeNotes");
     await createWelcomeNotesIfNeeded("zh");
@@ -175,23 +187,33 @@ describe("createWelcomeNotesIfNeeded", () => {
   });
 
   it("migrates existing welcome note content to latest seed tags", async () => {
-    notesWhereEquals.mockImplementation(async (title: string) =>
-      title === "Welcome to Hunos"
-        ? {
-            id: "welcome-en",
-            title,
-            content: JSON.stringify({
-              type: "doc",
-              content: [
-                {
-                  type: "paragraph",
-                  content: [{ type: "text", text: "#hunos/welcome" }],
-                },
-              ],
-            }),
-          }
-        : undefined,
-    );
+    const { getProjectDocsSeed } = await import("./welcomeNotes");
+    const projectDocs = getProjectDocsSeed("en");
+    notesWhereEquals.mockImplementation(async (title: string) => {
+      if (title === "Welcome to Hunos") {
+        return {
+          id: "welcome-en",
+          title,
+          content: JSON.stringify({
+            type: "doc",
+            content: [
+              {
+                type: "paragraph",
+                content: [{ type: "text", text: "#hunos/welcome" }],
+              },
+            ],
+          }),
+        };
+      }
+      if (title === projectDocs.title) {
+        return {
+          id: "docs-en",
+          title: projectDocs.title,
+          content: JSON.stringify(projectDocs.content),
+        };
+      }
+      return undefined;
+    });
 
     const { createWelcomeNotesIfNeeded } = await import("./welcomeNotes");
     await createWelcomeNotesIfNeeded("en");
@@ -205,17 +227,26 @@ describe("createWelcomeNotesIfNeeded", () => {
   });
 
   it("skips welcome creation when a welcome title already exists", async () => {
-    const { getWelcomeSeed } = await import("./welcomeNotes");
+    const { getWelcomeSeed, getProjectDocsSeed } = await import("./welcomeNotes");
     const seed = getWelcomeSeed("en");
-    notesWhereEquals.mockImplementation(async (title: string) =>
-      title === "Welcome to Hunos"
-        ? {
-            id: "w1",
-            title,
-            content: JSON.stringify(seed.content),
-          }
-        : undefined,
-    );
+    const projectDocs = getProjectDocsSeed("en");
+    notesWhereEquals.mockImplementation(async (title: string) => {
+      if (title === "Welcome to Hunos") {
+        return {
+          id: "w1",
+          title,
+          content: JSON.stringify(seed.content),
+        };
+      }
+      if (title === projectDocs.title) {
+        return {
+          id: "docs-en",
+          title: projectDocs.title,
+          content: JSON.stringify(projectDocs.content),
+        };
+      }
+      return undefined;
+    });
 
     const { createWelcomeNotesIfNeeded } = await import("./welcomeNotes");
     await createWelcomeNotesIfNeeded("en");
