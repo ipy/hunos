@@ -5,6 +5,7 @@ import {
   BACKLINKS_PANEL_TESTID,
   BACKLINKS_PANEL_TOGGLE_TESTID,
   assertUniqueBacklinkPanelKeys,
+  backlinksItemSnippetTestId,
   backlinksItemTestId,
   backlinksRowKey,
 } from "./BacklinksPanel";
@@ -24,6 +25,15 @@ describe("BacklinksPanel automation testids", () => {
 
   it("derives per-link item testids from link id", () => {
     expect(backlinksItemTestId("link-abc")).toBe("backlinks-item-link-abc");
+  });
+
+  it("derives per-link snippet testids from link id (AC59-backlink-snippet-testid)", () => {
+    expect(backlinksItemSnippetTestId("link-abc")).toBe(
+      "backlinks-snippet-link-abc",
+    );
+    expect(backlinksItemSnippetTestId("link-abc")).not.toBe(
+      backlinksItemTestId("link-abc"),
+    );
   });
 
   it("keeps item testids unique when two rows share the same note id", () => {

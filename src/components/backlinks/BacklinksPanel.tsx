@@ -17,6 +17,11 @@ export function backlinksItemTestId(linkId: string): string {
   return `backlinks-item-${linkId}`;
 }
 
+/** Context/snippet line inside a backlink row — stable for e2e text reads. */
+export function backlinksItemSnippetTestId(linkId: string): string {
+  return `backlinks-snippet-${linkId}`;
+}
+
 /** Stable React key when linkId alone may duplicate across wiki-link rows. */
 export function backlinksRowKey(
   section: "incoming" | "outgoing",
@@ -130,6 +135,7 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
       </div>
       {bl.context && (
         <div
+          data-testid={backlinksItemSnippetTestId(bl.linkId)}
           style={{
             fontSize: theme.fontSize.xs,
             color: theme.colors.textTertiary,

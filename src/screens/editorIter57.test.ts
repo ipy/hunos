@@ -69,7 +69,7 @@ describe("iteration 57 — backlinks unique DOM (AC57-backlinks-unique-dom)", ()
 
 describe("iteration 57 — canonical playground seed (AC57-seed-canonical)", () => {
   it("ships two 项目文档 wiki links in zh tags section at current version", () => {
-    expect(PLAYGROUND_CONTENT_VERSION).toBeGreaterThanOrEqual(25);
+    expect(PLAYGROUND_CONTENT_VERSION).toBeGreaterThanOrEqual(26);
     expect(findWikiLinkTitlesInTagsParagraph("zh")).toEqual([
       "欢迎使用 Hunos",
       "项目文档",

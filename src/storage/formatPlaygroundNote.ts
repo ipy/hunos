@@ -13,7 +13,7 @@ import { sanitizeBlockImageNoteContent } from "@/utils/migrateBlockImageFloor";
 
 type PlaygroundLocale = "en" | "zh";
 
-export const PLAYGROUND_CONTENT_VERSION = 25;
+export const PLAYGROUND_CONTENT_VERSION = 26;
 
 export const FORMAT_PLAYGROUND_TITLES: readonly string[] = [
   "Format Playground",
@@ -71,6 +71,8 @@ interface PlaygroundStrings {
   tagsWikiLinkEnd: string;
   tagsExternalPrefix: string;
   tagsExternalLabel: string;
+  tagsExternalMid: string;
+  tagsPlainIssueRef: string;
   tagsExternalSuffix: string;
   tryHintBullets: readonly string[];
 }
@@ -131,6 +133,7 @@ const STRINGS: Record<PlaygroundLocale, PlaygroundStrings> = {
     tagsExternalPrefix: " See ",
     tagsExternalLabel: "project docs",
     tagsExternalMid: " and ",
+    tagsPlainIssueRef: " #42",
     tagsExternalSuffix: " for more.",
     tryHintBullets: [
       "Type **bold**, _italic_, __underline__, ~~strike~~, `code`, or ==highlight== for inline marks.",
@@ -196,6 +199,7 @@ const STRINGS: Record<PlaygroundLocale, PlaygroundStrings> = {
     tagsExternalPrefix: " 详见 ",
     tagsExternalLabel: "项目文档",
     tagsExternalMid: " 与 ",
+    tagsPlainIssueRef: " #42",
     tagsExternalSuffix: "。",
     tryHintBullets: [
       "输入 **粗体**、_斜体_、__下划线__、~~删除线~~、`代码` 或 ==高亮== 等行内样式。",
@@ -392,6 +396,7 @@ export function buildPlaygroundContent(locale: Locale) {
         text(`[[${s.tagsExternalLabel}]]`),
         text(s.tagsExternalMid),
         text(`[[${s.tagsExternalLabel}]]`),
+        text(s.tagsPlainIssueRef),
         text(s.tagsExternalSuffix),
       ),
 
@@ -2311,6 +2316,7 @@ export function migratePlaygroundContentIfStale(
           text(`[[${s.tagsExternalLabel}]]`),
           text(s.tagsExternalMid),
           text(`[[${s.tagsExternalLabel}]]`),
+          text(s.tagsPlainIssueRef),
           text(s.tagsExternalSuffix),
         );
       }
