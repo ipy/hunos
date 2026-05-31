@@ -21,6 +21,7 @@ describe("EditorScreen note-switch autosave cleanup", () => {
     expect(editorSource).toContain("notifyOnError: false");
     expect(editorSource).toContain("persistEditorContent(");
     expect(editorSource).toContain("activeNoteId, json");
+    expect(editorSource).toContain("resolveEditorAutosaveContentJson");
   });
 
   it("uses silent debounced autosave during editing", () => {

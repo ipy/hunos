@@ -15,3 +15,19 @@ export function isDebouncedAutosaveStillCurrent(
   if (!scheduledNoteId) return false;
   return scheduledNoteId === currentActiveNoteId;
 }
+
+/** Prefer live ProseMirror JSON on flush — pending ref can lag behind rapid edits. */
+export function resolveEditorAutosaveContentJson(options: {
+  editor: { isDestroyed: boolean; getJSON: () => unknown } | null;
+  pendingContentJson: string | null;
+}): string | null {
+  const { editor, pendingContentJson } = options;
+  if (editor && !editor.isDestroyed) {
+    try {
+      return JSON.stringify(editor.getJSON());
+    } catch {
+      // fall through to pending stash
+    }
+  }
+  return pendingContentJson;
+}

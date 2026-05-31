@@ -88,7 +88,10 @@ import {
   persistNoteContent,
   persistNoteTitle,
 } from "@/screens/editorNotePersistence";
-import { isDebouncedAutosaveStillCurrent } from "@/screens/editorAutosaveEffectCleanup";
+import {
+  isDebouncedAutosaveStillCurrent,
+  resolveEditorAutosaveContentJson,
+} from "@/screens/editorAutosaveEffectCleanup";
 import type { PersistNoteOptions } from "@/screens/editorNotePersistence";
 
 declare const __HUNOS_E2E__: boolean | undefined;
@@ -517,13 +520,14 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       saveTimeoutRef.current = undefined;
     }
 
-    const json =
-      pendingContentRef.current ??
-      (editorInstanceRef.current
-        ? JSON.stringify(editorInstanceRef.current.getJSON())
-        : null);
+    const json = resolveEditorAutosaveContentJson({
+      editor: editorInstanceRef.current,
+      pendingContentJson: pendingContentRef.current,
+    });
 
-    if (!json) return null;
+    if (json) {
+      pendingContentRef.current = json;
+    }
     return json;
   }, [activeNoteId]);
 
