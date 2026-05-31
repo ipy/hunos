@@ -94,6 +94,13 @@ describe("buildWikiLinkDecorations", () => {
     );
   });
 
+  it("resolves wiki-link span from DOM title without click pos (AC41)", () => {
+    expect(wikiLinkSource).toContain("findWikiLinkByTitle");
+    expect(wikiLinkSource).toContain("wikiLinkMatchFromDomTarget");
+    expect(wikiLinkSource).toContain('tabindex: "0"');
+    expect(wikiLinkSource).toContain("keydown(view, event)");
+  });
+
   it("wires wiki-link target testid on content decoration", () => {
     expect(wikiLinkSource).toContain(`export const WIKI_LINK_TARGET_TESTID`);
     expect(wikiLinkSource).toContain(`"data-testid": WIKI_LINK_TARGET_TESTID`);

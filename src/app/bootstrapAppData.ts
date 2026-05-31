@@ -10,6 +10,7 @@ import { recoverPendingUnloadBackup } from "@/store/lifecycleUnload";
 import { useNoteStore } from "@/store/noteStore";
 import { useTagStore } from "@/store/tagStore";
 import { noteStorage } from "@/storage/noteStorage";
+import { hydrateActiveNoteFromLocationHash } from "@/utils/noteRouteHydration";
 
 const TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -17,6 +18,7 @@ const TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 export async function bootstrapAppData(locale: Locale): Promise<void> {
   await createWelcomeNotesIfNeeded(locale);
   await useNoteStore.getState().loadNotes({ status: "active" });
+  await hydrateActiveNoteFromLocationHash();
   await recoverPendingUnloadBackup();
   const flushedContent = await flushEditorAutosave();
   await syncFormatPlaygroundOnLocaleChange(locale, flushedContent, {

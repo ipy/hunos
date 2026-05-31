@@ -12,6 +12,7 @@ import { SettingsScreen } from "@/screens/SettingsScreen";
 import { ToastContainer } from "@/components/common/Toast";
 import { useTranslation } from "react-i18next";
 import { mountHunosE2eBridge } from "@/testing/hunos-e2e-bridge";
+import { hydrateActiveNoteFromLocationHash } from "@/utils/noteRouteHydration";
 
 declare const __HUNOS_E2E__: boolean | undefined;
 
@@ -34,6 +35,14 @@ function AppContent() {
     if (typeof __HUNOS_E2E__ !== "undefined" && __HUNOS_E2E__) {
       mountHunosE2eBridge();
     }
+  }, []);
+
+  useEffect(() => {
+    const onHashChange = () => {
+      void hydrateActiveNoteFromLocationHash();
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
   if (layout === "desktop") {

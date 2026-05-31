@@ -338,6 +338,30 @@ describe("playground restore visibility", () => {
     ).toBe(false);
   });
 
+  it("shows restore when foreign heading BACKTEST41 is inserted (AC41-body-drift-chip)", () => {
+    const parsed = JSON.parse(seedContent) as {
+      content: Array<{
+        type: string;
+        attrs?: { level: number };
+        content?: Array<{ type?: string; text?: string }>;
+      }>;
+    };
+    parsed.content.splice(5, 0, {
+      type: "heading",
+      attrs: { level: 2 },
+      content: [{ type: "text", text: "BACKTEST41" }],
+    });
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seedContent,
+        pendingDraftContent: JSON.stringify(parsed),
+        fallbackLocale: "zh",
+      }),
+    ).toBe(true);
+  });
+
   it("shows restore when T19-MIXED marker is inserted in Lists section", () => {
     const parsed = JSON.parse(seedContent) as {
       content: Array<{ type: string; content?: Array<{ text?: string }> }>;
@@ -371,7 +395,8 @@ describe("playground restore visibility", () => {
       }>;
     };
     const tryIndex = parsed.content.findIndex(
-      (node) => node.type === "heading" && node.content?.[0]?.text === "自由试炼",
+      (node) =>
+        node.type === "heading" && node.content?.[0]?.text === "自由试炼",
     );
     const sandboxParagraph = parsed.content[tryIndex + 2];
     if (sandboxParagraph?.type === "paragraph") {

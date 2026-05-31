@@ -48,6 +48,49 @@ function findWikiLinks(doc: ProseMirrorNode): WikiLinkMatch[] {
   return matches;
 }
 
+export function findWikiLinkByTitle(
+  doc: ProseMirrorNode,
+  title: string,
+): WikiLinkMatch | undefined {
+  return findWikiLinks(doc).find((wl) => wl.title === title);
+}
+
+function wikiLinkMatchAtCoords(
+  view: EditorView,
+  event: MouseEvent | PointerEvent,
+): WikiLinkMatch | null {
+  const coords = view.posAtCoords({
+    left: event.clientX,
+    top: event.clientY,
+  });
+  if (!coords) return null;
+
+  return (
+    findWikiLinks(view.state.doc).find(
+      (wl) => coords.pos >= wl.start && coords.pos <= wl.end,
+    ) ?? null
+  );
+}
+
+/** Resolve the document span for a `.wiki-link-content` decoration target. */
+export function wikiLinkMatchFromDomTarget(
+  view: EditorView,
+  linkEl: Element,
+  event?: MouseEvent | PointerEvent,
+): WikiLinkMatch | null {
+  const title = linkEl.getAttribute("data-wiki-title");
+  if (title) {
+    const byTitle = findWikiLinkByTitle(view.state.doc, title);
+    if (byTitle) return byTitle;
+  }
+
+  if (event) {
+    return wikiLinkMatchAtCoords(view, event);
+  }
+
+  return null;
+}
+
 export function buildWikiLinkDecorations(state: EditorState): DecorationSet {
   const { doc } = state;
   const wikiLinks = findWikiLinks(doc);
@@ -63,7 +106,7 @@ export function buildWikiLinkDecorations(state: EditorState): DecorationSet {
         "data-testid": WIKI_LINK_TARGET_TESTID,
         "data-wiki-title": wl.title,
         role: "link",
-        tabindex: "-1",
+        tabindex: "0",
         "aria-label": wl.title,
       }),
       Decoration.inline(wl.contentEnd, wl.end, {
@@ -90,19 +133,7 @@ function captureWikiLinkPreClick(
 
   suppressWikiLinkSuggestionBriefly();
 
-  const coords = view.posAtCoords({
-    left: event.clientX,
-    top: event.clientY,
-  });
-  if (!coords) {
-    clearPreClick();
-    return;
-  }
-
-  const wikiLinks = findWikiLinks(view.state.doc);
-  const linkAtPos = wikiLinks.find(
-    (wl) => coords.pos >= wl.start && coords.pos <= wl.end,
-  );
+  const linkAtPos = wikiLinkMatchFromDomTarget(view, linkEl, event);
   if (!linkAtPos) {
     clearPreClick();
     return;
@@ -112,6 +143,41 @@ function captureWikiLinkPreClick(
     start: linkAtPos.start,
     end: linkAtPos.end,
   });
+}
+
+function navigateWikiLinkFromTarget(
+  view: EditorView,
+  linkEl: Element,
+  event: MouseEvent | PointerEvent | KeyboardEvent,
+  selectionFromBeforeInteraction: number,
+  onWikiLinkClick: (title: string) => void,
+  navigationInFlight: { current: boolean },
+): boolean {
+  const linkAtPos = wikiLinkMatchFromDomTarget(
+    view,
+    linkEl,
+    event instanceof KeyboardEvent ? undefined : event,
+  );
+  if (!linkAtPos) return false;
+
+  const navigateOnKeyboard =
+    event instanceof KeyboardEvent &&
+    (event.key === "Enter" || event.key === " ");
+
+  if (
+    !navigateOnKeyboard &&
+    !shouldNavigateWikiLinkClick(selectionFromBeforeInteraction, linkAtPos)
+  ) {
+    return false;
+  }
+
+  if (navigationInFlight.current) return true;
+
+  navigationInFlight.current = true;
+  void Promise.resolve(onWikiLinkClick(linkAtPos.title)).finally(() => {
+    navigationInFlight.current = false;
+  });
+  return true;
 }
 
 export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
@@ -128,7 +194,7 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
 
     let preClickSelectionFrom: number | null = null;
     let preClickLinkSpan: { start: number; end: number } | null = null;
-    let navigationInFlight = false;
+    const navigationInFlight = { current: false };
 
     return [
       new Plugin({
@@ -181,6 +247,25 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
               );
               return false;
             },
+            keydown(view, event) {
+              if (event.key !== "Enter" && event.key !== " ") {
+                return false;
+              }
+
+              const target = event.target as HTMLElement;
+              const linkEl = target.closest(".wiki-link-content");
+              if (!linkEl) return false;
+
+              event.preventDefault();
+              return navigateWikiLinkFromTarget(
+                view,
+                linkEl,
+                event,
+                view.state.selection.from,
+                onWikiLinkClick,
+                navigationInFlight,
+              );
+            },
           },
           handleClick(view, pos, event) {
             const target = event.target as HTMLElement;
@@ -191,13 +276,11 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
               return false;
             }
 
-            const title = linkEl.getAttribute("data-wiki-title");
-            if (!title) return false;
-
-            const wikiLinks = findWikiLinks(view.state.doc);
-            const linkAtPos = wikiLinks.find(
-              (wl) => pos >= wl.start && pos <= wl.end,
-            );
+            const linkAtPos =
+              wikiLinkMatchFromDomTarget(view, linkEl, event) ??
+              findWikiLinks(view.state.doc).find(
+                (wl) => pos >= wl.start && pos <= wl.end,
+              );
             if (!linkAtPos) return false;
 
             const selectionFromBeforeClick =
@@ -210,19 +293,14 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
             preClickSelectionFrom = null;
             preClickLinkSpan = null;
 
-            if (
-              !shouldNavigateWikiLinkClick(selectionFromBeforeClick, linkAtPos)
-            ) {
-              return false;
-            }
-
-            if (navigationInFlight) return true;
-
-            navigationInFlight = true;
-            void Promise.resolve(onWikiLinkClick(title)).finally(() => {
-              navigationInFlight = false;
-            });
-            return true;
+            return navigateWikiLinkFromTarget(
+              view,
+              linkEl,
+              event,
+              selectionFromBeforeClick,
+              onWikiLinkClick,
+              navigationInFlight,
+            );
           },
         },
       }),

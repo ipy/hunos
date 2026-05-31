@@ -999,7 +999,11 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       }
     }
     const displayTitle = titleValue.trim() || note.title;
-    return shouldShowPlaygroundRestoreButton({
+    const playgroundLocale = resolvePlaygroundSeedLocale(
+      noteContentForEditor,
+      settings.locale,
+    );
+    const showRestore = shouldShowPlaygroundRestoreButton({
       displayTitle,
       storedTitle: note.title,
       storedContent: noteContentForEditor,
@@ -1008,12 +1012,28 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       fallbackLocale: settings.locale,
       isRestoringPlayground: playgroundRestoreSessionRef.current.isActive(),
     });
+    if (!showRestore) return false;
+    if (
+      restoreChipSuppressed &&
+      pendingDraftContent &&
+      isFormatPlaygroundNote(note.title, noteContentForEditor) &&
+      playgroundFormatQaDraftHidesRestoreChip(
+        pendingDraftContent,
+        note.title,
+        noteContentForEditor,
+        playgroundLocale,
+      )
+    ) {
+      return false;
+    }
+    return true;
   }, [
     note,
     noteContentForEditor,
     titleValue,
     settings.locale,
     restoreEditorSyncTick,
+    restoreChipSuppressed,
     editorInstance,
   ]);
 
