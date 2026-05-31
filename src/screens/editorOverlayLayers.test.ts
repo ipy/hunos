@@ -30,6 +30,8 @@ describe("editor overlay layers", () => {
     expect(toolbar).toContain('import type { Editor } from "@tiptap/react"');
     expect(toolbar).toContain("insertImageFromToolbarPicker");
     expect(toolbar).toContain('data-testid="editor-toolbar"');
+    expect(toolbar).toContain('data-testid={`editor-toolbar-btn-${item.icon}`}');
+    expect(editor).toContain("layoutMode={layout}");
   });
 
   it("wires Escape through dismissEditorOverlayOnEscape", () => {

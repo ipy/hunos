@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/theme/ThemeContext";
-import { useAdaptiveLayout } from "@/hooks/useAdaptiveLayout";
+import {
+  useAdaptiveLayout,
+  type LayoutMode,
+} from "@/hooks/useAdaptiveLayout";
 import { Icon } from "@/components/common/Icon";
 import { SketchPad } from "./SketchPad";
 import {
@@ -25,6 +28,8 @@ import {
 interface EditorToolbarProps {
   editor: Editor | null;
   formatOverlayOpen?: boolean;
+  /** When set, keeps toolbar tabs aligned with EditorScreen chrome (desktop Aa/¶ strips). */
+  layoutMode?: LayoutMode;
 }
 
 type ToolbarButton = InlineFormatItem;
@@ -146,10 +151,12 @@ interface SketchState {
 export function EditorToolbar({
   editor,
   formatOverlayOpen = false,
+  layoutMode,
 }: EditorToolbarProps) {
   const { t } = useTranslation();
   const theme = useTheme();
-  const layout = useAdaptiveLayout();
+  const adaptiveLayout = useAdaptiveLayout();
+  const layout = layoutMode ?? adaptiveLayout;
   const [activeTab, setActiveTab] = useState<"format" | "blocks" | "insert">(
     "format",
   );
@@ -529,6 +536,7 @@ export function EditorToolbar({
               <button
                 key={`${item.icon}-${idx}`}
                 type="button"
+                data-testid={`editor-toolbar-btn-${item.icon}`}
                 aria-label={ariaLabel}
                 title={ariaLabel}
                 onMouseDown={(e) => {

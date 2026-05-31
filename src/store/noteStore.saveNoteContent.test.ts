@@ -61,6 +61,7 @@ vi.mock("@/store/tagStore", () => ({
   },
 }));
 
+import { buildPlaygroundContent } from "@/storage/formatPlaygroundNote";
 import { noteStorage } from "@/storage/noteStorage";
 import { useNoteStore } from "./noteStore";
 
@@ -132,6 +133,84 @@ describe("useNoteStore.saveNoteContent", () => {
     expect(stored?.contentPlain).toContain("DistinctiveSnippetLine");
     expect(stored?.wordCount).toBe(1);
     expect(stored?.content).toBe(content);
+  });
+
+  it("returns false and skips db write when playground drift regresses canonical seed", async () => {
+    const seed = JSON.stringify(buildPlaygroundContent("zh"));
+    const note = await noteStorage.create({
+      title: "格式试炼场",
+      content: seed,
+      contentPlain: "格式试炼场",
+    });
+    useNoteStore.setState({ notes: [note] });
+    dbUpdate.mockClear();
+
+    const polluted = JSON.stringify({
+      type: "doc",
+      attrs: {
+        playgroundContentVersion: 22,
+        playgroundContentLocale: "zh",
+      },
+      content: (() => {
+        const parsed = JSON.parse(seed) as {
+          content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+        };
+        parsed.content.push({
+          type: "paragraph",
+          content: [{ type: "text", text: "T19-MIXED-lists" }],
+        });
+        return parsed.content;
+      })(),
+    });
+
+    const saved = await useNoteStore
+      .getState()
+      .saveNoteContent(note.id, polluted);
+
+    expect(saved).toBe(false);
+    expect(dbUpdate).not.toHaveBeenCalled();
+    expect(notesById.get(note.id)?.content).toBe(seed);
+  });
+
+  it("returns true for mark-only drift over canonical playground seed", async () => {
+    const seed = JSON.stringify(buildPlaygroundContent("zh"));
+    const note = await noteStorage.create({
+      title: "格式试炼场",
+      content: seed,
+      contentPlain: "格式试炼场",
+    });
+    useNoteStore.setState({ notes: [note] });
+    dbUpdate.mockClear();
+
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          content?: Array<{
+            content?: Array<{
+              type?: string;
+              text?: string;
+              marks?: unknown[];
+            }>;
+          }>;
+        }>;
+      }>;
+    };
+    const listsIndex = parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
+    );
+    const firstItemText =
+      parsed.content[listsIndex + 1]?.content?.[0]?.content?.[0]?.content?.[0];
+    if (firstItemText) {
+      firstItemText.marks = [{ type: "bold" }];
+    }
+
+    const saved = await useNoteStore
+      .getState()
+      .saveNoteContent(note.id, JSON.stringify(parsed));
+
+    expect(saved).toBe(true);
+    expect(dbUpdate).toHaveBeenCalledOnce();
   });
 
   it("propagates storage errors from saveNoteContent", async () => {

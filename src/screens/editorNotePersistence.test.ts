@@ -29,6 +29,15 @@ describe("editorNotePersistence", () => {
     expect(showToast).not.toHaveBeenCalled();
   });
 
+  it("returns false when content save is skipped without throwing", async () => {
+    const save = vi.fn().mockResolvedValue(false);
+
+    expect(await persistNoteContent(save, "note-1", '{"drift":true}')).toBe(
+      false,
+    );
+    expect(showToast).not.toHaveBeenCalled();
+  });
+
   it("shows toast and returns false when content save fails", async () => {
     const save = vi.fn().mockRejectedValue(new Error("disk full"));
 

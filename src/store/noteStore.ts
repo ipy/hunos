@@ -32,7 +32,7 @@ interface NoteStore {
     id: string,
     content: string,
     writeEpoch?: number,
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   saveNoteTitle: (
     id: string,
     title: string,
@@ -75,7 +75,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
 
   saveNoteContent: async (id, content, writeEpoch) => {
     if (isStalePlaygroundWrite(id, writeEpoch)) {
-      return;
+      return false;
     }
     const existing =
       get().notes.find((n) => n.id === id) ?? (await noteStorage.get(id));
@@ -88,7 +88,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         useSettingsStore.getState().locale,
       )
     ) {
-      return;
+      return false;
     }
     const applied = await noteStorage.update(id, { content });
     const sanitized = applied?.content ?? content;
@@ -103,6 +103,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         ),
       });
     }
+    return true;
   },
 
   saveNoteTitle: async (id, title, writeEpoch) => {

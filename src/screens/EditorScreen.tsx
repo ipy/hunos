@@ -1514,6 +1514,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         >
           <EditorToolbar
             editor={editorInstance}
+            layoutMode={layout}
             formatOverlayOpen={showActions || showStats}
           />
         </div>
