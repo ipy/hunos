@@ -120,7 +120,9 @@
     "backlinks": {
       "title": "Backlinks",
       "empty": "No backlinks yet",
-      "hint": "Other notes linking to this one will appear here"
+      "hint": "Other notes linking to this one will appear here",
+      "outgoing": "Links to",
+      "incoming": "Linked from"
     },
     "wikiLink": {
       "menuLabel": "Link to a note",

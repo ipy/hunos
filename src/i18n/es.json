@@ -119,7 +119,9 @@
     "backlinks": {
       "title": "Retroenlaces",
       "empty": "Aún no hay retroenlaces",
-      "hint": "Las notas que enlacen a esta aparecerán aquí"
+      "hint": "Las notas que enlacen a esta aparecerán aquí",
+      "outgoing": "Enlaces a",
+      "incoming": "Enlazado desde"
     },
     "wikiLink": {
       "menuLabel": "Enlazar a una nota",

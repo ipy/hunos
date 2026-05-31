@@ -29,8 +29,29 @@ describe("BacklinksPanel automation testids", () => {
     );
   });
 
-  it("derives per-note item testids from note id", () => {
-    expect(backlinksItemTestId("pg-zh")).toBe("backlinks-item-pg-zh");
+  it("derives per-link item testids from link id", () => {
+    expect(backlinksItemTestId("link-abc")).toBe("backlinks-item-link-abc");
+  });
+
+  it("keeps item testids unique when two rows share the same note id", () => {
+    const rowA = {
+      linkId: "link-1",
+      noteId: "pg-zh",
+      noteTitle: "格式试炼场",
+      context: "first [[项目文档]]",
+      type: "wiki_link" as const,
+    };
+    const rowB = {
+      linkId: "link-2",
+      noteId: "pg-zh",
+      noteTitle: "格式试炼场",
+      context: "second [[项目文档]]",
+      type: "wiki_link" as const,
+    };
+    expect(backlinksItemTestId(rowA.linkId)).not.toBe(
+      backlinksItemTestId(rowB.linkId),
+    );
+    expect(() => assertUniqueBacklinkPanelKeys([rowA, rowB], [])).not.toThrow();
   });
 
   it("keeps row keys unique after render-time dedupe of duplicate link ids", () => {
@@ -95,11 +116,16 @@ describe("BacklinksPanel automation testids", () => {
     expect(panelSource).toContain("Promise.all([");
     expect(panelSource).toContain("graphEngine.getBacklinks(noteId)");
     expect(panelSource).toContain("graphEngine.getOutgoingLinks(noteId)");
-    expect(panelSource).toContain("setBacklinks(dedupeBacklinkResults(incoming))");
-    expect(panelSource).toContain("setOutgoing(dedupeBacklinkResults(outgoing))");
     expect(panelSource).toContain(
-      "data-testid={backlinksItemTestId(bl.noteId)}",
+      "setBacklinks(dedupeBacklinkResults(incoming))",
     );
+    expect(panelSource).toContain(
+      "setOutgoing(dedupeBacklinkResults(outgoing))",
+    );
+    expect(panelSource).toContain(
+      "data-testid={backlinksItemTestId(bl.linkId)}",
+    );
+    expect(panelSource).toContain("data-link-key={bl.linkId}");
     expect(panelSource).toContain("data-note-title={bl.noteTitle}");
   });
 });

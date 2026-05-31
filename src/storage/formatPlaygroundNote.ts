@@ -13,7 +13,7 @@ import { sanitizeBlockImageNoteContent } from "@/utils/migrateBlockImageFloor";
 
 type PlaygroundLocale = "en" | "zh";
 
-export const PLAYGROUND_CONTENT_VERSION = 24;
+export const PLAYGROUND_CONTENT_VERSION = 25;
 
 export const FORMAT_PLAYGROUND_TITLES: readonly string[] = [
   "Format Playground",

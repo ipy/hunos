@@ -11,8 +11,9 @@ export const BACKLINKS_PANEL_TOGGLE_TESTID = "backlinks-panel-toggle";
 export const BACKLINKS_OUTGOING_SECTION_TESTID = "backlinks-outgoing-section";
 export const BACKLINKS_INCOMING_SECTION_TESTID = "backlinks-incoming-section";
 
-export function backlinksItemTestId(noteId: string): string {
-  return `backlinks-item-${noteId}`;
+/** Per-row test id — linkId is unique even when multiple rows share noteId. */
+export function backlinksItemTestId(linkId: string): string {
+  return `backlinks-item-${linkId}`;
 }
 
 /** Stable React key when linkId alone may duplicate across wiki-link rows. */
@@ -97,7 +98,8 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
   ) => (
     <div
       key={backlinksRowKey(section, bl, index)}
-      data-testid={backlinksItemTestId(bl.noteId)}
+      data-testid={backlinksItemTestId(bl.linkId)}
+      data-link-key={bl.linkId}
       data-note-title={bl.noteTitle}
       onClick={() => setActiveNote(bl.noteId)}
       style={{

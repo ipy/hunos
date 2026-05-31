@@ -1,7 +1,7 @@
 {
   "type": "doc",
   "attrs": {
-    "playgroundContentVersion": 25,
+    "playgroundContentVersion": 24,
     "playgroundContentLocale": "zh"
   },
   "content": [
@@ -602,14 +602,6 @@
         {
           "type": "text",
           "text": " 详见 "
-        },
-        {
-          "type": "text",
-          "text": "[[项目文档]]"
-        },
-        {
-          "type": "text",
-          "text": " 与 "
         },
         {
           "type": "text",
