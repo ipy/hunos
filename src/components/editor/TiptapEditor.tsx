@@ -27,7 +27,11 @@ import { MarkdownStarDebrisCleanup } from "./MarkdownStarDebrisCleanup";
 import { DocumentEndKeyboardShortcuts } from "./DocumentEndKeyboardShortcuts";
 import { TASK_LIST_TOGGLE_REORDER_META } from "./taskSinkUtils";
 import { applyHideCompletedTasksDomAttribute } from "@/utils/hideCompletedTasksDom";
-import { WikiLinkDecoration } from "./WikiLinkDecoration";
+import { registerWikiLinkActivator } from "@/testing/hunos-e2e-bridge";
+import {
+  WikiLinkDecoration,
+  activateWikiLinkByTitle,
+} from "./WikiLinkDecoration";
 import { WikiLinkSuggestion } from "./WikiLinkSuggestion";
 import { TagSuggestion } from "./TagSuggestion";
 import { TagDecoration } from "./TagDecoration";
@@ -411,6 +415,19 @@ export function TiptapEditor({
 
   const pMargin = paragraphSpacing > 0 ? `${paragraphSpacing}em` : "0.5em";
 
+  const wikiLinkClickRef = useRef(handleWikiLinkClick);
+  wikiLinkClickRef.current = handleWikiLinkClick;
+
+  useEffect(() => {
+    if (!editor) return;
+    registerWikiLinkActivator((title) =>
+      activateWikiLinkByTitle(editor.view, title, (t) =>
+        wikiLinkClickRef.current(t),
+      ),
+    );
+    return () => registerWikiLinkActivator(null);
+  }, [editor]);
+
   return (
     <>
       <style>{`
@@ -638,6 +655,9 @@ export function TiptapEditor({
           text-decoration: underline;
           text-decoration-style: dotted;
           cursor: pointer;
+          display: inline;
+          vertical-align: baseline;
+          pointer-events: auto;
         }
         .find-match-inactive {
           background: ${theme.colors.accentLight};

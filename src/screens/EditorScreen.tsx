@@ -17,6 +17,7 @@ import { editorContentMatchesStoredJson } from "@/components/editor/noteSwitchCo
 import { EditorStatusBar } from "@/components/editor/EditorStatusBar";
 import { EditorToolbar } from "@/components/editor/EditorToolbar";
 import { EditorFindBar } from "@/components/editor/EditorFindBar";
+import { EditorNoteSearch } from "@/components/editor/EditorNoteSearch";
 import { BacklinksPanel } from "@/components/backlinks/BacklinksPanel";
 import { InfoPanel } from "@/components/editor/InfoPanel";
 import { exportAndCopy, exportAndDownload } from "@/utils/export";
@@ -127,12 +128,16 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     requestFindInNote,
     focusNewNoteTitleSignal,
     clearFocusNewNoteTitle,
+    noteSearchOpen,
+    clearNoteSearchOpen,
+    openNoteSearch,
   } = useUIStore();
   const settings = useSettingsStore();
   const { hideCompletedTasks, setHideCompletedTasks } = settings;
   const [showActions, setShowActions] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
+  const [noteSearchVisible, setNoteSearchVisible] = useState(false);
   const [editorInstance, setEditorInstance] = useState<Editor | null>(null);
   const editorInstanceRef = useRef<Editor | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
@@ -802,12 +807,21 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
   useEffect(() => {
     setFindOpen(false);
+    setNoteSearchVisible(false);
   }, [note?.id]);
 
   useEffect(() => {
     if (findInNoteSignal === 0) return;
+    setNoteSearchVisible(false);
     setFindOpen(true);
   }, [findInNoteSignal]);
+
+  useEffect(() => {
+    if (!noteSearchOpen) return;
+    setFindOpen(false);
+    setNoteSearchVisible(true);
+    clearNoteSearchOpen();
+  }, [noteSearchOpen, clearNoteSearchOpen]);
 
   useEffect(() => {
     if (focusNewNoteTitleSignal === 0) return;
@@ -1287,6 +1301,48 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
             {!isCompactChrome && (
               <>
                 <button
+                  type="button"
+                  data-testid="editor-note-search-toggle"
+                  onClick={() => openNoteSearch()}
+                  aria-label={t("notes.search.placeholder")}
+                  title={t("notes.search.placeholder")}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 7,
+                    borderRadius: theme.radius.full,
+                    display: "flex",
+                    minWidth: 44,
+                    minHeight: 44,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: noteSearchVisible
+                      ? theme.colors.accentLight
+                      : "transparent",
+                    transition: "background-color 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!noteSearchVisible)
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.surfaceHover;
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!noteSearchVisible)
+                      e.currentTarget.style.backgroundColor = "transparent";
+                  }}
+                >
+                  <Icon
+                    name="search"
+                    size={17}
+                    color={
+                      noteSearchVisible
+                        ? theme.colors.accent
+                        : theme.colors.textTertiary
+                    }
+                  />
+                </button>
+                <button
                   data-testid="info-panel-toggle"
                   onPointerDownCapture={() => {
                     if (!showStats) captureSelectionForOverlay();
@@ -1383,6 +1439,10 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
             useUIStore.setState({ findInNoteReplaceMode: false });
           }}
         />
+      )}
+
+      {noteSearchVisible && (
+        <EditorNoteSearch onClose={() => setNoteSearchVisible(false)} />
       )}
 
       {/* Action menu with backdrop */}

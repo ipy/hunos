@@ -72,6 +72,33 @@ function wikiLinkMatchAtCoords(
   );
 }
 
+export function findWikiLinkContentInEventPath(
+  event: Event,
+): HTMLElement | null {
+  const path = event.composedPath();
+  for (const node of path) {
+    if (
+      node instanceof HTMLElement &&
+      node.classList.contains("wiki-link-content")
+    ) {
+      return node;
+    }
+  }
+  return null;
+}
+
+/** Programmatically open a wiki-link target (works when decoration bbox is 0×0). */
+export function activateWikiLinkByTitle(
+  view: EditorView,
+  title: string,
+  onWikiLinkClick: (title: string) => void,
+): boolean {
+  const match = findWikiLinkByTitle(view.state.doc, title);
+  if (!match) return false;
+  void Promise.resolve(onWikiLinkClick(match.title));
+  return true;
+}
+
 /** Resolve the document span for a `.wiki-link-content` decoration target. */
 export function wikiLinkMatchFromDomTarget(
   view: EditorView,
@@ -124,8 +151,7 @@ function captureWikiLinkPreClick(
   setPreClick: (from: number, span: { start: number; end: number }) => void,
   clearPreClick: () => void,
 ): void {
-  const target = event.target as HTMLElement;
-  const linkEl = target.closest(".wiki-link-content");
+  const linkEl = findWikiLinkContentInEventPath(event);
   if (!linkEl) {
     clearPreClick();
     return;
@@ -216,7 +242,39 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
             captureWikiLinkPreClick(view, event, setPreClick, clearPreClick);
           };
 
+          const onClickCapture = (event: MouseEvent) => {
+            const linkEl = findWikiLinkContentInEventPath(event);
+            if (!linkEl) return;
+
+            const linkAtPos = wikiLinkMatchFromDomTarget(view, linkEl);
+            if (!linkAtPos) return;
+
+            const selectionFromBeforeClick =
+              preClickLinkSpan?.start === linkAtPos.start &&
+              preClickLinkSpan?.end === linkAtPos.end &&
+              preClickSelectionFrom !== null
+                ? preClickSelectionFrom
+                : view.state.selection.from;
+
+            preClickSelectionFrom = null;
+            preClickLinkSpan = null;
+
+            const handled = navigateWikiLinkFromTarget(
+              view,
+              linkEl,
+              event,
+              selectionFromBeforeClick,
+              onWikiLinkClick,
+              navigationInFlight,
+            );
+            if (handled) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+          };
+
           view.dom.addEventListener("pointerdown", onPointerDownCapture, true);
+          view.dom.addEventListener("click", onClickCapture, true);
           return {
             destroy() {
               view.dom.removeEventListener(
@@ -224,6 +282,7 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
                 onPointerDownCapture,
                 true,
               );
+              view.dom.removeEventListener("click", onClickCapture, true);
             },
           };
         },
@@ -252,8 +311,7 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
                 return false;
               }
 
-              const target = event.target as HTMLElement;
-              const linkEl = target.closest(".wiki-link-content");
+              const linkEl = findWikiLinkContentInEventPath(event);
               if (!linkEl) return false;
 
               event.preventDefault();
@@ -268,8 +326,7 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
             },
           },
           handleClick(view, pos, event) {
-            const target = event.target as HTMLElement;
-            const linkEl = target.closest(".wiki-link-content");
+            const linkEl = findWikiLinkContentInEventPath(event);
             if (!linkEl) {
               preClickSelectionFrom = null;
               preClickLinkSpan = null;

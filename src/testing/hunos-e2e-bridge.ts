@@ -4,9 +4,16 @@ import { useTagStore } from "@/store/tagStore";
 import { useUIStore } from "@/store/uiStore";
 
 let e2eEditor: Editor | null = null;
+let wikiLinkActivator: ((title: string) => boolean) | null = null;
 
 export function registerHunosE2eEditor(editor: Editor | null): void {
   e2eEditor = editor;
+}
+
+export function registerWikiLinkActivator(
+  activator: ((title: string) => boolean) | null,
+): void {
+  wikiLinkActivator = activator;
 }
 
 /** Playwright Harmony/WebView E2E — set when building with HUNOS_E2E=1. */
@@ -21,6 +28,8 @@ export function mountHunosE2eBridge(): void {
       insertHeadingAtEnd: (level: 1 | 2 | 3, text: string) => boolean;
       editorUndo: () => boolean;
       requestFindInNote: (replace?: boolean) => void;
+      openNoteSearch: () => void;
+      activateWikiLink: (title: string) => boolean;
     };
   };
   w.__hunosE2e = {
@@ -65,5 +74,7 @@ export function mountHunosE2eBridge(): void {
       useUIStore
         .getState()
         .requestFindInNote(replace ? { replace: true } : undefined),
+    openNoteSearch: () => useUIStore.getState().openNoteSearch(),
+    activateWikiLink: (title: string) => wikiLinkActivator?.(title) ?? false,
   };
 }

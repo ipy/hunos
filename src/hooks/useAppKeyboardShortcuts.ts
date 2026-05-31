@@ -19,7 +19,7 @@ export function useAppKeyboardShortcuts() {
   const layout = useAdaptiveLayout();
 
   useEffect(() => {
-    if (layout !== "desktop") return;
+    if (layout === "mobile") return;
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return;

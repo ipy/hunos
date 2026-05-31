@@ -92,11 +92,16 @@ describe("buildWikiLinkDecorations", () => {
     expect(wikiLinkSource).toContain(
       'addEventListener("pointerdown", onPointerDownCapture, true)',
     );
+    expect(wikiLinkSource).toContain(
+      'addEventListener("click", onClickCapture, true)',
+    );
   });
 
   it("resolves wiki-link span from DOM title without click pos (AC41)", () => {
     expect(wikiLinkSource).toContain("findWikiLinkByTitle");
     expect(wikiLinkSource).toContain("wikiLinkMatchFromDomTarget");
+    expect(wikiLinkSource).toContain("findWikiLinkContentInEventPath");
+    expect(wikiLinkSource).toContain("activateWikiLinkByTitle");
     expect(wikiLinkSource).toContain('tabindex: "0"');
     expect(wikiLinkSource).toContain("keydown(view, event)");
   });
