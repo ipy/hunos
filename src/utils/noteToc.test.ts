@@ -101,7 +101,7 @@ describe("extractTocFromContent", () => {
 });
 
 describe("deriveToc", () => {
-  it("prefers live editor JSON over stale persisted content", () => {
+  it("prefers live editor doc over stale persisted content", () => {
     const staleContent = JSON.stringify(sampleDoc);
     const liveDoc = {
       type: "doc",
@@ -113,11 +113,24 @@ describe("deriveToc", () => {
         },
       ],
     };
-    const editor = { getJSON: () => liveDoc } as unknown as Editor;
+    const headingNode = {
+      type: { name: "heading" },
+      attrs: { level: 2 },
+      textContent: "Iter92 Renamed Heading",
+    };
+    const editor = {
+      state: {
+        doc: {
+          descendants: (fn: (node: typeof headingNode, pos: number) => void) => {
+            fn(headingNode, 0);
+          },
+        },
+      },
+    } as unknown as Editor;
     const note = baseNote({ content: staleContent });
 
     expect(deriveToc(note, editor)).toEqual([
-      { level: 2, text: "Iter92 Renamed Heading" },
+      { level: 2, text: "Iter92 Renamed Heading", docPos: 0 },
     ]);
   });
 

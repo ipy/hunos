@@ -5,6 +5,8 @@ import type { Editor } from "@tiptap/react";
 export interface TocItem {
   level: number;
   text: string;
+  /** Live editor position; used for TOC scroll jumps. */
+  docPos?: number;
 }
 
 function walkDocNodes(
@@ -54,7 +56,14 @@ export function extractTocFromContent(content: string): TocItem[] {
 }
 
 export function extractTocFromEditor(editor: Editor): TocItem[] {
-  return extractTocFromDoc(editor.getJSON());
+  const items: TocItem[] = [];
+  editor.state.doc.descendants((node, pos) => {
+    if (node.type.name !== "heading") return;
+    const text = node.textContent.trim();
+    if (!text) return;
+    items.push({ level: node.attrs.level ?? 1, text, docPos: pos });
+  });
+  return items;
 }
 
 export function extractTocFromNote(note: Note): TocItem[] {

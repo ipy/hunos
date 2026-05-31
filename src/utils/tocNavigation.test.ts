@@ -137,9 +137,16 @@ describe("scrollToTocIndex", () => {
     const editor = {
       state,
       view: {
+        state,
         dom: { parentElement: scrollEl },
         domAtPos: () => ({
           node: { nodeType: 3, parentElement: headingEl },
+        }),
+        coordsAtPos: () => ({
+          top: 400,
+          bottom: 428,
+          left: 24,
+          right: 376,
         }),
       },
       chain: () => {
@@ -258,9 +265,16 @@ describe("handleInfoPanelTocTap", () => {
     const editor = {
       state,
       view: {
+        state,
         dom: { parentElement: scrollEl },
         domAtPos: () => ({
           node: { nodeType: 3, parentElement: headingEl },
+        }),
+        coordsAtPos: () => ({
+          top: 200,
+          bottom: 228,
+          left: 24,
+          right: 376,
         }),
       },
       chain: () => {

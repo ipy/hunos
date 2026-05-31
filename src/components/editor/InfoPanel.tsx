@@ -25,6 +25,15 @@ interface InfoPanelProps {
 
 const DRAG_CLOSE_THRESHOLD = 80;
 
+function tocEntryIndexFromTarget(target: EventTarget | null): number | null {
+  if (!(target instanceof HTMLElement)) return null;
+  const btn = target.closest('[data-testid^="info-panel-toc-entry-"]');
+  if (!(btn instanceof HTMLElement)) return null;
+  const match = btn.dataset.testid?.match(/^info-panel-toc-entry-(\d+)$/);
+  if (!match) return null;
+  return Number(match[1]);
+}
+
 function formatDateTime(ts: number): string {
   const d = new Date(ts);
   const day = d.getDate();
@@ -381,7 +390,21 @@ export function InfoPanel({
           )}
 
           {activeTab === "toc" && (
-            <div data-testid="info-panel-toc-list">
+            <div
+              data-testid="info-panel-toc-list"
+              onPointerDownCapture={(event) => {
+                if (!editor || event.button !== 0) return;
+                const index = tocEntryIndexFromTarget(event.target);
+                if (index == null) return;
+                event.preventDefault();
+                const btn = (event.target as HTMLElement).closest(
+                  '[data-testid^="info-panel-toc-entry-"]',
+                ) as HTMLElement | null;
+                btn?.scrollIntoView({ block: "nearest" });
+                handleInfoPanelTocTap(editor, index, toc[index]?.docPos);
+              }}
+              style={{ paddingBottom: 48 }}
+            >
               {toc.length === 0 ? (
                 <p
                   style={{
@@ -399,10 +422,11 @@ export function InfoPanel({
                     key={i}
                     type="button"
                     data-testid={`info-panel-toc-entry-${i}`}
-                    onPointerDown={(event) => {
-                      if (!editor || event.button !== 0) return;
+                    onKeyDown={(event) => {
+                      if (!editor) return;
+                      if (event.key !== "Enter" && event.key !== " ") return;
                       event.preventDefault();
-                      handleInfoPanelTocTap(editor, i);
+                      handleInfoPanelTocTap(editor, i, item.docPos);
                     }}
                     style={{
                       display: "block",
