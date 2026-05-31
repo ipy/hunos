@@ -48,6 +48,16 @@ describe("iteration 46 — TOC click activation", () => {
   });
 });
 
+describe("iteration 46 — e2e editor bridge", () => {
+  it("registers the live editor with hunos-e2e-bridge when __HUNOS_E2E__", () => {
+    expect(editorSource).toContain('from "@/testing/hunos-e2e-bridge"');
+    expect(editorSource).toContain("registerHunosE2eEditor");
+    expect(editorSource).toMatch(
+      /__HUNOS_E2E__[\s\S]*registerHunosE2eEditor\(editor\)/,
+    );
+  });
+});
+
 describe("iteration 46 — info panel tab memory", () => {
   it("remembers tab on close and restores on reopen", () => {
     expect(infoPanelSource).toContain("initialInfoPanelTab");

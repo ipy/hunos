@@ -54,12 +54,14 @@ import {
 } from "@/storage/formatPlaygroundNote";
 import {
   clearStashedEditorAutosave,
+  type EditorAutosaveFlushResult,
   peekStashedEditorAutosaveForNote,
   registerEditorAutosaveFlush,
   stashEditorAutosaveSnapshot,
   takeStashedEditorAutosaveForNote,
   unregisterEditorAutosaveFlush,
 } from "@/store/editorAutosaveRegistry";
+import { registerHunosE2eEditor } from "@/testing/hunos-e2e-bridge";
 import { bindEditorLifecycleAutosaveFlush } from "@/store/editorLifecycleAutosave";
 import {
   bumpPlaygroundWriteEpoch,
