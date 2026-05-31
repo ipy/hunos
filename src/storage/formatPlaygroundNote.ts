@@ -544,7 +544,37 @@ function stripTextFromPlaygroundNode(
   const content = node.content?.length
     ? stripTextFromPlaygroundNodes(node.content)
     : undefined;
-  return { ...node, content: content?.length ? content : undefined };
+  return { type: node.type, content: content?.length ? content : undefined };
+}
+
+/** Keep only attrs that affect doc structure; TipTap default attrs are ignored. */
+function normalizePlaygroundStructuralNodeForFingerprint(
+  node: PlaygroundDocNode,
+): PlaygroundDocNode {
+  const structuralAttrsByType: Record<string, readonly string[]> = {
+    heading: ["level"],
+    taskItem: ["checked"],
+    codeBlock: ["language"],
+  };
+  const allowed = structuralAttrsByType[node.type];
+  const next: PlaygroundDocNode = { type: node.type };
+  if (allowed?.length && node.attrs) {
+    const attrs: Record<string, unknown> = {};
+    for (const key of allowed) {
+      if (node.attrs[key] !== undefined) {
+        attrs[key] = node.attrs[key];
+      }
+    }
+    if (Object.keys(attrs).length > 0) {
+      next.attrs = attrs;
+    }
+  }
+  if (node.content?.length) {
+    next.content = node.content.map(
+      normalizePlaygroundStructuralNodeForFingerprint,
+    );
+  }
+  return next;
 }
 
 function stripTextFromPlaygroundNodes(
@@ -563,7 +593,9 @@ function normalizePlaygroundDocNodeTreeForFingerprint(
     stripTrailingEmptyParagraphs(parsed.content),
   ).map((node) => {
     const migratedImage = migratePlaygroundSampleImageNode(node);
-    return migratedImage ?? node;
+    return normalizePlaygroundStructuralNodeForFingerprint(
+      migratedImage ?? node,
+    );
   });
   return {
     type: "doc",

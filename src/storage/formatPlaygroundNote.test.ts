@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   LEGACY_PLAYGROUND_SAMPLE_IMAGE_SRC,
   PLAYGROUND_SAMPLE_IMAGE_HEIGHT,
@@ -2025,6 +2027,39 @@ describe("comparePlaygroundStructuralDrift", () => {
         editorEcho,
         "zh",
       ),
+    ).toBe(false);
+  });
+
+  it("treats captured TipTap editor echo with default attrs as no drift vs stored seed", () => {
+    const stored = readFileSync(
+      join(
+        process.cwd(),
+        "src/storage/fixtures/playground-zh-stored.json",
+      ),
+      "utf-8",
+    );
+    const live = readFileSync(
+      join(
+        process.cwd(),
+        "src/storage/fixtures/playground-zh-tiptap-echo.json",
+      ),
+      "utf-8",
+    );
+    expect(comparePlaygroundStructuralDrift(live, stored, "zh")).toBe(false);
+    expect(
+      playgroundWriteRegressesCanonicalStored("格式试炼场", stored, live, "zh"),
+    ).toBe(false);
+    expect(
+      playgroundFormatQaDraftHidesRestoreChip(live, "格式试炼场", stored, "zh"),
+    ).toBe(true);
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: stored,
+        pendingDraftContent: live,
+        fallbackLocale: "zh",
+      }),
     ).toBe(false);
   });
 
