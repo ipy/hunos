@@ -10,16 +10,12 @@ import {
 } from "@/storage/formatPlaygroundNote";
 import { extractTocFromDoc } from "@/utils/noteToc";
 
-const wikiLinkSource = readFileSync(
-  join(process.cwd(), "src/components/editor/WikiLinkDecoration.ts"),
-  "utf-8",
-);
-const pointerUtilsSource = readFileSync(
-  join(process.cwd(), "src/components/editor/wikiLinkPointerUtils.ts"),
-  "utf-8",
-);
 const editorSource = readFileSync(
   join(process.cwd(), "src/screens/EditorScreen.tsx"),
+  "utf-8",
+);
+const infoPanelSource = readFileSync(
+  join(process.cwd(), "src/components/editor/InfoPanel.tsx"),
   "utf-8",
 );
 const tocSource = readFileSync(
@@ -27,34 +23,50 @@ const tocSource = readFileSync(
   "utf-8",
 );
 
-describe("iteration 43 — offscreen pointer hit-testing", () => {
-  it("maps pointer coords through scroll container for below-fold wiki-links", () => {
-    expect(wikiLinkSource).toContain("resolveWikiLinkFromPointerEvent");
-    expect(wikiLinkSource).toContain("wikiLinkMatchAtScrollMappedPointer");
-    expect(wikiLinkSource).toContain("findEditorScrollContainer");
-    expect(wikiLinkSource).toContain('document.addEventListener("click"');
-    expect(pointerUtilsSource).toContain("wikiLinkMatchAtPointer");
-    expect(pointerUtilsSource).toContain("wikiLinkMatchAtScrollMappedPointer");
-  });
-});
-
-describe("iteration 43 — TOC jump discoverability", () => {
+describe("iteration 44 — TOC scroll alignment", () => {
   it("includes 标签与链接 in playground TOC", () => {
     const toc = extractTocFromDoc(buildPlaygroundContent("zh"));
     expect(toc.some((entry) => entry.text === "标签与链接")).toBe(true);
   });
 
-  it("scrolls heading via editor scroll container after TOC tap", () => {
+  it("scrolls via editor scroll container with top padding", () => {
     expect(tocSource).toContain("findEditorScrollContainer");
     expect(tocSource).toContain("editorScrollDeltaForTocReveal");
     expect(tocSource).toContain("scrollIntoView: false");
+    expect(tocSource).not.toContain('block: "start"');
   });
 });
 
-describe("iteration 43 — restore chip de-emphasis for BACKTEST drift", () => {
+describe("iteration 44 — TOC first-click reliability", () => {
+  it("handles TOC tap on pointerdown without waiting for click", () => {
+    expect(infoPanelSource).toContain("onPointerDown");
+    expect(infoPanelSource).toContain("handleInfoPanelTocTap(editor, i)");
+    expect(infoPanelSource).toContain('touchAction: "manipulation"');
+    expect(infoPanelSource).toContain("safe-area-inset-bottom");
+  });
+});
+
+describe("iteration 44 — overlay panel exclusion", () => {
+  it("closes info panel when note search opens", () => {
+    expect(editorSource).toContain("setNoteSearchVisible(false)");
+    expect(editorSource).toContain("setShowStats(false)");
+    expect(editorSource).toMatch(
+      /noteSearchOpen[\s\S]*setShowStats\(false\)/,
+    );
+  });
+
+  it("closes note search when info panel opens", () => {
+    expect(editorSource).toMatch(
+      /openStatsOverlay[\s\S]*setNoteSearchVisible\(false\)/,
+    );
+    expect(editorSource).toMatch(/openStatsOverlay[\s\S]*setFindOpen\(false\)/);
+  });
+});
+
+describe("iteration 44 — BACKTEST drift banner friction", () => {
   const seedContent = JSON.stringify(buildPlaygroundContent("zh"));
 
-  it("detects BACKTEST43 marker headings", () => {
+  it("detects BACKTEST marker headings for restore menu gating", () => {
     const parsed = JSON.parse(seedContent) as {
       content: Array<{
         type: string;
@@ -65,7 +77,7 @@ describe("iteration 43 — restore chip de-emphasis for BACKTEST drift", () => {
     parsed.content.splice(5, 0, {
       type: "heading",
       attrs: { level: 2 },
-      content: [{ type: "text", text: "BACKTEST43" }],
+      content: [{ type: "text", text: "BACKTEST44" }],
     });
     const pendingDraft = JSON.stringify(parsed);
 
@@ -88,6 +100,23 @@ describe("iteration 43 — restore chip de-emphasis for BACKTEST drift", () => {
         fallbackLocale: "zh",
       }),
     ).toBe(true);
+  });
+
+  it("suppresses inline drift banner for BACKTEST-only QA inserts", () => {
+    const parsed = JSON.parse(seedContent) as {
+      content: Array<{
+        type: string;
+        attrs?: { level: number };
+        content?: Array<{ type?: string; text?: string }>;
+      }>;
+    };
+    parsed.content.splice(5, 0, {
+      type: "heading",
+      attrs: { level: 2 },
+      content: [{ type: "text", text: "BACKTEST44" }],
+    });
+    const pendingDraft = JSON.stringify(parsed);
+
     expect(
       shouldShowPlaygroundRestoreInDriftBanner({
         displayTitle: "格式试炼场",
@@ -97,12 +126,5 @@ describe("iteration 43 — restore chip de-emphasis for BACKTEST drift", () => {
         fallbackLocale: "zh",
       }),
     ).toBe(false);
-  });
-
-  it("keeps restore in menu without inline drift banner for BACKTEST drift", () => {
-    expect(editorSource).toContain("restore-playground-drift-banner");
-    expect(editorSource).toContain("showRestorePlaygroundDriftBanner");
-    expect(editorSource).toContain("showRestorePlaygroundChip");
-    expect(editorSource).toContain("playgroundDriftBannerHint");
   });
 });

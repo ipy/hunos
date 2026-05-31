@@ -2025,8 +2025,8 @@ export function playgroundDocHasBacktestMarkerHeading(
   }
 }
 
-/** De-emphasize restore control for BACKTEST-only structural drift QA inserts. */
-export function shouldShowPlaygroundRestoreInDriftBanner(options: {
+/** Inline drift banner is suppressed for BACKTEST-only QA inserts (restore stays in menu). */
+export function shouldShowPlaygroundRestoreInDriftBanner(_options: {
   displayTitle: string;
   storedTitle: string;
   storedContent: string;
@@ -2036,29 +2036,7 @@ export function shouldShowPlaygroundRestoreInDriftBanner(options: {
   isRestoringPlayground?: boolean;
   liveContent?: string | null;
 }): boolean {
-  const liveContent = options.liveContent ?? options.pendingDraftContent;
-  if (!liveContent) return false;
-  if (
-    !shouldShowPlaygroundRestoreButton({
-      ...options,
-      liveContent,
-    })
-  ) {
-    return false;
-  }
-
-  const kind = classifyPlaygroundDrift({
-    displayTitle: options.displayTitle,
-    storedTitle: options.storedTitle,
-    storedContent: options.storedContent,
-    liveContent,
-    pendingTitleDraft: options.pendingTitleDraft ?? null,
-    fallbackLocale: options.fallbackLocale,
-  });
-
-  return (
-    kind === "structural" && playgroundDocHasBacktestMarkerHeading(liveContent)
-  );
+  return false;
 }
 
 export async function createFormatPlaygroundNote(

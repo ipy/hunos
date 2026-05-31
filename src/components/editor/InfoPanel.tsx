@@ -298,7 +298,13 @@ export function InfoPanel({
         </div>
 
         {/* Content */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "0 20px max(20px, env(safe-area-inset-bottom))",
+          }}
+        >
           {activeTab === "stats" && (
             <div>
               {/* 2x2 grid */}
@@ -393,7 +399,9 @@ export function InfoPanel({
                     key={i}
                     type="button"
                     data-testid={`info-panel-toc-entry-${i}`}
-                    onClick={() => {
+                    onPointerDown={(event) => {
+                      if (!editor || event.button !== 0) return;
+                      event.preventDefault();
                       handleInfoPanelTocTap(editor, i);
                     }}
                     style={{
@@ -406,6 +414,7 @@ export function InfoPanel({
                       border: "none",
                       borderBottom: `1px solid ${theme.colors.borderLight}`,
                       cursor: editor ? "pointer" : "default",
+                      touchAction: "manipulation",
                     }}
                   >
                     <span

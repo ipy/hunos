@@ -1,8 +1,12 @@
 import { Schema } from "@tiptap/pm/model";
 import { EditorState } from "@tiptap/pm/state";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { extractTocFromDoc } from "./noteToc";
-import { scrollToTocIndex, handleInfoPanelTocTap } from "./tocNavigation";
+import {
+  editorScrollDeltaForTocReveal,
+  scrollToTocIndex,
+  handleInfoPanelTocTap,
+} from "./tocNavigation";
 
 const schema = new Schema({
   nodes: {
@@ -21,7 +25,45 @@ function docFromJson(json: unknown) {
   return schema.nodeFromJSON(json);
 }
 
+describe("editorScrollDeltaForTocReveal", () => {
+  it("aligns heading below scroll pane top without overshooting", () => {
+    const delta = editorScrollDeltaForTocReveal({
+      scrollViewportTop: 100,
+      scrollViewportBottom: 700,
+      headingTop: 400,
+      followBlockBottom: 440,
+    });
+    expect(delta).toBe(288);
+    expect(400 - delta).toBe(112);
+  });
+
+  it("keeps follow block visible when heading would clip content below", () => {
+    const delta = editorScrollDeltaForTocReveal({
+      scrollViewportTop: 100,
+      scrollViewportBottom: 200,
+      headingTop: 350,
+      followBlockBottom: 260,
+    });
+    expect(350 - delta).toBeGreaterThanOrEqual(100);
+    expect(260 - delta).toBeLessThanOrEqual(192);
+  });
+
+  it("does not scroll heading above the pane top", () => {
+    const delta = editorScrollDeltaForTocReveal({
+      scrollViewportTop: 100,
+      scrollViewportBottom: 700,
+      headingTop: 95,
+      followBlockBottom: 130,
+    });
+    expect(95 - delta).toBeGreaterThanOrEqual(100);
+  });
+});
+
 describe("scrollToTocIndex", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("scrolls to the heading at the live TOC index", () => {
     const json = {
       type: "doc",
@@ -44,29 +86,90 @@ describe("scrollToTocIndex", () => {
     const doc = docFromJson(json);
     const state = EditorState.create({ schema, doc });
     let selectionPos = -1;
+    let scrollTop = 0;
+    const scrollEl = {
+      parentElement: null,
+      scrollHeight: 2000,
+      clientHeight: 600,
+      getBoundingClientRect: () => ({
+        top: 100,
+        bottom: 700,
+        left: 0,
+        right: 400,
+        width: 400,
+        height: 600,
+        x: 0,
+        y: 100,
+        toJSON: () => ({}),
+      }),
+      scrollTo: (opts: { top: number }) => {
+        scrollTop = opts.top;
+      },
+    };
+    const headingEl = {
+      tagName: "H2",
+      nextElementSibling: {
+        getBoundingClientRect: () => ({
+          bottom: 440,
+          top: 412,
+          left: 24,
+          right: 376,
+          width: 352,
+          height: 28,
+          x: 24,
+          y: 412,
+          toJSON: () => ({}),
+        }),
+      },
+      getBoundingClientRect: () => ({
+        top: 400,
+        bottom: 428,
+        left: 24,
+        right: 376,
+        width: 352,
+        height: 28,
+        x: 24,
+        y: 400,
+        toJSON: () => ({}),
+      }),
+      parentElement: null,
+    };
     const editor = {
       state,
       view: {
+        dom: { parentElement: scrollEl },
         domAtPos: () => ({
-          node: { scrollIntoView: () => undefined },
+          node: { nodeType: 3, parentElement: headingEl },
         }),
       },
       chain: () => {
         const chain = {
-          focus: () => chain,
+          focus: (_pos?: unknown, _opts?: { scrollIntoView?: boolean }) =>
+            chain,
           setTextSelection: (pos: number) => {
             selectionPos = pos;
             return chain;
           },
-          scrollIntoView: () => chain,
           run: () => true,
         };
         return chain;
       },
     };
 
+    vi.stubGlobal(
+      "getComputedStyle",
+      vi.fn(() => ({ overflowY: "auto" }) as CSSStyleDeclaration),
+    );
+    Object.defineProperty(scrollEl, "scrollTop", {
+      get: () => scrollTop,
+      set: (v: number) => {
+        scrollTop = v;
+      },
+    });
+
     expect(scrollToTocIndex(editor as never, 1)).toBe(true);
     expect(selectionPos).toBeGreaterThan(0);
+    expect(scrollTop).toBe(288);
   });
 
   it("returns false when the TOC index is out of range", () => {
@@ -86,7 +189,7 @@ describe("scrollToTocIndex", () => {
       chain: () => ({
         focus: () => ({
           setTextSelection: () => ({
-            scrollIntoView: () => ({ run: () => true }),
+            run: () => true,
           }),
         }),
       }),
@@ -97,6 +200,10 @@ describe("scrollToTocIndex", () => {
 });
 
 describe("handleInfoPanelTocTap", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("returns false without scrolling when editor is null", () => {
     expect(handleInfoPanelTocTap(null, 0)).toBe(false);
   });
@@ -114,30 +221,68 @@ describe("handleInfoPanelTocTap", () => {
     };
     const state = EditorState.create({ schema, doc: docFromJson(json) });
     let selectionPos = -1;
-    let closeCalled = false;
+    const scrollEl = {
+      parentElement: null,
+      scrollTop: 0,
+      scrollHeight: 800,
+      clientHeight: 600,
+      getBoundingClientRect: () => ({
+        top: 100,
+        bottom: 700,
+        left: 0,
+        right: 400,
+        width: 400,
+        height: 600,
+        x: 0,
+        y: 100,
+        toJSON: () => ({}),
+      }),
+      scrollTo: () => undefined,
+    };
+    const headingEl = {
+      tagName: "H2",
+      nextElementSibling: null,
+      getBoundingClientRect: () => ({
+        top: 200,
+        bottom: 228,
+        left: 24,
+        right: 376,
+        width: 352,
+        height: 28,
+        x: 24,
+        y: 200,
+        toJSON: () => ({}),
+      }),
+      parentElement: null,
+    };
     const editor = {
       state,
       view: {
+        dom: { parentElement: scrollEl },
         domAtPos: () => ({
-          node: { scrollIntoView: () => undefined },
+          node: { nodeType: 3, parentElement: headingEl },
         }),
       },
       chain: () => {
         const chain = {
-          focus: () => chain,
+          focus: (_pos?: unknown, _opts?: { scrollIntoView?: boolean }) =>
+            chain,
           setTextSelection: (pos: number) => {
             selectionPos = pos;
             return chain;
           },
-          scrollIntoView: () => chain,
           run: () => true,
         };
         return chain;
       },
     };
 
+    vi.stubGlobal(
+      "getComputedStyle",
+      vi.fn(() => ({ overflowY: "auto" }) as CSSStyleDeclaration),
+    );
+
     expect(handleInfoPanelTocTap(editor as never, 0)).toBe(true);
     expect(selectionPos).toBeGreaterThan(0);
-    expect(closeCalled).toBe(false);
   });
 });

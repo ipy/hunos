@@ -187,6 +187,8 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   }, []);
 
   const openStatsOverlay = useCallback(() => {
+    setNoteSearchVisible(false);
+    setFindOpen(false);
     captureSelectionForOverlay();
     setEditorFormatOverlayPanelOpen(true);
     setShowStats(true);
@@ -820,6 +822,11 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   useEffect(() => {
     if (!noteSearchOpen) return;
     setFindOpen(false);
+    if (editorInstanceRef.current) {
+      restoreEditorSelectionOnOverlayDismiss(editorInstanceRef.current);
+    }
+    setEditorFormatOverlayPanelOpen(false);
+    setShowStats(false);
     setNoteSearchVisible(true);
     clearNoteSearchOpen();
   }, [noteSearchOpen, clearNoteSearchOpen]);
