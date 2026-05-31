@@ -1480,6 +1480,40 @@ describe("playgroundWriteRegressesCanonicalStored", () => {
     ).toBe(false);
   });
 
+  it("allows appended table rows over canonical stored seed (AC5)", () => {
+    const seed = JSON.stringify(buildPlaygroundContent("zh"));
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          type: string;
+          content?: Array<{ type: string; content?: unknown[] }>;
+        }>;
+      }>;
+    };
+    const tableIndex =
+      parsed.content.findIndex(
+        (node) => node.type === "heading" && node.content?.[0]?.text === "表格",
+      ) + 1;
+    const table = parsed.content[tableIndex];
+    const templateRow = table?.content?.[1];
+    if (!table?.content || !templateRow) throw new Error("seed table missing");
+    table.content.push(
+      JSON.parse(JSON.stringify(templateRow)) as (typeof table.content)[number],
+    );
+    const markerCell =
+      table.content[3]?.content?.[0]?.content?.[0]?.content?.[0];
+    if (markerCell && "text" in markerCell) {
+      markerCell.text = "AC26-ROW-marker";
+    }
+    const edited = JSON.stringify(parsed);
+
+    expect(playgroundContentMatchesQaTableRowAppend(edited, "zh")).toBe(true);
+    expect(
+      playgroundWriteRegressesCanonicalStored("格式试炼场", seed, edited, "zh"),
+    ).toBe(false);
+  });
+
   it("allows in-node text QA writes over canonical stored seed", () => {
     const seed = JSON.stringify(buildPlaygroundContent("zh"));
     const parsed = JSON.parse(seed) as {

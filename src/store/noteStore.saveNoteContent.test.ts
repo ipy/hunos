@@ -305,6 +305,50 @@ describe("useNoteStore.saveNoteContent", () => {
     expect(notesById.get(note.id)?.content).toContain("Z");
   });
 
+  it("persists appended playground table rows over canonical seed (AC5)", async () => {
+    const seed = JSON.stringify(buildPlaygroundContent("zh"));
+    const note = await noteStorage.create({
+      title: "格式试炼场",
+      content: seed,
+      contentPlain: "格式试炼场",
+    });
+    useNoteStore.setState({ notes: [note] });
+    dbUpdate.mockClear();
+
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          type: string;
+          content?: Array<{ type: string; content?: unknown[] }>;
+        }>;
+      }>;
+    };
+    const tableIndex =
+      parsed.content.findIndex(
+        (node) => node.type === "heading" && node.content?.[0]?.text === "表格",
+      ) + 1;
+    const table = parsed.content[tableIndex];
+    const templateRow = table?.content?.[1];
+    if (!table?.content || !templateRow) throw new Error("seed table missing");
+    table.content.push(
+      JSON.parse(JSON.stringify(templateRow)) as (typeof table.content)[number],
+    );
+    const markerCell =
+      table.content[3]?.content?.[0]?.content?.[0]?.content?.[0];
+    if (markerCell && "text" in markerCell) {
+      markerCell.text = "AC26-ROW-persist";
+    }
+
+    const saved = await useNoteStore
+      .getState()
+      .saveNoteContent(note.id, JSON.stringify(parsed));
+
+    expect(saved).toBe(true);
+    expect(dbUpdate).toHaveBeenCalledOnce();
+    expect(notesById.get(note.id)?.content).toContain("AC26-ROW-persist");
+  });
+
   it("returns false when storage update fails", async () => {
     const note = await noteStorage.create({ title: "Fail path" });
     useNoteStore.setState({ notes: [note] });

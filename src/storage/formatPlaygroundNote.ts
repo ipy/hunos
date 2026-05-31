@@ -1246,6 +1246,10 @@ export function playgroundWriteRegressesCanonicalStored(
     return false;
   }
 
+  if (playgroundContentMatchesQaTableRowAppend(candidateRow, stored.seedLocale)) {
+    return false;
+  }
+
   return true;
 }
 
