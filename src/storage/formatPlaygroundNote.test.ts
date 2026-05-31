@@ -25,6 +25,7 @@ import {
   playgroundFormatQaDraftHidesRestoreChip,
   playgroundFormatQaMarkOnlyDrift,
   playgroundFormatQaStructureMatchesCanonical,
+  playgroundRestoreChipOverridesSuppress,
   comparePlaygroundStructuralDrift,
   normalizePlaygroundNodeTreeSnapshot,
   resolvePlaygroundSeedLocale,
@@ -2565,6 +2566,100 @@ describe("iter 22 restore chip and persist policy", () => {
         storedTitle: "格式试炼场",
         storedContent: seed,
         pendingDraftContent: marked,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("playgroundRestoreChipOverridesSuppress", () => {
+  const seed = JSON.stringify(buildPlaygroundContent("zh"));
+
+  function listsIndex(parsed: {
+    content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+  }) {
+    return parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
+    );
+  }
+
+  it("overrides mark-only suppress for T22-Drift title with mark-only pending draft", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          content?: Array<{
+            content?: Array<{ text?: string; marks?: unknown[] }>;
+          }>;
+        }>;
+      }>;
+    };
+    const idx = listsIndex(parsed);
+    const firstItemText =
+      parsed.content[idx + 1]?.content?.[0]?.content?.[0]?.content?.[0];
+    if (firstItemText) {
+      firstItemText.marks = [{ type: "bold" }];
+    }
+    const marked = JSON.stringify(parsed);
+
+    expect(
+      playgroundRestoreChipOverridesSuppress({
+        displayTitle: "T22-Drift",
+        storedTitle: "T22-Drift",
+        storedContent: seed,
+        pendingDraftContent: marked,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(true);
+  });
+
+  it("overrides suppress for combined T22-Drift title and T22-MIXED marker", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    const idx = listsIndex(parsed);
+    parsed.content.splice(idx + 1, 0, {
+      type: "paragraph",
+      content: [{ type: "text", text: "T22-MIXED-marker" }],
+    });
+    const drifted = JSON.stringify(parsed);
+
+    expect(
+      playgroundRestoreChipOverridesSuppress({
+        displayTitle: "T22-Drift",
+        storedTitle: "T22-Drift",
+        storedContent: drifted,
+        pendingDraftContent: drifted,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(true);
+  });
+
+  it("does not override suppress for trailing T22-doc-end QA append", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{ type?: string; text?: string }>;
+      }>;
+    };
+    while (
+      parsed.content.at(-1)?.type === "paragraph" &&
+      !parsed.content.at(-1)?.content?.length
+    ) {
+      parsed.content.pop();
+    }
+    const lastParagraph = parsed.content[parsed.content.length - 1];
+    if (lastParagraph?.type === "paragraph" && lastParagraph.content?.[0]) {
+      lastParagraph.content[0].text = `${lastParagraph.content[0].text ?? ""} T22-doc-end`;
+    }
+    const edited = JSON.stringify(parsed);
+
+    expect(
+      playgroundRestoreChipOverridesSuppress({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        pendingDraftContent: edited,
         fallbackLocale: "zh",
       }),
     ).toBe(false);

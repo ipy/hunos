@@ -42,10 +42,8 @@ import {
   playgroundEditorContentMatchesStored,
   playgroundEditorMarkOnlyDriftFromStored,
   playgroundFormatQaDraftHidesRestoreChip,
-  readFormatPlaygroundCanonicalRow,
+  playgroundRestoreChipOverridesSuppress,
   playgroundPersistedContentForRow,
-  playgroundTitleDriftedFromCanonical,
-  playgroundLiveTitleDriftedFromCanonical,
   playgroundWriteRegressesCanonicalStored,
   resolvePlaygroundSeedLocale,
   shouldShowPlaygroundRestoreButton,
@@ -956,9 +954,6 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
 
   const showRestorePlayground = useMemo(() => {
     if (!note) return false;
-    if (restoreChipSuppressed || restoreChipSuppressedRef.current) {
-      return false;
-    }
     let pendingDraftContent = pendingContentRef.current;
     if (
       pendingDraftContent == null &&
@@ -971,55 +966,25 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         pendingDraftContent = null;
       }
     }
+    const displayTitle = titleValue.trim() || note.title;
     if (
-      pendingDraftContent &&
-      isFormatPlaygroundNote(note.title, noteContentForEditor)
+      isFormatPlaygroundNote(note.title, noteContentForEditor) &&
+      playgroundRestoreChipOverridesSuppress({
+        displayTitle,
+        storedTitle: note.title,
+        storedContent: noteContentForEditor,
+        pendingDraftContent,
+        pendingTitleDraft: pendingTitleRef.current,
+        fallbackLocale: settings.locale,
+      })
     ) {
-      const row = readFormatPlaygroundCanonicalRow(
-        note.title,
-        noteContentForEditor,
-        settings.locale,
-      );
-      const displayTitle = titleValue.trim() || note.title;
-      const pendingTitle = pendingTitleRef.current;
-      const seedLocale =
-        row?.seedLocale ??
-        resolvePlaygroundSeedLocale(noteContentForEditor, settings.locale);
-      if (
-        row != null &&
-        playgroundTitleDriftedFromCanonical(
-          note.title,
-          pendingTitle,
-          row.canonicalTitle,
-        )
-      ) {
-        return true;
-      }
-      if (
-        row != null &&
-        playgroundLiveTitleDriftedFromCanonical(
-          displayTitle,
-          note.title,
-          pendingTitle,
-          row.canonicalTitle,
-        )
-      ) {
-        return true;
-      }
-      if (
-        row != null &&
-        playgroundFormatQaDraftHidesRestoreChip(
-          pendingDraftContent,
-          note.title,
-          noteContentForEditor,
-          seedLocale,
-        )
-      ) {
-        return false;
-      }
+      return true;
+    }
+    if (restoreChipSuppressed || restoreChipSuppressedRef.current) {
+      return false;
     }
     return shouldShowPlaygroundRestoreButton({
-      displayTitle: titleValue.trim() || note.title,
+      displayTitle,
       storedTitle: note.title,
       storedContent: noteContentForEditor,
       pendingDraftContent,

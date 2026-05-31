@@ -1024,6 +1024,84 @@ function playgroundLiveContentNeedsRestore(options: {
   );
 }
 
+/** True when title or structural drift must show restore chip despite mark-only suppress. */
+export function playgroundRestoreChipOverridesSuppress(options: {
+  displayTitle: string;
+  storedTitle: string;
+  storedContent: string;
+  pendingDraftContent: string | null;
+  pendingTitleDraft?: string | null;
+  fallbackLocale: Locale;
+}): boolean {
+  const {
+    displayTitle,
+    storedTitle,
+    storedContent,
+    pendingDraftContent,
+    pendingTitleDraft = null,
+    fallbackLocale,
+  } = options;
+
+  const storedRow = readFormatPlaygroundCanonicalRow(
+    storedTitle,
+    storedContent,
+    fallbackLocale,
+  );
+  if (!storedRow) {
+    return false;
+  }
+
+  const { rowContent, seedLocale, canonicalTitle, isCanonical } = storedRow;
+
+  if (
+    playgroundTitleDriftedFromCanonical(
+      storedTitle,
+      pendingTitleDraft,
+      canonicalTitle,
+    )
+  ) {
+    return true;
+  }
+
+  if (
+    playgroundLiveTitleDriftedFromCanonical(
+      displayTitle,
+      storedTitle,
+      pendingTitleDraft,
+      canonicalTitle,
+    )
+  ) {
+    return true;
+  }
+
+  if (
+    !isCanonical &&
+    formatPlaygroundNeedsRestore(storedTitle, rowContent, seedLocale)
+  ) {
+    return true;
+  }
+
+  if (pendingDraftContent != null) {
+    if (
+      playgroundFormatQaDraftHidesRestoreChip(
+        pendingDraftContent,
+        storedTitle,
+        rowContent,
+        seedLocale,
+      )
+    ) {
+      return false;
+    }
+    return formatPlaygroundNeedsRestore(
+      displayTitle,
+      pendingDraftContent,
+      seedLocale,
+    );
+  }
+
+  return false;
+}
+
 /** Header restore chip — persisted row settles UI; live editor draft still gates drift. */
 export function shouldShowPlaygroundRestoreButton(options: {
   displayTitle: string;
