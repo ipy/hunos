@@ -1565,6 +1565,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         >
           <input
             ref={titleInputRef}
+            id="note-editor-title"
             data-field="note-title"
             data-testid="note-title"
             value={titleValue}
@@ -1598,7 +1599,10 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           {showRestorePlayground && (
             <button
               type="button"
-              onClick={requestRestorePlaygroundConfirm}
+              onClick={(e) => {
+                e.preventDefault();
+                requestRestorePlaygroundConfirm();
+              }}
               aria-label={restorePlaygroundLabel}
               title={restorePlaygroundLabel}
               data-testid="restore-playground-button"

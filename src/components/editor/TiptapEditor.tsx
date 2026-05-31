@@ -315,18 +315,39 @@ export function TiptapEditor({
     editorProps: {
       attributes: {
         class: "hunos-editor",
-        ...(accessibilityLabel ? { "aria-label": accessibilityLabel } : {}),
+        ...(accessibilityLabel
+          ? {
+              "aria-label": accessibilityLabel,
+              "aria-labelledby": "note-editor-title",
+              role: "textbox",
+              "aria-multiline": "true",
+            }
+          : {}),
       },
     },
   });
 
   useEffect(() => {
     if (!editor || editor.isDestroyed) return;
-    if (accessibilityLabel) {
-      editor.view.dom.setAttribute("aria-label", accessibilityLabel);
-    } else {
-      editor.view.dom.removeAttribute("aria-label");
-    }
+    const dom = editor.view.dom;
+    const applyA11yLabel = () => {
+      if (accessibilityLabel) {
+        dom.setAttribute("aria-label", accessibilityLabel);
+        dom.setAttribute("aria-labelledby", "note-editor-title");
+        dom.setAttribute("role", "textbox");
+        dom.setAttribute("aria-multiline", "true");
+      } else {
+        dom.removeAttribute("aria-label");
+        dom.removeAttribute("aria-labelledby");
+        dom.removeAttribute("role");
+        dom.removeAttribute("aria-multiline");
+      }
+    };
+    applyA11yLabel();
+    editor.on("update", applyA11yLabel);
+    return () => {
+      editor.off("update", applyA11yLabel);
+    };
   }, [editor, accessibilityLabel]);
 
   useEffect(() => {
@@ -630,7 +651,11 @@ export function TiptapEditor({
           padding: 0.05em 0;
         }
       `}</style>
-      <div data-testid="note-editor">
+      <div
+        data-testid="note-editor"
+        aria-label={accessibilityLabel}
+        aria-labelledby={accessibilityLabel ? "note-editor-title" : undefined}
+      >
         <EditorContent editor={editor} />
       </div>
       <SelectionBubbleMenu editor={editor} />

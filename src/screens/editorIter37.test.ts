@@ -24,7 +24,13 @@ describe("iteration 37 — restore confirm", () => {
     expect(editorSource).toContain('testId="restore-playground-confirm"');
     expect(editorSource).toContain("requestRestorePlaygroundConfirm");
     expect(editorSource).toContain("restorePlaygroundConfirmTitle");
-    expect(editorSource).toContain("onClick={requestRestorePlaygroundConfirm}");
+    expect(editorSource).toContain("requestRestorePlaygroundConfirm");
+    expect(
+      readFileSync(
+        join(process.cwd(), "src/components/common/ConfirmDialog.tsx"),
+        "utf-8",
+      ),
+    ).toContain("createPortal");
     expect(editorSource).not.toMatch(
       /onClick=\{handleRestorePlayground\}[\s\S]{0,80}data-testid="restore-playground-button"/,
     );
@@ -52,6 +58,8 @@ describe("iteration 37 — editor a11y label", () => {
     );
     expect(tiptapSource).toContain("accessibilityLabel?: string");
     expect(tiptapSource).toContain('"aria-label": accessibilityLabel');
+    expect(tiptapSource).toContain('"aria-labelledby": "note-editor-title"');
+    expect(editorSource).toContain('id="note-editor-title"');
     expect(zh.editor.regionLabel).toBe("编辑：{{title}}");
   });
 });
@@ -78,5 +86,18 @@ describe("iteration 37 — search title-first", () => {
       "欢迎",
     );
     expect(results.map((n) => n.title)).toEqual(["欢迎使用 Hunos"]);
+  });
+
+  it("excludes playground when 欢迎 appears only inside a wiki link", () => {
+    const results = filterNotesByTitleFirstSearch(
+      [
+        {
+          title: "格式试炼场",
+          contentPlain: "链接 [[欢迎使用 Hunos]]",
+        },
+      ],
+      "欢迎",
+    );
+    expect(results).toEqual([]);
   });
 });

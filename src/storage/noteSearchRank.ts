@@ -3,6 +3,11 @@ export interface NoteSearchMatchFields {
   contentPlain?: string | null;
 }
 
+/** Body search text with wiki-link targets removed (AC37-search-title-first). */
+export function noteSearchBodyPlain(contentPlain: string): string {
+  return contentPlain.replace(/\[\[[^\]]+\]\]/g, " ");
+}
+
 export function noteSearchMatchFlags(
   note: NoteSearchMatchFields,
   query: string,
@@ -12,7 +17,9 @@ export function noteSearchMatchFlags(
     return { titleMatch: false, bodyMatch: false };
   }
   const titleMatch = note.title.toLowerCase().includes(lower);
-  const bodyMatch = (note.contentPlain ?? "").toLowerCase().includes(lower);
+  const bodyMatch = noteSearchBodyPlain(note.contentPlain ?? "")
+    .toLowerCase()
+    .includes(lower);
   return { titleMatch, bodyMatch };
 }
 

@@ -427,6 +427,38 @@ describe("noteStorage.search", () => {
     expect(results.map((note) => note.title)).toEqual(["欢迎使用 Hunos"]);
   });
 
+  it("excludes playground when 欢迎 is only inside a wiki link in stored content", async () => {
+    const wikiLinkDoc = JSON.stringify({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            { type: "text", text: "链接 " },
+            {
+              type: "text",
+              text: "欢迎使用 Hunos",
+              marks: [{ type: "wikiLink", attrs: { title: "欢迎使用 Hunos" } }],
+            },
+          ],
+        },
+      ],
+    });
+    await noteStorage.create({
+      title: "格式试炼场",
+      content: wikiLinkDoc,
+      contentPlain: "",
+    });
+    await noteStorage.create({
+      title: "欢迎使用 Hunos",
+      contentPlain: "欢迎使用 Hunos 简介",
+    });
+
+    const results = await noteStorage.search("欢迎");
+
+    expect(results.map((note) => note.title)).toEqual(["欢迎使用 Hunos"]);
+  });
+
   it("falls back to body matches when no title matches", async () => {
     await noteStorage.create({
       title: "Meeting notes",

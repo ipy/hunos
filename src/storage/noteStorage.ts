@@ -184,7 +184,11 @@ export const noteStorage = {
     const active = await db.notes
       .filter((note) => note.status === "active")
       .toArray();
-    const matched = filterNotesByTitleFirstSearch(active, query);
+    const searchable = active.map((note) => ({
+      ...note,
+      contentPlain: note.contentPlain ?? deriveContentPlain(note.content ?? ""),
+    }));
+    const matched = filterNotesByTitleFirstSearch(searchable, query);
     return Promise.all(matched.map(hydrateNoteFromDb));
   },
 

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { Note } from "@/types/note";
 import { noteStorage } from "@/storage/noteStorage";
+import { filterNotesByTitleFirstSearch } from "@/storage/noteSearchRank";
 import { isMobileViewport } from "@/hooks/useAdaptiveLayout";
 import { clearLinkEditorSelection } from "@/components/editor/linkEditorSelection";
 import { scheduleLifecycleFlush } from "@/store/lifecycleUnload";
@@ -112,7 +113,10 @@ export const useUIStore = create<UIStore>((set, get) => ({
       return;
     }
     set({ isSearching: true });
-    const results = await noteStorage.search(query);
+    const results = filterNotesByTitleFirstSearch(
+      await noteStorage.search(query),
+      query,
+    );
     set({ searchResults: results, isSearching: false });
   },
 

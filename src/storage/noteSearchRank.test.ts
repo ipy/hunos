@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   filterNotesByTitleFirstSearch,
+  noteSearchBodyPlain,
   noteSearchMatchFlags,
 } from "./noteSearchRank";
 
@@ -22,7 +23,15 @@ describe("noteSearchRank", () => {
     });
     expect(noteSearchMatchFlags(playground, "欢迎")).toEqual({
       titleMatch: false,
-      bodyMatch: true,
+      bodyMatch: false,
+    });
+  });
+
+  it("does not treat wiki-link targets as body hits (AC37-search-title-first)", () => {
+    expect(noteSearchBodyPlain(playground.contentPlain)).not.toContain("欢迎");
+    expect(noteSearchMatchFlags(playground, "欢迎")).toEqual({
+      titleMatch: false,
+      bodyMatch: false,
     });
   });
 
