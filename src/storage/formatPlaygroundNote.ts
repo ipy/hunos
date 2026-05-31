@@ -549,6 +549,30 @@ export function playgroundEditorContentMatchesStored(
   );
 }
 
+/** True when live JSON differs from stored only by inline marks (TipTap split nodes included). */
+export function playgroundEditorMarkOnlyDriftFromStored(
+  editorContentJson: string,
+  storedContent: string,
+  fallbackLocale: Locale,
+): boolean {
+  if (!storedContent || editorContentJson === storedContent) {
+    return false;
+  }
+  if (
+    playgroundEditorContentMatchesStored(
+      editorContentJson,
+      storedContent,
+      fallbackLocale,
+    )
+  ) {
+    return false;
+  }
+  return (
+    normalizePlaygroundStructureSnapshot(editorContentJson, fallbackLocale) ===
+    normalizePlaygroundStructureSnapshot(storedContent, fallbackLocale)
+  );
+}
+
 /** Persisted JSON normalized the same way for list preview and restore chip gating. */
 export function playgroundPersistedContentForRow(content: string): string {
   if (!content) return "";
@@ -727,15 +751,13 @@ function playgroundLiveContentNeedsRestore(options: {
     return false;
   }
 
-  const storedStructure = normalizePlaygroundStructureSnapshot(
-    storedContent,
-    fallbackLocale,
-  );
-  const liveStructure = normalizePlaygroundStructureSnapshot(
-    liveContent,
-    fallbackLocale,
-  );
-  if (liveStructure === storedStructure) {
+  if (
+    playgroundEditorMarkOnlyDriftFromStored(
+      liveContent,
+      storedContent,
+      fallbackLocale,
+    )
+  ) {
     return false;
   }
 

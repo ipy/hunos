@@ -40,6 +40,7 @@ import {
   isFormatPlaygroundNote,
   normalizePlaygroundContentSnapshot,
   playgroundEditorContentMatchesStored,
+  playgroundEditorMarkOnlyDriftFromStored,
   playgroundPersistedContentForRow,
   playgroundWriteRegressesCanonicalStored,
   resolvePlaygroundSeedLocale,
@@ -366,6 +367,25 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           }
           return;
         }
+        if (
+          playgroundEditorMarkOnlyDriftFromStored(
+            json,
+            noteContentForEditor,
+            playgroundLocale,
+          )
+        ) {
+          pendingContentRef.current = json;
+          const writeEpoch = contentWriteEpochRef.current;
+          if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+          if (flushSave) {
+            void persistEditorContent(activeNoteId, json, writeEpoch);
+          } else {
+            saveTimeoutRef.current = setTimeout(() => {
+              void persistEditorContent(activeNoteId, json, writeEpoch);
+            }, 400);
+          }
+          return;
+        }
       }
 
       const hadNoPending = pendingContentRef.current == null;
@@ -377,11 +397,16 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         );
         if (
           isFormatPlaygroundNote(note.title, noteContentForEditor) &&
-          playgroundEditorContentMatchesStored(
+          (playgroundEditorContentMatchesStored(
             json,
             noteContentForEditor,
             playgroundLocale,
-          )
+          ) ||
+            playgroundEditorMarkOnlyDriftFromStored(
+              json,
+              noteContentForEditor,
+              playgroundLocale,
+            ))
         ) {
           clearRestoreSuppress = false;
         }

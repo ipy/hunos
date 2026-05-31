@@ -19,6 +19,7 @@ import {
   formatPlaygroundMatchesCanonicalSeed,
   formatPlaygroundNeedsRestore,
   playgroundEditorContentMatchesStored,
+  playgroundEditorMarkOnlyDriftFromStored,
   resolvePlaygroundSeedLocale,
   shouldShowPlaygroundRestoreButton,
   restoreFormatPlaygroundContent,
@@ -1570,6 +1571,44 @@ describe("formatPlayground restore gating", () => {
         storedTitle: "格式试炼场",
         storedContent: seed,
         pendingDraftContent: editorEcho,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
+
+  it("detects mark-only drift on list text with split TipTap nodes", () => {
+    const seed = JSON.stringify(buildPlaygroundContent("zh"));
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          content?: Array<{
+            content?: Array<{ type?: string; text?: string; marks?: unknown[] }>;
+          }>;
+        }>;
+      }>;
+    };
+    const listsIndex = parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
+    );
+    const firstItemParagraph =
+      parsed.content[listsIndex + 1]?.content?.[0]?.content?.[0];
+    if (firstItemParagraph) {
+      firstItemParagraph.content = [
+        { type: "text", text: "无序列表" },
+        { type: "text", text: "第一项", marks: [{ type: "bold" }] },
+      ];
+    }
+    const marked = JSON.stringify(parsed);
+    expect(playgroundEditorMarkOnlyDriftFromStored(marked, seed, "zh")).toBe(
+      true,
+    );
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        pendingDraftContent: marked,
         fallbackLocale: "zh",
       }),
     ).toBe(false);
