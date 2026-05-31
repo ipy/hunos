@@ -4,7 +4,10 @@ import { describe, expect, it } from "vitest";
 import { BACKLINKS_ITEM_NOTE_ID_ATTR } from "@/components/backlinks/BacklinksPanel";
 import {
   backlinkContextWithSection,
+  extractFromPlainText,
+  extractPlainTextForGraphSync,
   graphHeadingOffsetsFromJson,
+  sectionForWikiLinkAtOffset,
   sectionHeadingAtOffset,
 } from "@/graph/linkExtractor";
 import {
@@ -74,14 +77,30 @@ describe("iteration 62 — snippet section disambiguation (AC62-backlink-snippet
     expect(tagsSection).toBe("标签与链接");
     expect(trySection).toBe("自由试炼");
 
+    const plain = extractPlainTextForGraphSync(content);
+    const projectDocLinks = extractFromPlainText(plain).wikiLinks.filter(
+      (wl) => wl.title === "项目文档",
+    );
+    expect(projectDocLinks).toHaveLength(2);
+
+    const tagsLinkSection = sectionForWikiLinkAtOffset(
+      plain,
+      projectDocLinks[0]!.position,
+      headings,
+    );
+    const tryLinkSection = sectionForWikiLinkAtOffset(
+      plain,
+      projectDocLinks[1]!.position,
+      headings,
+    );
+    expect(tagsLinkSection).toBe("标签与链接");
+    expect(tryLinkSection).toBe("自由试炼");
+
     const tagsSnippet = formatBacklinkSnippet(
-      backlinkContextWithSection(
-        "... 详见 [[项目文档]] 与 [[项目文档]] #42。...",
-        "标签与链接",
-      ),
+      backlinkContextWithSection(projectDocLinks[0]!.context, tagsLinkSection),
     );
     const trySnippet = formatBacklinkSnippet(
-      backlinkContextWithSection("... 与 [[项目文档]] #42。...", "自由试炼"),
+      backlinkContextWithSection(projectDocLinks[1]!.context, tryLinkSection),
     );
     expect(tagsSnippet.startsWith("标签与链接 ·")).toBe(true);
     expect(trySnippet.startsWith("自由试炼 ·")).toBe(true);

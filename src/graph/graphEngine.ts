@@ -6,7 +6,7 @@ import {
   extractPlainTextForGraphSync,
   backlinkContextWithSection,
   graphHeadingOffsetsFromJson,
-  sectionHeadingAtOffset,
+  sectionForWikiLinkAtOffset,
 } from "./linkExtractor";
 import { isValidTagName } from "@/utils/tagPattern";
 import { replaceWikiLinkTitleInContent } from "@/utils/wikiLink";
@@ -39,8 +39,10 @@ function wikiLinkContextWithSection(
   context: string,
 ): string {
   try {
-    const headings = graphHeadingOffsetsFromJson(JSON.parse(note.content));
-    const section = sectionHeadingAtOffset(headings, position);
+    const parsed = JSON.parse(note.content);
+    const plainText = extractPlainTextForGraphSync(parsed);
+    const headings = graphHeadingOffsetsFromJson(parsed);
+    const section = sectionForWikiLinkAtOffset(plainText, position, headings);
     return backlinkContextWithSection(context, section);
   } catch {
     return context;
@@ -79,7 +81,11 @@ export const graphEngine = {
 
     for (const wikiLink of extraction.wikiLinks) {
       const target = await noteStorage.findActiveByTitle(wikiLink.title);
-      const section = sectionHeadingAtOffset(headingRanges, wikiLink.position);
+      const section = sectionForWikiLinkAtOffset(
+        plainText,
+        wikiLink.position,
+        headingRanges,
+      );
 
       if (target) {
         await linkStorage.create(

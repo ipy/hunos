@@ -42,6 +42,46 @@ export function sectionHeadingAtOffset(
   return found?.title ?? null;
 }
 
+/**
+ * When duplicate wiki-links share a section, the next line may be a later section
+ * heading (e.g. 自由试炼 after the second [[项目文档]] in 标签与链接).
+ */
+export function trailingSectionAfterWikiLink(
+  plainText: string,
+  linkPosition: number,
+  headings: GraphHeadingAtOffset[],
+): string | null {
+  const linkEnd = plainText.indexOf("]]", linkPosition);
+  if (linkEnd === -1) return null;
+
+  const tailStart = linkEnd + 2;
+  const lineBreak = plainText.indexOf("\n", tailStart);
+  if (lineBreak === -1) return null;
+
+  if (plainText.slice(tailStart, lineBreak).includes("[[")) return null;
+
+  const nextLineStart = lineBreak + 1;
+  const nextLineEnd = plainText.indexOf("\n", nextLineStart);
+  const nextLine = plainText.slice(
+    nextLineStart,
+    nextLineEnd === -1 ? undefined : nextLineEnd,
+  );
+
+  return headings.find((h) => h.title === nextLine)?.title ?? null;
+}
+
+/** Primary section at link offset, or trailing heading when it disambiguates duplicates. */
+export function sectionForWikiLinkAtOffset(
+  plainText: string,
+  linkPosition: number,
+  headings: GraphHeadingAtOffset[],
+): string | null {
+  return (
+    trailingSectionAfterWikiLink(plainText, linkPosition, headings) ??
+    sectionHeadingAtOffset(headings, linkPosition)
+  );
+}
+
 /** Prefix link context with its source section when not already disambiguated. */
 export function backlinkContextWithSection(
   context: string,
@@ -150,14 +190,17 @@ function graphPlainTextFromNode(
 
   if (doc.type === "heading") {
     const headingStart = offsetRef.value;
+    const childRef = { value: headingStart };
     const headingText = doc.content
-      .map((node) => graphPlainTextFromNode(node, onHeading, offsetRef))
+      .map((node) => graphPlainTextFromNode(node, onHeading, childRef))
       .join("")
       .trim();
     if (headingText) {
       onHeading?.(headingStart, headingText);
     }
-    return appendText(headingText + "\n");
+    const output = headingText + "\n";
+    offsetRef.value = headingStart + output.length;
+    return output;
   }
 
   return doc.content
@@ -214,8 +257,12 @@ function graphPlainTextFromNode(
         );
       }
       if (n.type === "tableRow") {
-        const rowText = graphPlainTextFromNode(n, onHeading, offsetRef).trim();
-        return rowText ? appendText(rowText + "\n") : "";
+        const rowStart = offsetRef.value;
+        const childRef = { value: rowStart };
+        const rowText = graphPlainTextFromNode(n, onHeading, childRef).trim();
+        const output = rowText ? rowText + "\n" : "";
+        offsetRef.value = rowStart + output.length;
+        return output;
       }
       if (n.type === "tableCell" || n.type === "tableHeader") {
         return (

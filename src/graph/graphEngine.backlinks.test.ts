@@ -208,4 +208,77 @@ describe("graphEngine backlink keys", () => {
     const incoming = await graphEngine.getBacklinks("target");
     expect(incoming[0]?.context).toMatch(/^标签与链接 ·/);
   });
+
+  it("uses trailing section heading to disambiguate duplicate-source rows", async () => {
+    seedNote("target", "项目文档");
+    const sourceContent = JSON.stringify({
+      type: "doc",
+      content: [
+        {
+          type: "heading",
+          attrs: { level: 2 },
+          content: [{ type: "text", text: "标签与链接" }],
+        },
+        {
+          type: "paragraph",
+          content: [
+            { type: "text", text: "详见 " },
+            {
+              type: "text",
+              text: "项目文档",
+              marks: [{ type: "wikiLink", attrs: { title: "项目文档" } }],
+            },
+            { type: "text", text: " 与 " },
+            {
+              type: "text",
+              text: "项目文档",
+              marks: [{ type: "wikiLink", attrs: { title: "项目文档" } }],
+            },
+            { type: "text", text: " #42。" },
+          ],
+        },
+        {
+          type: "heading",
+          attrs: { level: 2 },
+          content: [{ type: "text", text: "自由试炼" }],
+        },
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "hint" }],
+        },
+      ],
+    });
+    const source: Note = {
+      id: "source",
+      title: "格式试炼场",
+      content: sourceContent,
+      contentPlain: "",
+      isPinned: false,
+      status: "active",
+      trashedAt: null,
+      createdAt: 1,
+      modifiedAt: 1,
+      wordCount: 0,
+    };
+    notesById.set("source", source);
+    seedWikiLink(
+      "link-1",
+      "source",
+      "target",
+      "... 详见 [[项目文档]] 与 [[项目文档]] #42。...",
+      9,
+    );
+    seedWikiLink(
+      "link-2",
+      "source",
+      "target",
+      "... 与 [[项目文档]] #42。...",
+      20,
+    );
+
+    const incoming = await graphEngine.getBacklinks("target");
+    expect(incoming).toHaveLength(2);
+    expect(incoming[0]?.context).toMatch(/^标签与链接 ·/);
+    expect(incoming[1]?.context).toMatch(/^自由试炼 ·/);
+  });
 });

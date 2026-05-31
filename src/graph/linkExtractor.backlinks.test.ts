@@ -1,0 +1,65 @@
+import { describe, expect, it } from "vitest";
+import {
+  extractPlainTextForGraphSync,
+  graphHeadingOffsetsFromJson,
+  sectionForWikiLinkAtOffset,
+  sectionHeadingAtOffset,
+  trailingSectionAfterWikiLink,
+} from "./linkExtractor";
+import { buildPlaygroundContent } from "@/storage/formatPlaygroundNote";
+
+describe("graphPlainText heading offsets", () => {
+  it("aligns stored heading offsets with plain text positions", () => {
+    const content = buildPlaygroundContent("zh");
+    const plain = extractPlainTextForGraphSync(content);
+    const headings = graphHeadingOffsetsFromJson(content);
+
+    for (const heading of headings) {
+      expect(plain.indexOf(`${heading.title}\n`)).toBe(heading.offset);
+    }
+  });
+});
+
+describe("trailingSectionAfterWikiLink", () => {
+  it("returns null when another wiki link follows on the same line", () => {
+    const plain =
+      "标签与链接\n详见 [[项目文档]] 与 [[项目文档]] #42。\n自由试炼\n";
+    const headings = [
+      { offset: 0, title: "标签与链接" },
+      { offset: 40, title: "自由试炼" },
+    ];
+    expect(trailingSectionAfterWikiLink(plain, plain.indexOf("[[项目文档]]"), headings)).toBeNull();
+  });
+
+  it("returns the next-line section when the link tail is not followed by another link", () => {
+    const plain =
+      "标签与链接\n详见 [[项目文档]] 与 [[项目文档]] #42。\n自由试炼\n";
+    const headings = [
+      { offset: 0, title: "标签与链接" },
+      { offset: 40, title: "自由试炼" },
+    ];
+    const secondLinkPos = plain.lastIndexOf("[[项目文档]]");
+    expect(trailingSectionAfterWikiLink(plain, secondLinkPos, headings)).toBe(
+      "自由试炼",
+    );
+  });
+});
+
+describe("sectionForWikiLinkAtOffset", () => {
+  it("disambiguates duplicate playground links to 项目文档", () => {
+    const content = buildPlaygroundContent("zh");
+    const plain = extractPlainTextForGraphSync(content);
+    const headings = graphHeadingOffsetsFromJson(content);
+    const first = plain.indexOf("[[项目文档]]");
+    const second = plain.lastIndexOf("[[项目文档]]");
+
+    expect(sectionHeadingAtOffset(headings, first)).toBe("标签与链接");
+    expect(sectionHeadingAtOffset(headings, second)).toBe("标签与链接");
+    expect(sectionForWikiLinkAtOffset(plain, first, headings)).toBe(
+      "标签与链接",
+    );
+    expect(sectionForWikiLinkAtOffset(plain, second, headings)).toBe(
+      "自由试炼",
+    );
+  });
+});
