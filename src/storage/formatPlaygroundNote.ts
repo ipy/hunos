@@ -871,21 +871,154 @@ function normalizePlaygroundTableRowForQaFingerprint(
   );
 }
 
-function tableRowStructureFingerprint(
-  row: PlaygroundDocNode,
+function normalizePlaygroundTableNodeForPersistCompare(
+  table: PlaygroundDocNode,
+): PlaygroundDocNode {
+  if (table.type !== "table" || !table.content?.length) {
+    return table;
+  }
+  return {
+    ...table,
+    content: table.content.map(normalizePlaygroundTableRowForQaFingerprint),
+  };
+}
+
+function normalizePlaygroundDocForPersistCompare(
+  parsed: PlaygroundDoc,
   seedLocale: PlaygroundLocale,
-): string {
-  return normalizePlaygroundStructureSnapshot(
-    JSON.stringify({
-      type: "doc",
-      attrs: {
-        playgroundContentVersion: PLAYGROUND_CONTENT_VERSION,
-        playgroundContentLocale: seedLocale,
-      },
-      content: [normalizePlaygroundTableRowForQaFingerprint(row)],
-    }),
+): PlaygroundDoc {
+  const content = parsed.content.map((node) =>
+    node.type === "table"
+      ? normalizePlaygroundTableNodeForPersistCompare(node)
+      : node,
+  );
+  return normalizePlaygroundDocForFingerprint(
+    { ...parsed, content },
     seedLocale,
   );
+}
+
+/** IDB vs editor equality — table cell attrs and trailing in-cell paragraphs ignored. */
+export function normalizePlaygroundPersistCompareSnapshot(
+  content: string,
+  fallbackLocale: Locale,
+): string {
+  const migrated =
+    migratePlaygroundContentIfStale(content, fallbackLocale) ?? content;
+  try {
+    const parsed = JSON.parse(migrated) as PlaygroundDoc;
+    if (parsed.type !== "doc" || !Array.isArray(parsed.content)) {
+      return migrated;
+    }
+    const seedLocale = resolvePlaygroundSeedLocale(migrated, fallbackLocale);
+    return JSON.stringify(
+      normalizePlaygroundDocForPersistCompare(parsed, seedLocale),
+    );
+  } catch {
+    return migrated;
+  }
+}
+
+export function playgroundPersistCompareContentsEqual(
+  a: string,
+  b: string,
+  fallbackLocale: Locale,
+): boolean {
+  return (
+    normalizePlaygroundPersistCompareSnapshot(a, fallbackLocale) ===
+    normalizePlaygroundPersistCompareSnapshot(b, fallbackLocale)
+  );
+}
+
+function playgroundSeedTableHeaderLabelsMatch(
+  headerRow: PlaygroundDocNode,
+  seedLocale: PlaygroundLocale,
+  headerColumns: number,
+): boolean {
+  const s = STRINGS[seedLocale];
+  const headerTexts = (headerRow.content ?? []).map(collectPlaygroundNodeText);
+  if (headerTexts.length !== headerColumns) {
+    return false;
+  }
+  return (
+    headerTexts[0] === s.tableH1 &&
+    headerTexts[1] === s.tableH2 &&
+    headerTexts[2] === s.tableH3
+  );
+}
+
+function playgroundTableRowHasSeedColumnShape(row: PlaygroundDocNode): boolean {
+  if (row.type !== "tableRow" || !row.content?.length) {
+    return false;
+  }
+  return !row.content.some(
+    (cell) => cell.type !== "tableCell" && cell.type !== "tableHeader",
+  );
+}
+
+function playgroundTableHasExtraRowsBeyondSeed(
+  content: string,
+  fallbackLocale: Locale,
+): boolean {
+  const row = playgroundPersistedContentForRow(content);
+  if (!row) return false;
+  try {
+    const parsed = JSON.parse(row) as PlaygroundDoc;
+    const seedLocale = resolvePlaygroundSeedLocale(row, fallbackLocale);
+    const canonical = JSON.parse(
+      playgroundPersistedContentForRow(
+        JSON.stringify(buildPlaygroundContent(seedLocale)),
+      ),
+    ) as PlaygroundDoc;
+    const liveTable = findPlaygroundSeedTable(parsed, seedLocale);
+    const canonicalTable = findPlaygroundSeedTable(canonical, seedLocale);
+    if (!liveTable?.content?.length || !canonicalTable?.content?.length) {
+      return false;
+    }
+    const canonicalRows = canonicalTable.content;
+    const liveRows = liveTable.content;
+    if (liveRows.length <= canonicalRows.length) {
+      return false;
+    }
+    const headerColumns = canonicalRows[0]?.content?.length ?? 0;
+    if (headerColumns === 0) {
+      return false;
+    }
+    const headerRow = liveRows[0];
+    if (
+      !headerRow ||
+      !playgroundSeedTableHeaderLabelsMatch(
+        headerRow,
+        seedLocale,
+        headerColumns,
+      )
+    ) {
+      return false;
+    }
+    for (let i = 1; i < canonicalRows.length; i += 1) {
+      const seedRow = liveRows[i];
+      if (
+        !seedRow ||
+        !playgroundTableRowHasSeedColumnShape(seedRow) ||
+        (seedRow.content?.length ?? 0) !== headerColumns
+      ) {
+        return false;
+      }
+    }
+    for (let i = canonicalRows.length; i < liveRows.length; i += 1) {
+      const extraRow = liveRows[i];
+      if (
+        !extraRow ||
+        !playgroundTableRowHasSeedColumnShape(extraRow) ||
+        (extraRow.content?.length ?? 0) !== headerColumns
+      ) {
+        return false;
+      }
+    }
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** True when live playground table matches seed plus optional trailing data rows. */
@@ -923,17 +1056,24 @@ export function playgroundContentMatchesQaTableRowAppend(
     const headerColumns = canonicalRows[0]?.content?.length ?? 0;
     if (headerColumns === 0) return false;
 
+    const headerRow = liveRows[0];
     if (
-      tableRowStructureFingerprint(liveRows[0]!, seedLocale) !==
-      tableRowStructureFingerprint(canonicalRows[0]!, seedLocale)
+      !headerRow ||
+      !playgroundSeedTableHeaderLabelsMatch(
+        headerRow,
+        seedLocale,
+        headerColumns,
+      )
     ) {
       return false;
     }
 
-    for (let i = 0; i < canonicalRows.length; i += 1) {
+    for (let i = 1; i < canonicalRows.length; i += 1) {
+      const seedRow = liveRows[i];
       if (
-        tableRowStructureFingerprint(liveRows[i]!, seedLocale) !==
-        tableRowStructureFingerprint(canonicalRows[i]!, seedLocale)
+        !seedRow ||
+        !playgroundTableRowHasSeedColumnShape(seedRow) ||
+        (seedRow.content?.length ?? 0) !== headerColumns
       ) {
         return false;
       }
@@ -941,12 +1081,10 @@ export function playgroundContentMatchesQaTableRowAppend(
 
     for (let i = canonicalRows.length; i < liveRows.length; i += 1) {
       const extraRow = liveRows[i];
-      if (extraRow?.type !== "tableRow") return false;
-      if ((extraRow.content?.length ?? 0) !== headerColumns) return false;
       if (
-        extraRow.content?.some(
-          (cell) => cell.type !== "tableCell" && cell.type !== "tableHeader",
-        )
+        !extraRow ||
+        !playgroundTableRowHasSeedColumnShape(extraRow) ||
+        (extraRow.content?.length ?? 0) !== headerColumns
       ) {
         return false;
       }
@@ -1053,6 +1191,18 @@ export function classifyPlaygroundDrift(options: {
   }
 
   if (
+    liveContent != null &&
+    playgroundPersistCompareContentsEqual(
+      liveContent,
+      rowContent,
+      fallbackLocale,
+    ) &&
+    playgroundTableHasExtraRowsBeyondSeed(rowContent, seedLocale)
+  ) {
+    return "qaTableAppend";
+  }
+
+  if (
     comparePlaygroundStructuralDrift(rowForClassify, canonicalRow, seedLocale)
   ) {
     return "structural";
@@ -1117,6 +1267,15 @@ export function playgroundEditorContentMatchesStored(
 ): boolean {
   if (!storedContent) return false;
   if (editorContentJson === storedContent) return true;
+  if (
+    playgroundPersistCompareContentsEqual(
+      editorContentJson,
+      storedContent,
+      fallbackLocale,
+    )
+  ) {
+    return true;
+  }
   return (
     normalizePlaygroundContentSnapshot(editorContentJson, fallbackLocale) ===
     normalizePlaygroundContentSnapshot(storedContent, fallbackLocale)

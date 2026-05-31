@@ -24,6 +24,7 @@ import {
   playgroundEditorMarkOnlyDriftFromStored,
   playgroundFormatQaDraftHidesRestoreChip,
   playgroundContentMatchesQaTableRowAppend,
+  playgroundPersistCompareContentsEqual,
   playgroundPersistedContentForRow,
   playgroundFormatQaMarkOnlyDrift,
   playgroundFormatQaStructureMatchesCanonical,
@@ -3193,5 +3194,151 @@ describe("iter 27 playground table QA drift", () => {
         fallbackLocale: "zh",
       }),
     ).toBe(false);
+  });
+});
+
+describe("iter 28 playground table row persist compare", () => {
+  const seed = JSON.stringify(buildPlaygroundContent("zh"));
+
+  function tableSectionIndex(parsed: {
+    content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+  }) {
+    return parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "表格",
+    );
+  }
+
+  function appendTableRowWithMarker(marker: string) {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          type: string;
+          attrs?: Record<string, unknown>;
+          content?: Array<{
+            type: string;
+            attrs?: Record<string, unknown>;
+            content?: unknown[];
+          }>;
+        }>;
+      }>;
+    };
+    const tableIndex = tableSectionIndex(parsed) + 1;
+    const table = parsed.content[tableIndex];
+    const templateRow = table?.content?.[1];
+    if (!table?.content || !templateRow) throw new Error("seed table missing");
+    const extraRow = JSON.parse(
+      JSON.stringify(templateRow),
+    ) as (typeof table.content)[number];
+    const markerCell = extraRow.content?.[0];
+    if (markerCell) {
+      markerCell.content = [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: marker }],
+        },
+        { type: "paragraph" },
+      ];
+    }
+    for (const row of table.content) {
+      for (const cell of row.content ?? []) {
+        cell.attrs = { colspan: 1, rowspan: 1, colwidth: null };
+      }
+    }
+    for (const cell of extraRow.content ?? []) {
+      cell.attrs = { colspan: 1, rowspan: 1, colwidth: null };
+    }
+    table.content.push(extraRow);
+    return JSON.stringify(parsed);
+  }
+
+  it("treats TipTap table attrs as equal under persist compare (AC5-no-false-restore)", () => {
+    const edited = appendTableRowWithMarker("AC28-ROW-persist");
+    const stored = playgroundPersistedContentForRow(edited);
+    const rawEditor = edited;
+
+    expect(playgroundPersistCompareContentsEqual(rawEditor, stored, "zh")).toBe(
+      true,
+    );
+    expect(
+      classifyPlaygroundDrift({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: stored,
+        liveContent: rawEditor,
+        fallbackLocale: "zh",
+      }),
+    ).toBe("qaTableAppend");
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: stored,
+        pendingDraftContent: rawEditor,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
+
+  it("hides restore chip when IDB matches editor after trailing in-cell paragraph drift", () => {
+    const edited = appendTableRowWithMarker("AC28-ROW-persist");
+    const parsed = JSON.parse(edited) as {
+      content: Array<{
+        content?: Array<{
+          content?: Array<{ content?: Array<{ type: string }> }>;
+        }>;
+      }>;
+    };
+    const table = parsed.content[tableSectionIndex(parsed) + 1];
+    const markCell = table?.content?.[1]?.content?.[1];
+    if (markCell) {
+      markCell.content = [...(markCell.content ?? []), { type: "paragraph" }];
+    }
+    const stored = playgroundPersistedContentForRow(JSON.stringify(parsed));
+    const live = JSON.stringify(parsed);
+
+    expect(playgroundContentMatchesQaTableRowAppend(stored, "zh")).toBe(true);
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: stored,
+        pendingDraftContent: live,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
+
+  it("shows restore chip when title renamed to T28-Drift after table row append (AC5-no-false-restore guard)", () => {
+    const stored = playgroundPersistedContentForRow(
+      appendTableRowWithMarker("AC28-ROW-persist"),
+    );
+
+    expect(
+      classifyPlaygroundDrift({
+        displayTitle: "T28-Drift",
+        storedTitle: "T28-Drift",
+        storedContent: stored,
+        liveContent: stored,
+        fallbackLocale: "zh",
+      }),
+    ).toBe("titleDrift");
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "T28-Drift",
+        storedTitle: "T28-Drift",
+        storedContent: stored,
+        pendingDraftContent: stored,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(true);
+  });
+
+  it("uses playgroundEditorContentMatchesStored with table persist compare snapshot", () => {
+    const edited = appendTableRowWithMarker("AC28-ROW-marker");
+    const stored = playgroundPersistedContentForRow(edited);
+    expect(playgroundEditorContentMatchesStored(edited, stored, "zh")).toBe(
+      true,
+    );
   });
 });
