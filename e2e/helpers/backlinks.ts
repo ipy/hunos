@@ -72,3 +72,42 @@ export async function collectIncomingBacklinkRowTestIds(
   );
   return testIds.filter((id): id is string => id != null);
 }
+
+/**
+ * Multi-hop backlink nav — re-collects row test ids after each return because
+ * link ids can change when the graph reloads (AC59-backlinks-e2e-distinct-nav).
+ */
+export async function clickEachIncomingBacklinkByFreshTestId(
+  page: Page,
+  expectedNoteTitle: string,
+  hops: number = 2,
+): Promise<void> {
+  const visitedSnippets = new Set<string>();
+
+  for (let hop = 0; hop < hops; hop++) {
+    await openProjectDocsWithBacklinksPanel(page);
+    await expandBacklinksPanelIfCollapsed(page);
+
+    const rowTestIds = await collectIncomingBacklinkRowTestIds(page);
+    let clicked = false;
+
+    for (const rowTestId of rowTestIds) {
+      const linkId = rowTestId.replace(/^backlinks-item-/, "");
+      const snippet = await page
+        .getByTestId(`backlinks-snippet-${linkId}`)
+        .innerText();
+      if (visitedSnippets.has(snippet)) continue;
+
+      visitedSnippets.add(snippet);
+      await page.getByTestId(rowTestId).click();
+      await expect(page.getByTestId("note-title")).toHaveValue(
+        expectedNoteTitle,
+        { timeout: 15_000 },
+      );
+      clicked = true;
+      break;
+    }
+
+    expect(clicked).toBe(true);
+  }
+}

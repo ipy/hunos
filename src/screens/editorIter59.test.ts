@@ -30,6 +30,16 @@ describe("iteration 59 — snippet hash rules (AC59-backlink-snippet-hash)", () 
     expect(preview).not.toMatch(/\[\[/);
     expect(backlinkSnippetHasRawMarkdown(preview)).toBe(false);
   });
+
+  it("cleans underline tokens cut off by the link context radius", () => {
+    const raw =
+      "... 与 [[项目文档]] #42。 自由试炼 输入 **粗体**、_斜体_、__下划线, sibling...";
+    const preview = formatBacklinkSnippet(raw);
+    expect(preview).toContain("#42");
+    expect(preview).toContain("下划线");
+    expect(preview).not.toContain("__");
+    expect(backlinkSnippetHasRawMarkdown(preview)).toBe(false);
+  });
 });
 
 describe("iteration 59 — playground seed issue ref (AC59-backlink-snippet-hash)", () => {

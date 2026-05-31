@@ -6,6 +6,7 @@ import {
 } from "../helpers/playground";
 import {
   assertBacklinkSnippetPlainText,
+  clickEachIncomingBacklinkByFreshTestId,
   collectIncomingBacklinkRowTestIds,
   expandBacklinksPanelIfCollapsed,
   openProjectDocsWithBacklinksPanel,
@@ -26,7 +27,9 @@ test.describe("backlinks footer — iter 59", () => {
       page,
     }) => {
       const panel = page.getByTestId("backlinks-panel");
-      await expect(panel.getByText("LINKS TO", { exact: false })).toHaveCount(0);
+      await expect(panel.getByText("LINKS TO", { exact: false })).toHaveCount(
+        0,
+      );
 
       const toggle = page.getByTestId("backlinks-panel-toggle");
       await expect(toggle).toContainText("反向链接");
@@ -61,16 +64,11 @@ test.describe("backlinks footer — iter 59", () => {
       page,
     }) => {
       await page.getByTestId("backlinks-panel-toggle").click();
-      const rowTestIds = await collectIncomingBacklinkRowTestIds(page);
-      for (const rowTestId of rowTestIds) {
-        await openProjectDocsWithBacklinksPanel(page);
-        await expandBacklinksPanelIfCollapsed(page);
-        await page.getByTestId(rowTestId).click();
-        await expect(page.getByTestId("note-title")).toHaveValue(
-          FORMAT_PLAYGROUND_TITLE,
-          { timeout: 15_000 },
-        );
-      }
+      await waitForIncomingBacklinkRowCount(page, 2);
+      await clickEachIncomingBacklinkByFreshTestId(
+        page,
+        FORMAT_PLAYGROUND_TITLE,
+      );
     });
 
     test("AC59-backlinks-e2e-bootstrap: incoming row count is 2 before assertions", async ({
