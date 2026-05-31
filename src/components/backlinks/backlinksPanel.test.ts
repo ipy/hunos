@@ -6,7 +6,7 @@ import {
   BACKLINKS_OUTGOING_SECTION_TESTID,
   BACKLINKS_PANEL_TESTID,
   BACKLINKS_PANEL_TOGGLE_TESTID,
-  assertUniqueBacklinkRowKeys,
+  assertUniqueBacklinkPanelKeys,
   backlinksItemTestId,
   backlinksRowKey,
 } from "./BacklinksPanel";
@@ -43,7 +43,21 @@ describe("BacklinksPanel automation testids", () => {
     };
     const rows = dedupeBacklinkResults([duplicate, duplicate]);
     expect(rows).toHaveLength(1);
-    expect(() => assertUniqueBacklinkRowKeys("incoming", rows)).not.toThrow();
+    expect(() => assertUniqueBacklinkPanelKeys(rows, [])).not.toThrow();
+  });
+
+  it("keeps react keys unique when the same link id appears in incoming and outgoing", () => {
+    const row = {
+      linkId: "mppmosoy-004-nqniss1y",
+      noteId: "pg-zh",
+      noteTitle: "格式试炼场",
+      context: "[[Welcome]]",
+      type: "wiki_link" as const,
+    };
+    expect(backlinksRowKey("incoming", row, 0)).not.toBe(
+      backlinksRowKey("outgoing", row, 0),
+    );
+    expect(() => assertUniqueBacklinkPanelKeys([row], [row])).not.toThrow();
   });
 
   it("derives stable row keys from section, link id, note id, and list index", () => {
@@ -77,8 +91,9 @@ describe("BacklinksPanel automation testids", () => {
     expect(panelSource).toContain("let cancelled = false");
     expect(panelSource).toContain("noteLinkRevision");
     expect(panelSource).toContain("dedupeBacklinkResults");
-    expect(panelSource).toContain('assertUniqueBacklinkRowKeys("incoming"');
-    expect(panelSource).toContain('assertUniqueBacklinkRowKeys("outgoing"');
+    expect(panelSource).toContain("assertUniqueBacklinkPanelKeys(incomingRows");
+    expect(panelSource).toContain("setBacklinks(dedupeBacklinkResults(rows))");
+    expect(panelSource).toContain("setOutgoing(dedupeBacklinkResults(rows))");
     expect(panelSource).toContain(
       "data-testid={backlinksItemTestId(bl.noteId)}",
     );

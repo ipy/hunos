@@ -24,19 +24,23 @@ export function backlinksRowKey(
   return `${section}:${bl.linkId}:${bl.noteId}:${index}`;
 }
 
-/** @internal Ensures React list keys stay unique for a rendered backlink section. */
-export function assertUniqueBacklinkRowKeys(
-  section: "incoming" | "outgoing",
-  rows: BacklinkResult[],
+/** @internal Ensures React list keys stay unique across incoming and outgoing sections. */
+export function assertUniqueBacklinkPanelKeys(
+  incoming: BacklinkResult[],
+  outgoing: BacklinkResult[],
 ): void {
   const keys = new Set<string>();
-  rows.forEach((row, index) => {
-    const key = backlinksRowKey(section, row, index);
-    if (keys.has(key)) {
-      throw new Error(`duplicate backlink row key: ${key}`);
-    }
-    keys.add(key);
-  });
+  const add = (section: "incoming" | "outgoing", rows: BacklinkResult[]) => {
+    rows.forEach((row, index) => {
+      const key = backlinksRowKey(section, row, index);
+      if (keys.has(key)) {
+        throw new Error(`duplicate backlink row key: ${key}`);
+      }
+      keys.add(key);
+    });
+  };
+  add("incoming", incoming);
+  add("outgoing", outgoing);
 }
 
 interface BacklinksPanelProps {
@@ -69,10 +73,10 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
     setOutgoing([]);
 
     void graphEngine.getBacklinks(noteId).then((rows) => {
-      if (!cancelled) setBacklinks(rows);
+      if (!cancelled) setBacklinks(dedupeBacklinkResults(rows));
     });
     void graphEngine.getOutgoingLinks(noteId).then((rows) => {
-      if (!cancelled) setOutgoing(rows);
+      if (!cancelled) setOutgoing(dedupeBacklinkResults(rows));
     });
 
     return () => {
@@ -82,8 +86,7 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
 
   if (incomingRows.length === 0 && outgoingRows.length === 0) return null;
 
-  assertUniqueBacklinkRowKeys("incoming", incomingRows);
-  assertUniqueBacklinkRowKeys("outgoing", outgoingRows);
+  assertUniqueBacklinkPanelKeys(incomingRows, outgoingRows);
 
   const renderLink = (
     section: "incoming" | "outgoing",
