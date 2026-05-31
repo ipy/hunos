@@ -57,6 +57,7 @@
       "restorePlaygroundDone": "Patio de formatos restaurado",
       "restorePlaygroundConfirmTitle": "¿Restaurar plantilla de formatos?",
       "restorePlaygroundConfirmMessage": "Restablece la nota a la semilla de formatos. Se perderán las ediciones del área libre y del resto del documento. No se puede deshacer.",
+      "playgroundDriftBannerHint": "El cuerpo difiere de la semilla de formatos.",
       "createNote": "Crear nueva nota"
     },
     "list": {

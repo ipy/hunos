@@ -48,6 +48,7 @@ import {
   playgroundWriteRegressesCanonicalStored,
   resolvePlaygroundSeedLocale,
   shouldShowPlaygroundRestoreButton,
+  shouldShowPlaygroundRestoreInDriftBanner,
   migratePlaygroundContentIfStale,
   playgroundContentMatchesLocale,
 } from "@/storage/formatPlaygroundNote";
@@ -1051,6 +1052,42 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     editorInstance,
   ]);
 
+  const showRestorePlaygroundDriftBanner = useMemo(() => {
+    if (!note) return false;
+    let pendingDraftContent = pendingContentRef.current;
+    if (
+      pendingDraftContent == null &&
+      editorInstance &&
+      !playgroundRestoreSessionRef.current.isActive()
+    ) {
+      try {
+        pendingDraftContent = JSON.stringify(editorInstance.getJSON());
+      } catch {
+        pendingDraftContent = null;
+      }
+    }
+    const displayTitle = titleValue.trim() || note.title;
+    return shouldShowPlaygroundRestoreInDriftBanner({
+      displayTitle,
+      storedTitle: note.title,
+      storedContent: noteContentForEditor,
+      pendingDraftContent,
+      pendingTitleDraft: pendingTitleRef.current,
+      fallbackLocale: settings.locale,
+      isRestoringPlayground: playgroundRestoreSessionRef.current.isActive(),
+    });
+  }, [
+    note,
+    noteContentForEditor,
+    titleValue,
+    settings.locale,
+    restoreEditorSyncTick,
+    editorInstance,
+  ]);
+
+  const showRestorePlaygroundChip =
+    showRestorePlayground && !showRestorePlaygroundDriftBanner;
+
   if (!note) {
     const hasNotes = notes.length > 0;
     return (
@@ -1680,7 +1717,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
               lineHeight: 1.2,
             }}
           />
-          {showRestorePlayground && (
+          {showRestorePlaygroundChip && (
             <button
               type="button"
               onClick={(e) => {
@@ -1720,6 +1757,59 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
             </button>
           )}
         </div>
+        {showRestorePlaygroundDriftBanner && (
+          <div
+            data-testid="restore-playground-drift-banner"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "8px 24px 0",
+              maxWidth: `${settings.lineWidth}em`,
+              margin: "0 auto",
+            }}
+          >
+            <p
+              style={{
+                flex: 1,
+                margin: 0,
+                fontSize: 12,
+                lineHeight: 1.4,
+                color: theme.colors.textTertiary,
+              }}
+            >
+              {t("notes.actions.playgroundDriftBannerHint")}
+            </p>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                requestRestorePlaygroundConfirm();
+              }}
+              aria-label={restorePlaygroundLabel}
+              title={restorePlaygroundLabel}
+              data-testid="restore-playground-button"
+              style={{
+                background: "transparent",
+                border: `1px solid ${theme.colors.borderLight}`,
+                cursor: "pointer",
+                padding: "4px 10px",
+                borderRadius: theme.radius.full,
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                minHeight: 32,
+                fontSize: 12,
+                fontWeight: 500,
+                color: theme.colors.textTertiary,
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+              }}
+            >
+              {restorePlaygroundVisibleText}
+            </button>
+          </div>
+        )}
         <TiptapEditor
           noteId={note.id}
           initialContent={editorSeedContent ?? noteContentForEditor}

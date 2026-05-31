@@ -57,6 +57,7 @@
       "restorePlaygroundDone": "Format Playground restored",
       "restorePlaygroundConfirmTitle": "Restore format template?",
       "restorePlaygroundConfirmMessage": "This resets the note to the format seed. Edits in the free-form sandbox and elsewhere will be lost. This cannot be undone.",
+      "playgroundDriftBannerHint": "Body differs from the format seed.",
       "createNote": "Create new note"
     },
     "list": {

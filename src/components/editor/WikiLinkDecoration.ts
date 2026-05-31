@@ -6,6 +6,10 @@ import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import type { EditorState } from "@tiptap/pm/state";
 import { suppressWikiLinkSuggestionBriefly } from "./wikiLinkEditGuard";
 import { shouldNavigateWikiLinkClick } from "./wikiLinkClickUtils";
+import {
+  findEditorScrollContainer,
+  wikiLinkMatchAtScrollMappedPointer,
+} from "./wikiLinkPointerUtils";
 
 const WIKI_LINK_REGEX = /\[\[([^\]]+)\]\]/g;
 const wikiLinkKey = new PluginKey("wikiLinkDecoration");
@@ -24,7 +28,7 @@ interface WikiLinkMatch {
   title: string;
 }
 
-function findWikiLinks(doc: ProseMirrorNode): WikiLinkMatch[] {
+export function findWikiLinks(doc: ProseMirrorNode): WikiLinkMatch[] {
   const matches: WikiLinkMatch[] = [];
 
   doc.descendants((node, pos) => {
@@ -164,25 +168,36 @@ export function buildWikiLinkDecorations(state: EditorState): DecorationSet {
   return DecorationSet.create(doc, decorations);
 }
 
+function resolveWikiLinkFromPointerEvent(
+  view: EditorView,
+  event: MouseEvent | PointerEvent,
+): { linkEl: HTMLElement | null; linkAtPos: WikiLinkMatch | null } {
+  const linkEl = findWikiLinkContentInEventPath(event);
+  if (linkEl) {
+    return {
+      linkEl,
+      linkAtPos: wikiLinkMatchFromDomTarget(view, linkEl, event),
+    };
+  }
+
+  const links = findWikiLinks(view.state.doc);
+  const mapped = wikiLinkMatchAtScrollMappedPointer(view, event, links);
+  return { linkEl: null, linkAtPos: mapped };
+}
+
 function captureWikiLinkPreClick(
   view: EditorView,
   event: MouseEvent | PointerEvent,
   setPreClick: (from: number, span: { start: number; end: number }) => void,
   clearPreClick: () => void,
 ): void {
-  const linkEl = findWikiLinkContentInEventPath(event);
-  if (!linkEl) {
+  const { linkAtPos } = resolveWikiLinkFromPointerEvent(view, event);
+  if (!linkAtPos) {
     clearPreClick();
     return;
   }
 
   suppressWikiLinkSuggestionBriefly();
-
-  const linkAtPos = wikiLinkMatchFromDomTarget(view, linkEl, event);
-  if (!linkAtPos) {
-    clearPreClick();
-    return;
-  }
 
   setPreClick(view.state.selection.from, {
     start: linkAtPos.start,
@@ -267,13 +282,13 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
           };
 
           const onClickCapture = (event: MouseEvent) => {
-            const linkEl = findWikiLinkContentInEventPath(event);
-            if (!linkEl) return;
+            const { linkEl, linkAtPos } = resolveWikiLinkFromPointerEvent(
+              view,
+              event,
+            );
+            if (!linkAtPos) return;
 
             event.preventDefault();
-
-            const linkAtPos = wikiLinkMatchFromDomTarget(view, linkEl);
-            if (!linkAtPos) return;
 
             const selectionFromBeforeClick =
               preClickLinkSpan?.start === linkAtPos.start &&
@@ -292,6 +307,7 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
               selectionFromBeforeClick,
               onWikiLinkClick,
               navigationInFlight,
+              linkAtPos,
             );
             if (handled) {
               event.preventDefault();
@@ -299,16 +315,26 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
             }
           };
 
-          view.dom.addEventListener("pointerdown", onPointerDownCapture, true);
-          view.dom.addEventListener("click", onClickCapture, true);
+          const scrollRoot =
+            findEditorScrollContainer(view.dom) ?? view.dom;
+          scrollRoot.addEventListener("pointerdown", onPointerDownCapture, true);
+          scrollRoot.addEventListener("click", onClickCapture, true);
+          document.addEventListener("pointerdown", onPointerDownCapture, true);
+          document.addEventListener("click", onClickCapture, true);
           return {
             destroy() {
-              view.dom.removeEventListener(
+              scrollRoot.removeEventListener(
                 "pointerdown",
                 onPointerDownCapture,
                 true,
               );
-              view.dom.removeEventListener("click", onClickCapture, true);
+              scrollRoot.removeEventListener("click", onClickCapture, true);
+              document.removeEventListener(
+                "pointerdown",
+                onPointerDownCapture,
+                true,
+              );
+              document.removeEventListener("click", onClickCapture, true);
             },
           };
         },
@@ -352,11 +378,14 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
             },
           },
           handleClick(view, pos, event) {
-            const linkEl = findWikiLinkContentInEventPath(event);
-            const linkAtPos = linkEl
-              ? (wikiLinkMatchFromDomTarget(view, linkEl, event) ??
-                wikiLinkMatchAtPos(view.state.doc, pos))
-              : wikiLinkMatchAtPos(view.state.doc, pos);
+            const resolved = resolveWikiLinkFromPointerEvent(view, event);
+            const linkEl = resolved.linkEl;
+            const linkAtPos =
+              resolved.linkAtPos ??
+              (linkEl
+                ? (wikiLinkMatchFromDomTarget(view, linkEl, event) ??
+                  wikiLinkMatchAtPos(view.state.doc, pos))
+                : wikiLinkMatchAtPos(view.state.doc, pos));
 
             if (!linkAtPos) {
               preClickSelectionFrom = null;

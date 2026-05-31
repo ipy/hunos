@@ -1996,6 +1996,71 @@ export function shouldShowPlaygroundRestoreButton(options: {
   );
 }
 
+const BACKTEST_HEADING_RE = /^BACKTEST\d+$/;
+
+/** True when live JSON contains a QA marker heading such as BACKTEST43. */
+export function playgroundDocHasBacktestMarkerHeading(
+  contentJson: string,
+): boolean {
+  try {
+    const parsed = JSON.parse(contentJson) as {
+      content?: Array<{
+        type?: string;
+        content?: Array<{ text?: string }>;
+      }>;
+    };
+    return (
+      parsed.content?.some(
+        (node) =>
+          node.type === "heading" &&
+          node.content?.some(
+            (inline) =>
+              typeof inline.text === "string" &&
+              BACKTEST_HEADING_RE.test(inline.text.trim()),
+          ),
+      ) ?? false
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** De-emphasize restore control for BACKTEST-only structural drift QA inserts. */
+export function shouldShowPlaygroundRestoreInDriftBanner(options: {
+  displayTitle: string;
+  storedTitle: string;
+  storedContent: string;
+  pendingDraftContent: string | null;
+  pendingTitleDraft?: string | null;
+  fallbackLocale: Locale;
+  isRestoringPlayground?: boolean;
+  liveContent?: string | null;
+}): boolean {
+  const liveContent = options.liveContent ?? options.pendingDraftContent;
+  if (!liveContent) return false;
+  if (
+    !shouldShowPlaygroundRestoreButton({
+      ...options,
+      liveContent,
+    })
+  ) {
+    return false;
+  }
+
+  const kind = classifyPlaygroundDrift({
+    displayTitle: options.displayTitle,
+    storedTitle: options.storedTitle,
+    storedContent: options.storedContent,
+    liveContent,
+    pendingTitleDraft: options.pendingTitleDraft ?? null,
+    fallbackLocale: options.fallbackLocale,
+  });
+
+  return (
+    kind === "structural" && playgroundDocHasBacktestMarkerHeading(liveContent)
+  );
+}
+
 export async function createFormatPlaygroundNote(
   locale: Locale,
 ): Promise<void> {

@@ -46,6 +46,11 @@ describe("scrollToTocIndex", () => {
     let selectionPos = -1;
     const editor = {
       state,
+      view: {
+        domAtPos: () => ({
+          node: { scrollIntoView: () => undefined },
+        }),
+      },
       chain: () => {
         const chain = {
           focus: () => chain,
@@ -112,6 +117,11 @@ describe("handleInfoPanelTocTap", () => {
     let closeCalled = false;
     const editor = {
       state,
+      view: {
+        domAtPos: () => ({
+          node: { scrollIntoView: () => undefined },
+        }),
+      },
       chain: () => {
         const chain = {
           focus: () => chain,

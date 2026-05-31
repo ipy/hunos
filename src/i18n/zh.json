@@ -57,6 +57,7 @@
       "restorePlaygroundDone": "格式试炼场已恢复",
       "restorePlaygroundConfirmTitle": "恢复格式模板？",
       "restorePlaygroundConfirmMessage": "将用格式种子重置整篇笔记，您在「自由试炼」等区域的编辑会丢失。此操作无法撤销。",
+      "playgroundDriftBannerHint": "正文已与格式种子不同。",
       "createNote": "创建新笔记"
     },
     "list": {

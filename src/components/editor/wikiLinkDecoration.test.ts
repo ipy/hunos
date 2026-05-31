@@ -88,12 +88,14 @@ describe("buildWikiLinkDecorations", () => {
 
   it("captures pre-click on pointerdown and mousedown for navigation", () => {
     expect(wikiLinkSource).toContain("captureWikiLinkPreClick");
+    expect(wikiLinkSource).toContain("resolveWikiLinkFromPointerEvent");
     expect(wikiLinkSource).toContain("mousedown(view, event)");
+    expect(wikiLinkSource).toContain("findEditorScrollContainer");
     expect(wikiLinkSource).toContain(
-      'addEventListener("pointerdown", onPointerDownCapture, true)',
+      'document.addEventListener("pointerdown", onPointerDownCapture, true)',
     );
     expect(wikiLinkSource).toContain(
-      'addEventListener("click", onClickCapture, true)',
+      'document.addEventListener("click", onClickCapture, true)',
     );
   });
 
