@@ -60,7 +60,7 @@ describe("iteration 47 — TOC click activation", () => {
     expect(captureBlock).not.toContain("preventDefault");
 
     const tocEntryBlock = infoPanelSource.slice(
-      infoPanelSource.indexOf("info-panel-toc-entry-"),
+      infoPanelSource.indexOf("data-testid={`info-panel-toc-entry-${i}`}"),
       infoPanelSource.indexOf('touchAction: "manipulation"'),
     );
     expect(tocEntryBlock).toMatch(/onClick=\{/);
