@@ -382,6 +382,32 @@ describe("HunosTable column commands (TipTap tableHeader schema)", () => {
     expect(headerColumnCount(state)).toBe(3);
   });
 
+  it("AC30-keyboard-delete-parity: delete at seed width after round-trip is a no-op", () => {
+    const context = createColumnCommandContext();
+    let state = buildPlaygroundTableState(
+      tiptapTableSchema,
+      "tableHeader",
+      "tableCell",
+      "tableRow",
+      "类型",
+    );
+
+    state = runColumnCommand(state, addColumnAfter, 1, context);
+    expect(headerColumnCount(state)).toBe(4);
+
+    state = runColumnCommand(state, deleteColumn, null, context);
+    expect(headerTexts(state)).toEqual(["名称", "类型", "状态"]);
+    expect(headerColumnCount(state)).toBe(3);
+    expect(context.insertGuard).toBe("deleted-once");
+
+    const canDelete = withHeaderRowFix(deleteColumn, null, context);
+    expect(canDelete(state)).toBe(false);
+
+    state = runColumnCommand(state, deleteColumn, null, context);
+    expect(headerTexts(state)).toEqual(["名称", "类型", "状态"]);
+    expect(headerColumnCount(state)).toBe(3);
+  });
+
   it("deleteColumn alone removes focused column without blanking sibling headers", () => {
     let state = buildPlaygroundTableState(
       tiptapTableSchema,

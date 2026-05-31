@@ -1096,6 +1096,121 @@ export function playgroundContentMatchesQaTableRowAppend(
   }
 }
 
+function playgroundTableCellIsTextEmpty(cell: PlaygroundDocNode): boolean {
+  return collectPlaygroundNodeText(cell).trim().length === 0;
+}
+
+function playgroundTableColumnIsEmptyInAllRows(
+  rows: PlaygroundDocNode[],
+  colIndex: number,
+): boolean {
+  return rows.every((row) => {
+    const cell = row.content?.[colIndex];
+    if (!cell) return false;
+    return playgroundTableCellIsTextEmpty(cell);
+  });
+}
+
+function stripEmptyColumnsFromPlaygroundTable(
+  table: PlaygroundDocNode,
+): PlaygroundDocNode | null {
+  if (table.type !== "table" || !table.content?.length) {
+    return null;
+  }
+  const rows = table.content;
+  const colCount = rows[0]?.content?.length ?? 0;
+  if (colCount === 0) {
+    return null;
+  }
+
+  const keepIndices: number[] = [];
+  for (let c = 0; c < colCount; c += 1) {
+    if (!playgroundTableColumnIsEmptyInAllRows(rows, c)) {
+      keepIndices.push(c);
+    }
+  }
+
+  if (keepIndices.length === colCount) {
+    return table;
+  }
+
+  return {
+    ...table,
+    content: rows.map((row) => ({
+      ...row,
+      content: keepIndices.map((i) => row.content![i]),
+    })),
+  };
+}
+
+/** True when seed table has extra empty columns from insert (round-trip QA, iter 30). */
+export function playgroundContentMatchesQaTableColumnRoundTrip(
+  content: string,
+  fallbackLocale: Locale,
+): boolean {
+  const row = playgroundPersistedContentForRow(content);
+  if (!row) return false;
+
+  try {
+    const parsed = JSON.parse(row) as PlaygroundDoc;
+    const seedLocale = resolvePlaygroundSeedLocale(row, fallbackLocale);
+    const canonical = JSON.parse(
+      playgroundPersistedContentForRow(
+        JSON.stringify(buildPlaygroundContent(seedLocale)),
+      ),
+    ) as PlaygroundDoc;
+    const liveTable = findPlaygroundSeedTable(parsed, seedLocale);
+    const canonicalTable = findPlaygroundSeedTable(canonical, seedLocale);
+    if (!liveTable?.content?.length || !canonicalTable?.content?.length) {
+      return false;
+    }
+
+    const canonicalRows = canonicalTable.content;
+    const liveRows = liveTable.content;
+    if (liveRows.length !== canonicalRows.length) {
+      return false;
+    }
+
+    const canonicalColCount = canonicalRows[0]?.content?.length ?? 0;
+    const liveColCount = liveRows[0]?.content?.length ?? 0;
+    if (liveColCount <= canonicalColCount || canonicalColCount === 0) {
+      return false;
+    }
+
+    const stripped = stripEmptyColumnsFromPlaygroundTable(liveTable);
+    if (!stripped?.content?.length) {
+      return false;
+    }
+
+    const strippedColCount = stripped.content[0]?.content?.length ?? 0;
+    if (strippedColCount !== canonicalColCount) {
+      return false;
+    }
+
+    const headerRow = stripped.content[0];
+    if (
+      !headerRow ||
+      !playgroundSeedTableHeaderLabelsMatch(
+        headerRow,
+        seedLocale,
+        canonicalColCount,
+      )
+    ) {
+      return false;
+    }
+
+    const strippedTableJson = JSON.stringify(
+      normalizePlaygroundTableNodeForPersistCompare(stripped),
+    );
+    const canonicalTableJson = JSON.stringify(
+      normalizePlaygroundTableNodeForPersistCompare(canonicalTable),
+    );
+    return strippedTableJson === canonicalTableJson;
+  } catch {
+    return false;
+  }
+}
+
 export type PlaygroundDriftKind =
   | "none"
   | "titleDrift"
@@ -1103,7 +1218,8 @@ export type PlaygroundDriftKind =
   | "markOnly"
   | "qaTailAppend"
   | "qaAc2Prep"
-  | "qaTableAppend";
+  | "qaTableAppend"
+  | "qaTableColumnRoundTrip";
 
 /** Single drift classifier for restore chip + persist policy (iter 23 SSOT). */
 export function classifyPlaygroundDrift(options: {
@@ -1180,6 +1296,12 @@ export function classifyPlaygroundDrift(options: {
 
   if (playgroundContentMatchesQaTableRowAppend(rowForClassify, seedLocale)) {
     return "qaTableAppend";
+  }
+
+  if (
+    playgroundContentMatchesQaTableColumnRoundTrip(rowForClassify, seedLocale)
+  ) {
+    return "qaTableColumnRoundTrip";
   }
 
   if (
@@ -1388,7 +1510,8 @@ export function playgroundFormatQaDraftHidesRestoreChip(
     kind === "markOnly" ||
     kind === "qaTailAppend" ||
     kind === "qaAc2Prep" ||
-    kind === "qaTableAppend"
+    kind === "qaTableAppend" ||
+    kind === "qaTableColumnRoundTrip"
   );
 }
 
@@ -1471,6 +1594,15 @@ export function playgroundWriteRegressesCanonicalStored(
 
   if (
     playgroundContentMatchesQaTableRowAppend(candidateRow, stored.seedLocale)
+  ) {
+    return false;
+  }
+
+  if (
+    playgroundContentMatchesQaTableColumnRoundTrip(
+      candidateRow,
+      stored.seedLocale,
+    )
   ) {
     return false;
   }
@@ -1604,6 +1736,9 @@ export function formatPlaygroundNeedsRestore(
 
   const canonical = JSON.stringify(buildPlaygroundContent(seedLocale));
   if (playgroundContentMatchesQaTableRowAppend(body, seedLocale)) {
+    return false;
+  }
+  if (playgroundContentMatchesQaTableColumnRoundTrip(body, seedLocale)) {
     return false;
   }
   if (!comparePlaygroundStructuralDrift(body, canonical, seedLocale)) {

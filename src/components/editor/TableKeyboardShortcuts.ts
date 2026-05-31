@@ -49,6 +49,9 @@ export const TableKeyboardShortcuts = Extension.create({
         if (shouldBlockTableShortcutForSuggestionMenu()) {
           return true;
         }
+        if (!this.editor.can().deleteColumn()) {
+          return true;
+        }
         return this.editor.commands.deleteColumn();
       },
     };

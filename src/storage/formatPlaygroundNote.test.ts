@@ -24,6 +24,7 @@ import {
   playgroundEditorMarkOnlyDriftFromStored,
   playgroundFormatQaDraftHidesRestoreChip,
   playgroundContentMatchesQaTableRowAppend,
+  playgroundContentMatchesQaTableColumnRoundTrip,
   playgroundPersistCompareContentsEqual,
   playgroundPersistedContentForRow,
   playgroundFormatQaMarkOnlyDrift,
@@ -3340,5 +3341,179 @@ describe("iter 28 playground table row persist compare", () => {
     expect(playgroundEditorContentMatchesStored(edited, stored, "zh")).toBe(
       true,
     );
+  });
+});
+
+describe("iter 30 playground table column QA drift", () => {
+  const seed = JSON.stringify(buildPlaygroundContent("zh"));
+
+  function tableSectionIndex(parsed: {
+    content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+  }) {
+    return parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "表格",
+    );
+  }
+
+  function emptyTableCell(type: "tableHeader" | "tableCell") {
+    return { type, content: [{ type: "paragraph" }] };
+  }
+
+  function insertColumnAfter(
+    parsed: {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          type: string;
+          content?: Array<{ type: string; content?: unknown[] }>;
+        }>;
+      }>;
+    },
+    afterColIndex: number,
+  ) {
+    const tableIndex = tableSectionIndex(parsed) + 1;
+    const table = parsed.content[tableIndex];
+    if (!table?.content) throw new Error("seed table missing");
+    for (const row of table.content) {
+      const cellType =
+        row.content?.[afterColIndex]?.type === "tableHeader"
+          ? "tableHeader"
+          : "tableCell";
+      row.content?.splice(
+        afterColIndex + 1,
+        0,
+        emptyTableCell(cellType as "tableHeader" | "tableCell"),
+      );
+    }
+    return JSON.stringify(parsed);
+  }
+
+  function removeColumnAt(
+    parsed: {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          type: string;
+          content?: Array<{ type: string; content?: unknown[] }>;
+        }>;
+      }>;
+    },
+    colIndex: number,
+  ) {
+    const tableIndex = tableSectionIndex(parsed) + 1;
+    const table = parsed.content[tableIndex];
+    if (!table?.content) throw new Error("seed table missing");
+    for (const row of table.content) {
+      row.content?.splice(colIndex, 1);
+    }
+    return JSON.stringify(parsed);
+  }
+
+  it("matches qaTableColumnRoundTrip when an empty column is inserted after 类型 (AC30-no-chip-mid-insert)", () => {
+    const parsed = JSON.parse(seed) as Parameters<typeof insertColumnAfter>[0];
+    const inserted = insertColumnAfter(parsed, 1);
+    const table = parsed.content[tableSectionIndex(parsed) + 1];
+    expect(table?.content?.[0]?.content?.length).toBe(4);
+
+    expect(playgroundContentMatchesQaTableColumnRoundTrip(inserted, "zh")).toBe(
+      true,
+    );
+    expect(
+      classifyPlaygroundDrift({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        liveContent: inserted,
+        fallbackLocale: "zh",
+      }),
+    ).toBe("qaTableColumnRoundTrip");
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        pendingDraftContent: inserted,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
+
+  it("hides restore chip after column insert-delete round-trip (AC30-chip-after-round-trip)", () => {
+    const parsed = JSON.parse(seed) as Parameters<typeof insertColumnAfter>[0];
+    insertColumnAfter(parsed, 1);
+    const roundTrip = removeColumnAt(parsed, 2);
+
+    expect(
+      playgroundContentMatchesQaTableColumnRoundTrip(roundTrip, "zh"),
+    ).toBe(false);
+    expect(
+      classifyPlaygroundDrift({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        liveContent: roundTrip,
+        fallbackLocale: "zh",
+      }),
+    ).toBe("none");
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        pendingDraftContent: roundTrip,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
+
+  it("shows restore chip when title renamed to T30-Drift (AC30-structural-drift-guard)", () => {
+    const parsed = JSON.parse(seed) as Parameters<typeof insertColumnAfter>[0];
+    const inserted = insertColumnAfter(parsed, 1);
+
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "T30-Drift",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        pendingDraftContent: inserted,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(true);
+    expect(
+      classifyPlaygroundDrift({
+        displayTitle: "T30-Drift",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        liveContent: inserted,
+        fallbackLocale: "zh",
+      }),
+    ).toBe("titleDrift");
+  });
+
+  it("does not match qaTableColumnRoundTrip when inserted column has content", () => {
+    const parsed = JSON.parse(seed) as Parameters<typeof insertColumnAfter>[0];
+    insertColumnAfter(parsed, 1);
+    const table = parsed.content[tableSectionIndex(parsed) + 1];
+    const insertedCell = table?.content?.[1]?.content?.[2];
+    if (insertedCell?.content?.[0]) {
+      insertedCell.content[0] = {
+        type: "paragraph",
+        content: [{ type: "text", text: "drift" }],
+      };
+    }
+    const edited = JSON.stringify(parsed);
+
+    expect(playgroundContentMatchesQaTableColumnRoundTrip(edited, "zh")).toBe(
+      false,
+    );
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        pendingDraftContent: edited,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(true);
   });
 });
