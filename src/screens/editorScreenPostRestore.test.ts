@@ -29,5 +29,6 @@ describe("EditorScreen post-restore AC1 fixes", () => {
     expect(source).toContain(
       "setRestoreEditorSyncTick((tick) => tick + 1);\n          const writeEpoch = contentWriteEpochRef.current;",
     );
+    expect(source).toContain("JSON.stringify(editorInstance.getJSON())");
   });
 });

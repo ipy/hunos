@@ -555,21 +555,32 @@ export function playgroundEditorMarkOnlyDriftFromStored(
   storedContent: string,
   fallbackLocale: Locale,
 ): boolean {
-  if (!storedContent || editorContentJson === storedContent) {
+  const editorRow = playgroundPersistedContentForRow(editorContentJson);
+  const storedRow = playgroundPersistedContentForRow(storedContent);
+  if (!storedRow || editorRow === storedRow) {
     return false;
   }
   if (
-    playgroundEditorContentMatchesStored(
-      editorContentJson,
-      storedContent,
-      fallbackLocale,
-    )
+    playgroundEditorContentMatchesStored(editorRow, storedRow, fallbackLocale)
   ) {
     return false;
   }
-  return (
-    normalizePlaygroundStructureSnapshot(editorContentJson, fallbackLocale) ===
-    normalizePlaygroundStructureSnapshot(storedContent, fallbackLocale)
+
+  const seedLocale = resolvePlaygroundSeedLocale(storedRow, fallbackLocale);
+  const editorStructure = normalizePlaygroundStructureSnapshot(
+    editorRow,
+    seedLocale,
+  );
+  if (editorStructure === normalizePlaygroundStructureSnapshot(storedRow, seedLocale)) {
+    return true;
+  }
+
+  const canonicalRow = playgroundPersistedContentForRow(
+    JSON.stringify(buildPlaygroundContent(seedLocale)),
+  );
+  return editorStructure === normalizePlaygroundStructureSnapshot(
+    canonicalRow,
+    seedLocale,
   );
 }
 

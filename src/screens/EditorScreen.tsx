@@ -876,11 +876,23 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     if (restoreChipSuppressed) {
       return false;
     }
+    let pendingDraftContent = pendingContentRef.current;
+    if (
+      pendingDraftContent == null &&
+      editorInstance &&
+      !playgroundRestoreSessionRef.current.isActive()
+    ) {
+      try {
+        pendingDraftContent = JSON.stringify(editorInstance.getJSON());
+      } catch {
+        pendingDraftContent = null;
+      }
+    }
     return shouldShowPlaygroundRestoreButton({
       displayTitle: titleValue.trim() || note.title,
       storedTitle: note.title,
       storedContent: noteContentForEditor,
-      pendingDraftContent: pendingContentRef.current,
+      pendingDraftContent,
       pendingTitleDraft: pendingTitleRef.current,
       fallbackLocale: settings.locale,
       isRestoringPlayground: playgroundRestoreSessionRef.current.isActive(),
@@ -892,6 +904,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     settings.locale,
     restoreEditorSyncTick,
     restoreChipSuppressed,
+    editorInstance,
   ]);
 
   if (!note) {

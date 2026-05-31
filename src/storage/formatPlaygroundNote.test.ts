@@ -1576,6 +1576,51 @@ describe("formatPlayground restore gating", () => {
     ).toBe(false);
   });
 
+  it("treats bold on list text as mark-only when stored seed keeps trailing empty paragraphs", () => {
+    const seed = JSON.stringify(buildPlaygroundContent("zh"));
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          content?: Array<{
+            content?: Array<{
+              type?: string;
+              text?: string;
+              marks?: unknown[];
+            }>;
+          }>;
+        }>;
+      }>;
+    };
+    while (
+      parsed.content.at(-1)?.type === "paragraph" &&
+      !parsed.content.at(-1)?.content?.length
+    ) {
+      parsed.content.pop();
+    }
+    const listsIndex = parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
+    );
+    const firstItemText =
+      parsed.content[listsIndex + 1]?.content?.[0]?.content?.[0]?.content?.[0];
+    if (firstItemText) {
+      firstItemText.marks = [{ type: "bold" }];
+    }
+    const editorBold = JSON.stringify(parsed);
+    expect(playgroundEditorMarkOnlyDriftFromStored(editorBold, seed, "zh")).toBe(
+      true,
+    );
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        pendingDraftContent: editorBold,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
+
   it("detects mark-only drift on list text with split TipTap nodes", () => {
     const seed = JSON.stringify(buildPlaygroundContent("zh"));
     const parsed = JSON.parse(seed) as {
