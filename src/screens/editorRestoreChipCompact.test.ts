@@ -15,5 +15,7 @@ describe("restore playground chip compact label", () => {
     expect(source).toContain("aria-label={restorePlaygroundLabel}");
     expect(source).toContain("title={restorePlaygroundLabel}");
     expect(source).toContain("{restorePlaygroundVisibleText}");
+    expect(source).toContain("requestRestorePlaygroundConfirm");
+    expect(source).toContain("restore-playground-confirm");
   });
 });

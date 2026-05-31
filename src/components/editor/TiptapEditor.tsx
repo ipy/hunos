@@ -86,6 +86,7 @@ interface TiptapEditorProps {
   lineWidth: number;
   paragraphSpacing: number;
   hideCompletedTasks: boolean;
+  accessibilityLabel?: string;
 }
 
 export function TiptapEditor({
@@ -101,6 +102,7 @@ export function TiptapEditor({
   lineWidth,
   paragraphSpacing,
   hideCompletedTasks,
+  accessibilityLabel,
 }: TiptapEditorProps) {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -313,9 +315,19 @@ export function TiptapEditor({
     editorProps: {
       attributes: {
         class: "hunos-editor",
+        ...(accessibilityLabel ? { "aria-label": accessibilityLabel } : {}),
       },
     },
   });
+
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    if (accessibilityLabel) {
+      editor.view.dom.setAttribute("aria-label", accessibilityLabel);
+    } else {
+      editor.view.dom.removeAttribute("aria-label");
+    }
+  }, [editor, accessibilityLabel]);
 
   useEffect(() => {
     if (editor) onEditorReady(editor);

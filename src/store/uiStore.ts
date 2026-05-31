@@ -30,6 +30,7 @@ interface UIStore {
 
   navigate: (screen: Screen) => void;
   goBack: () => void;
+  returnToNoteList: () => void;
   setSearchQuery: (query: string) => void;
   performSearch: (query: string) => Promise<void>;
   clearSearch: () => void;
@@ -83,6 +84,23 @@ export const useUIStore = create<UIStore>((set, get) => ({
     set({
       currentScreen: newStack[newStack.length - 1],
       screenStack: newStack,
+    });
+  },
+
+  returnToNoteList: () => {
+    const { screenStack, currentScreen } = get();
+    if (currentScreen === "editor") {
+      void scheduleLifecycleFlush({ syncBackup: true });
+    }
+    const noteListIndex = screenStack.indexOf("noteList");
+    const newStack =
+      noteListIndex >= 0
+        ? screenStack.slice(0, noteListIndex + 1)
+        : (["noteList"] as Screen[]);
+    set({
+      currentScreen: "noteList",
+      screenStack: newStack,
+      sidebarVisible: false,
     });
   },
 

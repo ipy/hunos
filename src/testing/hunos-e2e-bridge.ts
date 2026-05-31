@@ -31,7 +31,7 @@ export function mountHunosE2eBridge(): void {
       useUIStore.getState().requestFocusNewNoteTitle();
       return note;
     },
-    goToNoteList: () => useUIStore.getState().navigate("noteList"),
+    goToNoteList: () => useUIStore.getState().returnToNoteList(),
     clearTagFilter: () => {
       useTagStore.getState().setActiveTag(null);
       void useNoteStore.getState().loadNotes({ status: "active" });

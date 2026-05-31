@@ -145,7 +145,7 @@ export function TagsScreen({ layout = "mobile" }: TagsScreenProps) {
   const theme = useTheme();
   const { tagTree, loadTags, setActiveTag } = useTagStore();
   const { loadNotes } = useNoteStore();
-  const { navigate, hideSidebar } = useUIStore();
+  const { navigate, hideSidebar, returnToNoteList } = useUIStore();
 
   useEffect(() => {
     loadTags();
@@ -154,7 +154,7 @@ export function TagsScreen({ layout = "mobile" }: TagsScreenProps) {
   const handleAllNotes = () => {
     setActiveTag(null);
     loadNotes({ status: "active" });
-    navigate("noteList");
+    returnToNoteList();
     hideSidebar();
   };
 

@@ -10,7 +10,8 @@
       "redo": "重做",
       "share": "分享",
       "export": "导出",
-      "more": "更多操作"
+      "more": "更多操作",
+      "confirm": "确认"
     },
     "confirm": {
       "delete": "确定要删除吗？",
@@ -54,6 +55,8 @@
       "restorePlayground": "恢复格式试炼场模板（仅格式种子，非整篇撤销）",
       "restorePlaygroundShort": "恢复格式模板",
       "restorePlaygroundDone": "格式试炼场已恢复",
+      "restorePlaygroundConfirmTitle": "恢复格式模板？",
+      "restorePlaygroundConfirmMessage": "将用格式种子重置整篇笔记，您在「自由试炼」等区域的编辑会丢失。此操作无法撤销。",
       "createNote": "创建新笔记"
     },
     "list": {
@@ -70,6 +73,7 @@
   "editor": {
     "placeholder": "开始写作...",
     "titlePlaceholder": "标题",
+    "regionLabel": "编辑：{{title}}",
     "saveFailed": "无法保存更改，编辑内容仍保留在编辑器中。",
     "toolbar": {
       "inlineFormatting": "文本格式",

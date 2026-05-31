@@ -11,6 +11,7 @@ import { useNoteStore } from "@/store/noteStore";
 import { useUIStore } from "@/store/uiStore";
 import { useSettingsStore } from "@/store/settingsStore";
 import { Icon } from "@/components/common/Icon";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { TiptapEditor } from "@/components/editor/TiptapEditor";
 import { editorContentMatchesStoredJson } from "@/components/editor/noteSwitchContentUtils";
 import { EditorStatusBar } from "@/components/editor/EditorStatusBar";
@@ -116,6 +117,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   } = useNoteStore();
   const {
     goBack,
+    returnToNoteList,
     showToast,
     focusMode,
     toggleFocusMode,
@@ -154,6 +156,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     null,
   );
   const [restoreEditorSyncTick, setRestoreEditorSyncTick] = useState(0);
+  const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false);
   const [restoreChipSuppressed, setRestoreChipSuppressed] = useState(false);
   const restoreChipSuppressedRef = useRef(false);
   const titleTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
@@ -262,6 +265,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       contentWriteEpochRef.current = getPlaygroundWriteEpoch(note.id);
     }
     prevActiveNoteIdRef.current = nextNoteId;
+    setRestoreConfirmOpen(false);
   }, [note?.id]);
 
   useEffect(() => {
@@ -900,8 +904,17 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     if (layout === "mobile") goBack();
   };
 
+  const requestRestorePlaygroundConfirm = () => {
+    setRestoreConfirmOpen(true);
+  };
+
+  const cancelRestorePlaygroundConfirm = () => {
+    setRestoreConfirmOpen(false);
+  };
+
   const handleRestorePlayground = async () => {
     if (!note) return;
+    setRestoreConfirmOpen(false);
     const restoreSession = playgroundRestoreSessionRef.current;
     contentWriteEpochRef.current = bumpPlaygroundWriteEpoch(note.id);
     applyRestoreChipSuppressed(true);
@@ -1051,6 +1064,10 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const restorePlaygroundVisibleText = t(
     "notes.actions.restorePlaygroundShort",
   );
+  const editorNoteTitle = titleValue.trim() || note?.title || "";
+  const editorAccessibilityLabel = editorNoteTitle
+    ? t("editor.regionLabel", { title: editorNoteTitle })
+    : undefined;
   const isMobileRestoreChip = layout === "mobile";
 
   return (
@@ -1078,8 +1095,10 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       >
         {showBackButton && (
           <button
+            type="button"
             data-testid="editor-back-button"
-            onClick={goBack}
+            aria-label={t("tags.sections.allNotes")}
+            onClick={returnToNoteList}
             style={{
               background: "none",
               border: "none",
@@ -1098,6 +1117,27 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
             }
           >
             <Icon name="back" size={20} color={theme.colors.accent} />
+          </button>
+        )}
+        {showBackButton && (
+          <button
+            type="button"
+            data-testid="editor-all-notes-button"
+            onClick={returnToNoteList}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "6px 10px",
+              borderRadius: theme.radius.full,
+              fontSize: 14,
+              fontWeight: 600,
+              color: theme.colors.accent,
+              whiteSpace: "nowrap",
+              minHeight: 44,
+            }}
+          >
+            {t("tags.sections.allNotes")}
           </button>
         )}
         <div style={{ flex: 1 }} />
@@ -1399,7 +1439,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
                           label: t("notes.actions.restorePlayground"),
                           icon: "note",
                           danger: false,
-                          action: handleRestorePlayground,
+                          action: requestRestorePlaygroundConfirm,
                         },
                       ]
                     : []),
@@ -1558,7 +1598,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           {showRestorePlayground && (
             <button
               type="button"
-              onClick={handleRestorePlayground}
+              onClick={requestRestorePlaygroundConfirm}
               aria-label={restorePlaygroundLabel}
               title={restorePlaygroundLabel}
               data-testid="restore-playground-button"
@@ -1597,6 +1637,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           initialContent={editorSeedContent ?? noteContentForEditor}
           onChange={handleContentChange}
           onEditorReady={handleEditorReady}
+          accessibilityLabel={editorAccessibilityLabel}
           fontFamily={settings.editorFont}
           headingsFont={settings.headingsFont}
           codeFont={settings.codeFont}
@@ -1627,6 +1668,15 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           />
         </div>
       )}
+      <ConfirmDialog
+        open={restoreConfirmOpen}
+        testId="restore-playground-confirm"
+        title={t("notes.actions.restorePlaygroundConfirmTitle")}
+        message={t("notes.actions.restorePlaygroundConfirmMessage")}
+        confirmLabel={t("notes.actions.restorePlaygroundShort")}
+        onConfirm={() => void handleRestorePlayground()}
+        onCancel={cancelRestorePlaygroundConfirm}
+      />
     </div>
   );
 }

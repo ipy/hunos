@@ -6,6 +6,7 @@ import {
   extractPlainTextFromTiptap,
 } from "@/graph/linkExtractor";
 import { sanitizeBlockImageNoteContent } from "@/utils/migrateBlockImageFloor";
+import { filterNotesByTitleFirstSearch } from "./noteSearchRank";
 
 function deriveContentPlain(content: string): string {
   if (!content) {
@@ -180,16 +181,11 @@ export const noteStorage = {
 
   async search(query: string): Promise<Note[]> {
     if (!query.trim()) return [];
-    const lower = query.toLowerCase();
-    return db.notes
-      .filter(
-        (note) =>
-          note.status === "active" &&
-          (note.title.toLowerCase().includes(lower) ||
-            (note.contentPlain ?? "").toLowerCase().includes(lower)),
-      )
-      .toArray()
-      .then((notes) => Promise.all(notes.map(hydrateNoteFromDb)));
+    const active = await db.notes
+      .filter((note) => note.status === "active")
+      .toArray();
+    const matched = filterNotesByTitleFirstSearch(active, query);
+    return Promise.all(matched.map(hydrateNoteFromDb));
   },
 
   async count(status: NoteStatus = "active"): Promise<number> {
