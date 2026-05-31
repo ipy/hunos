@@ -73,8 +73,11 @@ describe("code markdown input", () => {
   it("converts T10-code-sample via backticks", () => {
     const tr = applyCodeInputRule("`T10-code-sample`");
     expect(tr.doc.textContent).toBe("T10-code-sample");
-    expect(tr.doc.resolve(1).marks().some((mark) => mark.type.name === "code")).toBe(
-      true,
-    );
+    expect(
+      tr.doc
+        .resolve(1)
+        .marks()
+        .some((mark) => mark.type.name === "code"),
+    ).toBe(true);
   });
 });

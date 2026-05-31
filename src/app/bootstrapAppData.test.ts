@@ -32,7 +32,8 @@ vi.mock("@/storage/formatPlaygroundNote", () => ({
 }));
 
 vi.mock("@/storage/bootstrapTagReconcile", () => ({
-  reconcileBootstrapTags: (...args: unknown[]) => reconcileBootstrapTags(...args),
+  reconcileBootstrapTags: (...args: unknown[]) =>
+    reconcileBootstrapTags(...args),
 }));
 
 vi.mock("@/store/noteStore", () => ({

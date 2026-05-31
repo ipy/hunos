@@ -12,9 +12,7 @@ import {
   flushEditorAutosave,
 } from "@/store/editorAutosaveRegistry";
 import { clearUnloadBackup } from "@/store/lifecycleUnload";
-import {
-  isStalePlaygroundWrite,
-} from "@/store/noteStorePlaygroundWriteEpoch";
+import { isStalePlaygroundWrite } from "@/store/noteStorePlaygroundWriteEpoch";
 import { enqueueActiveNoteSwitch } from "@/store/noteStoreActiveNoteSwitch";
 import { useSettingsStore } from "@/store/settingsStore";
 import { useTagStore } from "@/store/tagStore";

@@ -39,7 +39,8 @@ function duplicatePlaygroundPair(): Note[] {
 }
 
 vi.mock("@/storage/bootstrapTagReconcile", () => ({
-  reconcileBootstrapTags: (...args: unknown[]) => reconcileBootstrapTags(...args),
+  reconcileBootstrapTags: (...args: unknown[]) =>
+    reconcileBootstrapTags(...args),
 }));
 
 vi.mock("@/storage/welcomeNotes", () => ({

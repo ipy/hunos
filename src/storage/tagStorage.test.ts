@@ -69,9 +69,9 @@ describe("tagStorage orphan cleanup", () => {
 
     const { tagStorage } = await import("./tagStorage");
     expect(await tagStorage.cleanOrphaned()).toBe(0);
-    expect([...(await tagStorage.listAll())].map((tag) => tag.name).sort()).toEqual(
-      ["hunos", "hunos/入门指南"],
-    );
+    expect(
+      [...(await tagStorage.listAll())].map((tag) => tag.name).sort(),
+    ).toEqual(["hunos", "hunos/入门指南"]);
   });
 
   it("recreates missing hunos parent for orphaned leaf tags", async () => {
@@ -100,7 +100,9 @@ describe("tagStorage orphan cleanup", () => {
     expect(names).toContain("hunos/入门指南");
     expect(names).toContain("hunos/getting-started");
 
-    const hunos = (await tagStorage.listAll()).find((tag) => tag.name === "hunos");
+    const hunos = (await tagStorage.listAll()).find(
+      (tag) => tag.name === "hunos",
+    );
     const guide = (await tagStorage.listAll()).find(
       (tag) => tag.name === "hunos/入门指南",
     );
