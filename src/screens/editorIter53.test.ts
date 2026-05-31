@@ -62,8 +62,12 @@ describe("iteration 53 — editor a11y name", () => {
   it("uses aria-label on ProseMirror and hides injected stylesheet from a11y", () => {
     expect(tiptapSource).toContain('<style aria-hidden="true">');
     expect(tiptapSource).toContain('"aria-label": accessibilityLabel');
-    expect(tiptapSource).toContain('dom.setAttribute("aria-label", accessibilityLabel)');
-    expect(tiptapSource).not.toContain('"aria-labelledby": "note-editor-title"');
+    expect(tiptapSource).toContain(
+      'dom.setAttribute("aria-label", accessibilityLabel)',
+    );
+    expect(tiptapSource).not.toContain(
+      '"aria-labelledby": "note-editor-title"',
+    );
     expect(editorSource).toContain('t("editor.bodyLabel")');
     expect(zh.editor.bodyLabel).toBe("笔记正文");
     expect(en.editor.bodyLabel).toBe("Note body");
@@ -72,13 +76,16 @@ describe("iteration 53 — editor a11y name", () => {
 
 describe("iteration 53 — wiki-link offscreen", () => {
   it("AC42 E2E targets zh-CN 项目文档 (default lang=zh-CN)", () => {
-    expect(playgroundHelperSource).toContain('PROJECT_DOCS_NOTE_TITLE = "项目文档"');
+    expect(playgroundHelperSource).toContain(
+      'PROJECT_DOCS_NOTE_TITLE = "项目文档"',
+    );
     expect(wikiLinkE2eSource).toContain("PROJECT_DOCS_NOTE_TITLE");
     expect(wikiLinkE2eSource).not.toContain('data-wiki-title="project docs"');
   });
 
   it("navigates decoration targets without caret-outside guard", () => {
-    expect(wikiLinkSource).toContain("WIKI_LINK_TARGET_TESTID");
+    expect(wikiLinkSource).toContain("WIKI_LINK_TARGET_TESTID_PREFIX");
+    expect(wikiLinkSource).toContain("isWikiLinkTargetTestId");
     expect(wikiLinkSource).toContain("decorationTarget");
     expect(wikiLinkSource).toContain("pointerClick");
     expect(wikiLinkSource).toMatch(

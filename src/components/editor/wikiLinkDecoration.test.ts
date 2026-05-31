@@ -4,8 +4,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  WIKI_LINK_TARGET_TESTID,
+  WIKI_LINK_TARGET_TESTID_PREFIX,
   buildWikiLinkDecorations,
+  isWikiLinkTargetTestId,
+  wikiLinkTargetTestId,
 } from "./WikiLinkDecoration";
 
 const wikiLinkSource = readFileSync(
@@ -35,8 +37,15 @@ function inlineDecorationClasses(state: EditorState): string[] {
     });
 }
 
-function wikiLinkContentDecoration(state: EditorState) {
-  const decos = buildWikiLinkDecorations(state);
+function wikiLinkContentDecoration(
+  state: EditorState,
+  getNotes: () => readonly {
+    id: string;
+    title: string;
+    status: string;
+  }[] = () => [],
+) {
+  const decos = buildWikiLinkDecorations(state, getNotes);
   const found = decos.find(0, state.doc.content.size);
   return found
     .filter((deco) => deco.inline)
@@ -66,16 +75,30 @@ function stateWithWikiCaret(caretOffsetInParagraph: number) {
 }
 
 describe("buildWikiLinkDecorations", () => {
-  it("exports stable wiki-link target testid", () => {
-    expect(WIKI_LINK_TARGET_TESTID).toBe("wiki-link-target");
+  it("exports stable wiki-link target testid prefix", () => {
+    expect(WIKI_LINK_TARGET_TESTID_PREFIX).toBe("wiki-link-target");
+    expect(isWikiLinkTargetTestId("wiki-link-target-note-1")).toBe(true);
+    expect(isWikiLinkTargetTestId("wiki-link-target")).toBe(true);
+    expect(isWikiLinkTargetTestId("other-testid")).toBe(false);
   });
 
-  it("tags wiki-link content with data-testid and data-wiki-title", () => {
+  it("tags wiki-link content with unique testid and data-wiki-title", () => {
     const state = stateWithWikiCaret(4);
     const attrs = wikiLinkContentDecoration(state);
 
-    expect(attrs?.["data-testid"]).toBe(WIKI_LINK_TARGET_TESTID);
+    expect(attrs?.["data-testid"]).toBe(wikiLinkTargetTestId({ start: 3 }));
     expect(attrs?.["data-wiki-title"]).toBe("欢迎使用 Hunos");
+    expect(attrs?.["data-testid"]).not.toBe("wiki-link-target");
+  });
+
+  it("resolves note id into testid and data-note-id when notes are available", () => {
+    const state = stateWithWikiCaret(4);
+    const attrs = wikiLinkContentDecoration(state, () => [
+      { id: "welcome-id", title: "欢迎使用 Hunos", status: "active" },
+    ]);
+
+    expect(attrs?.["data-testid"]).toBe("wiki-link-target-welcome-id");
+    expect(attrs?.["data-note-id"]).toBe("welcome-id");
   });
 
   it("exposes link role and accessible name (AC39-wiki-link-a11y)", () => {
@@ -108,10 +131,13 @@ describe("buildWikiLinkDecorations", () => {
     expect(wikiLinkSource).toContain("keydown(view, event)");
   });
 
-  it("wires wiki-link target testid on content decoration", () => {
-    expect(wikiLinkSource).toContain(`export const WIKI_LINK_TARGET_TESTID`);
-    expect(wikiLinkSource).toContain(`"data-testid": WIKI_LINK_TARGET_TESTID`);
+  it("wires unique wiki-link target testids on content decoration", () => {
+    expect(wikiLinkSource).toContain(
+      `export const WIKI_LINK_TARGET_TESTID_PREFIX`,
+    );
+    expect(wikiLinkSource).toContain(`wikiLinkTargetTestId(wl, noteId)`);
     expect(wikiLinkSource).toContain(`"data-wiki-title": wl.title`);
+    expect(wikiLinkSource).toContain(`"data-note-id"`);
   });
 
   it("always hides bracket characters instead of wiki-link-bracket-visible", () => {

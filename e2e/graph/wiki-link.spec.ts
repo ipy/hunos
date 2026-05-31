@@ -5,6 +5,7 @@ import {
   WELCOME_NOTE_TITLE,
   editorLocator,
   openCleanFormatPlayground,
+  wikiLinkByTitle,
 } from "../helpers/playground";
 
 test.describe("wiki-link graph navigation", () => {
@@ -16,25 +17,17 @@ test.describe("wiki-link graph navigation", () => {
     page,
   }) => {
     await page.evaluate(() => {
-      const pane = document.querySelector(
-        '[data-testid="editor-scroll-pane"]',
-      );
+      const pane = document.querySelector('[data-testid="editor-scroll-pane"]');
       if (pane instanceof HTMLElement) pane.scrollTop = 0;
     });
 
     const scrollBefore = await page.evaluate(() => {
-      const pane = document.querySelector(
-        '[data-testid="editor-scroll-pane"]',
-      );
+      const pane = document.querySelector('[data-testid="editor-scroll-pane"]');
       return pane instanceof HTMLElement ? pane.scrollTop : -1;
     });
     expect(scrollBefore).toBe(0);
 
-    const link = page
-      .locator(
-        `[data-testid="wiki-link-target"][data-wiki-title="${PROJECT_DOCS_NOTE_TITLE}"]`,
-      )
-      .first();
+    const link = wikiLinkByTitle(page, PROJECT_DOCS_NOTE_TITLE);
     await link.click({ force: true });
 
     await expect(page.getByTestId("note-title")).toHaveValue(
@@ -43,14 +36,27 @@ test.describe("wiki-link graph navigation", () => {
     );
   });
 
+  test("AC42-wiki-link-offscreen-welcome: welcome link at editor scrollTop 0", async ({
+    page,
+  }) => {
+    await page.evaluate(() => {
+      const pane = document.querySelector('[data-testid="editor-scroll-pane"]');
+      if (pane instanceof HTMLElement) pane.scrollTop = 0;
+    });
+
+    const link = wikiLinkByTitle(page, WELCOME_NOTE_TITLE);
+    await link.click({ force: true });
+
+    await expect(page.getByTestId("note-title")).toHaveValue(
+      WELCOME_NOTE_TITLE,
+      { timeout: 15_000 },
+    );
+  });
+
   test("seed wiki-link navigates to welcome note and back via backlinks", async ({
     page,
   }) => {
-    const link = page
-      .locator(
-        `[data-testid="wiki-link-target"][data-wiki-title="${WELCOME_NOTE_TITLE}"]`,
-      )
-      .first();
+    const link = wikiLinkByTitle(page, WELCOME_NOTE_TITLE);
     await expect(link).toBeVisible();
     await link.click();
 

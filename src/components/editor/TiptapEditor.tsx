@@ -285,7 +285,10 @@ export function TiptapEditor({
       MarkdownReveal,
       ImagePasteDrop,
       MarkdownPaste,
-      WikiLinkDecoration.configure({ onWikiLinkClick: handleWikiLinkClick }),
+      WikiLinkDecoration.configure({
+        onWikiLinkClick: handleWikiLinkClick,
+        getNotes: () => notesRef.current,
+      }),
       WikiLinkSuggestion.configure({
         getNoteId: () => noteIdRef.current,
         getNotes: () => notesRef.current,

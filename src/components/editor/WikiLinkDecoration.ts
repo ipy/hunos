@@ -4,6 +4,7 @@ import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import type { EditorView } from "@tiptap/pm/view";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import type { EditorState } from "@tiptap/pm/state";
+import { findNoteByWikiTitle } from "@/utils/wikiLink";
 import { suppressWikiLinkSuggestionBriefly } from "./wikiLinkEditGuard";
 import { shouldNavigateWikiLinkClick } from "./wikiLinkClickUtils";
 import {
@@ -14,10 +15,33 @@ import {
 const WIKI_LINK_REGEX = /\[\[([^\]]+)\]\]/g;
 const wikiLinkKey = new PluginKey("wikiLinkDecoration");
 
-export const WIKI_LINK_TARGET_TESTID = "wiki-link-target";
+/** Prefix for per-link wiki-link target testids (`wiki-link-target-{noteId|pos-N}`). */
+export const WIKI_LINK_TARGET_TESTID_PREFIX = "wiki-link-target";
+
+export interface WikiLinkNoteRef {
+  id: string;
+  title: string;
+  status: string;
+}
 
 export interface WikiLinkDecorationOptions {
   onWikiLinkClick: (title: string) => void;
+  getNotes: () => readonly WikiLinkNoteRef[];
+}
+
+export function wikiLinkTargetTestId(
+  match: Pick<WikiLinkMatch, "start">,
+  noteId?: string,
+): string {
+  if (noteId) return `${WIKI_LINK_TARGET_TESTID_PREFIX}-${noteId}`;
+  return `${WIKI_LINK_TARGET_TESTID_PREFIX}-pos-${match.start}`;
+}
+
+export function isWikiLinkTargetTestId(testId: string | null): boolean {
+  return (
+    testId === WIKI_LINK_TARGET_TESTID_PREFIX ||
+    (testId?.startsWith(`${WIKI_LINK_TARGET_TESTID_PREFIX}-`) ?? false)
+  );
 }
 
 interface WikiLinkMatch {
@@ -139,26 +163,36 @@ export function wikiLinkMatchFromDomTarget(
   return null;
 }
 
-export function buildWikiLinkDecorations(state: EditorState): DecorationSet {
+export function buildWikiLinkDecorations(
+  state: EditorState,
+  getNotes: () => readonly WikiLinkNoteRef[] = () => [],
+): DecorationSet {
   const { doc } = state;
   const wikiLinks = findWikiLinks(doc);
+  const notes = getNotes();
   const decorations: Decoration[] = [];
 
   for (const wl of wikiLinks) {
+    const noteId = findNoteByWikiTitle(notes, wl.title)?.id;
+    const contentAttrs: Record<string, string> = {
+      nodeName: "a",
+      class: "wiki-link-content",
+      href: "#",
+      "data-testid": wikiLinkTargetTestId(wl, noteId),
+      "data-wiki-title": wl.title,
+      role: "link",
+      tabindex: "0",
+      "aria-label": wl.title,
+    };
+    if (noteId) {
+      contentAttrs["data-note-id"] = noteId;
+    }
+
     decorations.push(
       Decoration.inline(wl.start, wl.contentStart, {
         class: "wiki-link-bracket-hidden",
       }),
-      Decoration.inline(wl.contentStart, wl.contentEnd, {
-        nodeName: "a",
-        class: "wiki-link-content",
-        href: "#",
-        "data-testid": WIKI_LINK_TARGET_TESTID,
-        "data-wiki-title": wl.title,
-        role: "link",
-        tabindex: "0",
-        "aria-label": wl.title,
-      }),
+      Decoration.inline(wl.contentStart, wl.contentEnd, contentAttrs),
       Decoration.inline(wl.contentEnd, wl.end, {
         class: "wiki-link-bracket-hidden",
       }),
@@ -231,7 +265,7 @@ function navigateWikiLinkFromTarget(
 
   const decorationTarget =
     linkEl instanceof HTMLElement &&
-    linkEl.getAttribute("data-testid") === WIKI_LINK_TARGET_TESTID;
+    isWikiLinkTargetTestId(linkEl.getAttribute("data-testid"));
   const pointerClick =
     event instanceof MouseEvent || event instanceof PointerEvent;
 
@@ -259,11 +293,12 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
   addOptions() {
     return {
       onWikiLinkClick: () => {},
+      getNotes: () => [] as readonly WikiLinkNoteRef[],
     };
   },
 
   addProseMirrorPlugins() {
-    const { onWikiLinkClick } = this.options;
+    const { onWikiLinkClick, getNotes } = this.options;
 
     let preClickSelectionFrom: number | null = null;
     let preClickLinkSpan: { start: number; end: number } | null = null;
@@ -351,7 +386,7 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
         },
         props: {
           decorations(state) {
-            return buildWikiLinkDecorations(state);
+            return buildWikiLinkDecorations(state, getNotes);
           },
           handleDOMEvents: {
             mousedown(view, event) {

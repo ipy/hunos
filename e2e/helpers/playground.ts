@@ -34,9 +34,11 @@ export async function gotoFreshApp(page: Page): Promise<void> {
     await page.reload({ waitUntil: "domcontentloaded" });
   }
   await expect(page.getByTestId("note-list")).toBeVisible();
-  await expect(noteListItem(page, FORMAT_PLAYGROUND_TITLE).first()).toBeVisible({
-    timeout: 15_000,
-  });
+  await expect(noteListItem(page, FORMAT_PLAYGROUND_TITLE).first()).toBeVisible(
+    {
+      timeout: 15_000,
+    },
+  );
 }
 
 export async function openFormatPlayground(page: Page): Promise<void> {
@@ -78,6 +80,10 @@ export async function openFormatPlaygroundInfoPanelToc(
   await expect(page.getByTestId("info-panel")).toBeVisible();
   await page.getByTestId("info-panel-tab-toc").click();
   await expect(page.getByTestId("info-panel-toc-list")).toBeVisible();
+}
+
+export function wikiLinkByTitle(page: Page, title: string) {
+  return page.locator(`.wiki-link-content[data-wiki-title="${title}"]`);
 }
 
 export function editorLocator(page: Page) {
@@ -125,12 +131,16 @@ export async function appendEditorHeading(
             };
           }
         ).__hunosE2e;
-        return bridge?.insertHeadingAtEnd(lvl as 1 | 2 | 3, headingText) ?? false;
+        return (
+          bridge?.insertHeadingAtEnd(lvl as 1 | 2 | 3, headingText) ?? false
+        );
       },
       { lvl: level, headingText: text },
     );
     if (!ok) {
-      throw new Error("appendEditorHeading: __hunosE2e.insertHeadingAtEnd failed");
+      throw new Error(
+        "appendEditorHeading: __hunosE2e.insertHeadingAtEnd failed",
+      );
     }
     await page.waitForTimeout(300);
     return;

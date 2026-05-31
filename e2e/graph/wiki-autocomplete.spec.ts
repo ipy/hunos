@@ -3,6 +3,7 @@ import {
   WELCOME_NOTE_TITLE,
   editorLocator,
   openCleanFormatPlayground,
+  wikiLinkByTitle,
 } from "../helpers/playground";
 
 test.describe("wiki-link autocomplete", () => {
@@ -25,12 +26,6 @@ test.describe("wiki-link autocomplete", () => {
     await expect(item).toContainText(WELCOME_NOTE_TITLE);
 
     await page.keyboard.press("Enter");
-    await expect(
-      page
-        .locator(
-          `[data-testid="wiki-link-target"][data-wiki-title="${WELCOME_NOTE_TITLE}"]`,
-        )
-        .first(),
-    ).toBeVisible();
+    await expect(wikiLinkByTitle(page, WELCOME_NOTE_TITLE)).toBeVisible();
   });
 });
