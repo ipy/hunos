@@ -359,6 +359,10 @@ export function NoteListScreen({ layout = "mobile" }: NoteListScreenProps) {
   };
 
   const handleSelectNote = (id: string) => {
+    if (searchQuery.trim()) {
+      clearSearch();
+      setShowSearch(false);
+    }
     setActiveNote(id);
     if (layout === "mobile") navigate("editor");
     else if (currentScreen === "settings") navigate("editor");

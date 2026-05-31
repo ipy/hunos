@@ -160,4 +160,52 @@ describe("graphEngine backlink keys", () => {
     expect(incoming).toHaveLength(1);
     expect(incoming[0]?.linkId).toBe(stableBacklinkLinkId("source", 42));
   });
+
+  it("enriches context with section heading when source note has structured content", async () => {
+    seedNote("target", "项目文档");
+    const sourceContent = JSON.stringify({
+      type: "doc",
+      content: [
+        {
+          type: "heading",
+          attrs: { level: 2 },
+          content: [{ type: "text", text: "标签与链接" }],
+        },
+        {
+          type: "paragraph",
+          content: [
+            { type: "text", text: "详见 " },
+            {
+              type: "text",
+              text: "项目文档",
+              marks: [{ type: "wikiLink", attrs: { title: "项目文档" } }],
+            },
+          ],
+        },
+      ],
+    });
+    const source: Note = {
+      id: "source",
+      title: "格式试炼场",
+      content: sourceContent,
+      contentPlain: "标签与链接\n详见 [[项目文档]]\n",
+      isPinned: false,
+      status: "active",
+      trashedAt: null,
+      createdAt: 1,
+      modifiedAt: 1,
+      wordCount: 0,
+    };
+    notesById.set("source", source);
+    seedWikiLink(
+      "link-1",
+      "source",
+      "target",
+      "标签与链接 · ... 详见 [[项目文档]] ...",
+      10,
+    );
+
+    const incoming = await graphEngine.getBacklinks("target");
+    expect(incoming[0]?.context).toMatch(/^标签与链接 ·/);
+  });
 });

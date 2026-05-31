@@ -9,6 +9,19 @@ export function assertBacklinkSnippetPlainText(text: string): void {
   expect(backlinkSnippetHasRawMarkdown(text)).toBe(false);
 }
 
+/** Read target note id from a backlink row's payload (AC62-backlinks-nav-hash-resolve). */
+export async function incomingBacklinkTargetNoteId(
+  page: Page,
+  rowTestId: string,
+): Promise<string> {
+  const row = page.getByTestId(rowTestId);
+  const noteId = await row.getAttribute("data-note-id");
+  if (!noteId) {
+    throw new Error(`backlink row missing data-note-id: ${rowTestId}`);
+  }
+  return noteId;
+}
+
 /** Assert location.hash references the target note id (AC61-backlinks-nav-hash). */
 export async function expectBacklinkNavigationHash(
   page: Page,

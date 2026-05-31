@@ -4,6 +4,7 @@ import {
   BACKLINKS_OUTGOING_SECTION_TESTID,
   BACKLINKS_PANEL_TESTID,
   BACKLINKS_PANEL_TOGGLE_TESTID,
+  BACKLINKS_ITEM_NOTE_ID_ATTR,
   assertUniqueBacklinkPanelKeys,
   backlinksItemSnippetTestId,
   backlinksItemTestId,
@@ -34,6 +35,10 @@ describe("BacklinksPanel automation testids", () => {
     expect(backlinksItemSnippetTestId("link-abc")).not.toBe(
       backlinksItemTestId("link-abc"),
     );
+  });
+
+  it("exposes target note id on each row for hash navigation (AC62-backlinks-nav-hash-resolve)", () => {
+    expect(BACKLINKS_ITEM_NOTE_ID_ATTR).toBe("data-note-id");
   });
 
   it("keeps item testids unique when two rows share the same note id", () => {

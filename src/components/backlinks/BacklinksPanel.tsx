@@ -12,6 +12,9 @@ export const BACKLINKS_PANEL_TOGGLE_TESTID = "backlinks-panel-toggle";
 export const BACKLINKS_OUTGOING_SECTION_TESTID = "backlinks-outgoing-section";
 export const BACKLINKS_INCOMING_SECTION_TESTID = "backlinks-incoming-section";
 
+/** Target note id on a backlink row — stable for hash navigation e2e. */
+export const BACKLINKS_ITEM_NOTE_ID_ATTR = "data-note-id";
+
 /** Per-row test id — linkId is stable (source + position) even when rows share noteId. */
 export function backlinksItemTestId(linkId: string): string {
   return `backlinks-item-${linkId}`;
@@ -106,6 +109,7 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
       key={backlinksRowKey(section, bl, index)}
       data-testid={backlinksItemTestId(bl.linkId)}
       data-link-key={bl.linkId}
+      data-note-id={bl.noteId}
       data-note-title={bl.noteTitle}
       onClick={() => setActiveNote(bl.noteId)}
       style={{

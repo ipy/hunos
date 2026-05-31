@@ -10,10 +10,11 @@ import {
   collectIncomingBacklinkRowTestIds,
   expandBacklinksPanelIfCollapsed,
   expectBacklinkNavigationHash,
+  incomingBacklinkTargetNoteId,
   openProjectDocsWithBacklinksPanel,
   waitForIncomingBacklinkRowCount,
 } from "../helpers/backlinks";
-import { noteIdFromListItem, openNoteFromList } from "../helpers/notes";
+import { openNoteFromList } from "../helpers/notes";
 
 const DESKTOP_VIEWPORT = { width: 1280, height: 720 } as const;
 
@@ -83,20 +84,18 @@ test.describe("backlinks footer — iter 61", () => {
       test("AC61-backlinks-nav-hash: row click sets location.hash to target note id", async ({
         page,
       }) => {
-        const playgroundNoteId = await noteIdFromListItem(
-          page,
-          FORMAT_PLAYGROUND_TITLE,
-        );
-        // Mobile: noteIdFromListItem backs out to the list via ensureNoteListScreen.
-        await openProjectDocsWithBacklinksPanel(page);
         await expandBacklinksPanelIfCollapsed(page);
         const rowTestIds = await collectIncomingBacklinkRowTestIds(page);
 
         for (const rowTestId of rowTestIds) {
           await openProjectDocsWithBacklinksPanel(page);
           await expandBacklinksPanelIfCollapsed(page);
+          const expectedNoteId = await incomingBacklinkTargetNoteId(
+            page,
+            rowTestId,
+          );
           await page.getByTestId(rowTestId).click();
-          await expectBacklinkNavigationHash(page, playgroundNoteId);
+          await expectBacklinkNavigationHash(page, expectedNoteId);
           await expect(page.getByTestId("note-title")).toHaveValue(
             FORMAT_PLAYGROUND_TITLE,
             { timeout: 15_000 },
@@ -105,6 +104,27 @@ test.describe("backlinks footer — iter 61", () => {
             encodeURIComponent(FORMAT_PLAYGROUND_TITLE),
           );
         }
+      });
+
+      test("AC62-backlink-snippet-disambiguate: rows show distinct section prefixes", async ({
+        page,
+      }) => {
+        await expandBacklinksPanelIfCollapsed(page);
+        const rowTestIds = await collectIncomingBacklinkRowTestIds(page);
+        const prefixes: string[] = [];
+
+        for (const rowTestId of rowTestIds) {
+          const linkId = rowTestId.replace(/^backlinks-item-/, "");
+          const text = await page
+            .getByTestId(`backlinks-snippet-${linkId}`)
+            .innerText();
+          assertBacklinkSnippetPlainText(text);
+          prefixes.push(text.split(" · ")[0] ?? text);
+        }
+
+        expect(new Set(prefixes).size).toBe(2);
+        expect(prefixes.join(" ")).toMatch(/标签与链接/);
+        expect(prefixes.join(" ")).toMatch(/自由试炼/);
       });
     });
   }

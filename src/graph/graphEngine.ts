@@ -4,6 +4,9 @@ import { noteStorage } from "@/storage/noteStorage";
 import {
   extractFromPlainText,
   extractPlainTextForGraphSync,
+  backlinkContextWithSection,
+  graphHeadingOffsetsFromJson,
+  sectionHeadingAtOffset,
 } from "./linkExtractor";
 import { isValidTagName } from "@/utils/tagPattern";
 import { replaceWikiLinkTitleInContent } from "@/utils/wikiLink";
@@ -30,17 +33,35 @@ export function dedupeBacklinkResults(
   });
 }
 
+function wikiLinkContextWithSection(
+  note: Note,
+  position: number,
+  context: string,
+): string {
+  try {
+    const headings = graphHeadingOffsetsFromJson(JSON.parse(note.content));
+    const section = sectionHeadingAtOffset(headings, position);
+    return backlinkContextWithSection(context, section);
+  } catch {
+    return context;
+  }
+}
+
 export const graphEngine = {
   async syncNoteLinks(noteId: string, content: string): Promise<void> {
     let plainText: string;
+    let parsedJson: unknown = null;
     try {
-      const json = JSON.parse(content);
-      plainText = extractPlainTextForGraphSync(json);
+      parsedJson = JSON.parse(content);
+      plainText = extractPlainTextForGraphSync(parsedJson);
     } catch {
       plainText = content;
     }
 
     const extraction = extractFromPlainText(plainText);
+    const headingRanges = parsedJson
+      ? graphHeadingOffsetsFromJson(parsedJson)
+      : [];
 
     await linkStorage.deleteBySourceAndType(noteId, "tag_ref");
     await linkStorage.deleteBySourceAndType(noteId, "wiki_link");
@@ -58,13 +79,14 @@ export const graphEngine = {
 
     for (const wikiLink of extraction.wikiLinks) {
       const target = await noteStorage.findActiveByTitle(wikiLink.title);
+      const section = sectionHeadingAtOffset(headingRanges, wikiLink.position);
 
       if (target) {
         await linkStorage.create(
           noteId,
           target.id,
           "wiki_link",
-          wikiLink.context,
+          backlinkContextWithSection(wikiLink.context, section),
           wikiLink.position,
         );
       }
@@ -114,7 +136,11 @@ export const graphEngine = {
           linkId: stableBacklinkLinkId(link.sourceNoteId, link.position),
           noteId: note.id,
           noteTitle: note.title,
-          context: link.context,
+          context: wikiLinkContextWithSection(
+            note,
+            link.position,
+            link.context,
+          ),
           type: link.type,
         });
       }

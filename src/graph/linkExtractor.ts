@@ -19,6 +19,40 @@ export interface ExtractionResult {
   title: string;
 }
 
+export interface GraphHeadingAtOffset {
+  offset: number;
+  title: string;
+}
+
+const BACKLINK_SECTION_SEP = " · ";
+
+/** Section heading immediately before `position` in graph-sync plain text offsets. */
+export function sectionHeadingAtOffset(
+  headings: GraphHeadingAtOffset[],
+  position: number,
+): string | null {
+  let found: GraphHeadingAtOffset | null = null;
+  for (const heading of headings) {
+    if (heading.offset <= position) {
+      found = heading;
+    } else {
+      break;
+    }
+  }
+  return found?.title ?? null;
+}
+
+/** Prefix link context with its source section when not already disambiguated. */
+export function backlinkContextWithSection(
+  context: string,
+  section: string | null,
+): string {
+  if (!section) return context;
+  const prefix = `${section}${BACKLINK_SECTION_SEP}`;
+  if (context.startsWith(prefix)) return context;
+  return `${prefix}${context}`;
+}
+
 function extractContext(
   text: string,
   position: number,
@@ -83,8 +117,11 @@ export function plainTextFromTiptapTextNode(
   return text.replace(/\[\[[^\]]+\]\]/g, " ");
 }
 
-/** Plain text for graph link extraction — keeps [[title]] literals for wiki-link indexing. */
-export function extractPlainTextForGraphSync(json: unknown): string {
+function graphPlainTextFromNode(
+  json: unknown,
+  onHeading?: (offset: number, title: string) => void,
+  offsetRef: { value: number } = { value: 0 },
+): string {
   if (!json || typeof json !== "object") return "";
 
   const doc = json as {
@@ -93,17 +130,35 @@ export function extractPlainTextForGraphSync(json: unknown): string {
     text?: string;
     marks?: unknown[];
   };
+
+  const appendText = (chunk: string): string => {
+    offsetRef.value += chunk.length;
+    return chunk;
+  };
+
   if (doc.type === "text" && doc.text) {
     if (isWikiLinkMark(doc.marks)) {
       const title = (doc.marks ?? []).find(
         (mark) => (mark as { type?: string }).type === "wikiLink",
       ) as { attrs?: { title?: string } } | undefined;
-      return title?.attrs?.title ? `[[${title.attrs.title}]]` : " ";
+      return appendText(title?.attrs?.title ? `[[${title.attrs.title}]]` : " ");
     }
-    return doc.text;
+    return appendText(doc.text);
   }
 
   if (!Array.isArray(doc.content)) return "";
+
+  if (doc.type === "heading") {
+    const headingStart = offsetRef.value;
+    const headingText = doc.content
+      .map((node) => graphPlainTextFromNode(node, onHeading, offsetRef))
+      .join("")
+      .trim();
+    if (headingText) {
+      onHeading?.(headingStart, headingText);
+    }
+    return appendText(headingText + "\n");
+  }
 
   return doc.content
     .map((node: unknown) => {
@@ -118,43 +173,74 @@ export function extractPlainTextForGraphSync(json: unknown): string {
           const title = (n.marks ?? []).find(
             (mark) => (mark as { type?: string }).type === "wikiLink",
           ) as { attrs?: { title?: string } } | undefined;
-          return title?.attrs?.title ? `[[${title.attrs.title}]]` : " ";
+          return appendText(
+            title?.attrs?.title ? `[[${title.attrs.title}]]` : " ",
+          );
         }
-        return n.text || "";
+        return appendText(n.text || "");
       }
-      if (n.type === "paragraph" || n.type === "heading") {
-        return extractPlainTextForGraphSync(n) + "\n";
+      if (n.type === "paragraph") {
+        return (
+          graphPlainTextFromNode(n, onHeading, offsetRef) + appendText("\n")
+        );
+      }
+      if (n.type === "heading") {
+        return graphPlainTextFromNode(n, onHeading, offsetRef);
       }
       if (
         n.type === "taskItem" ||
         n.type === "listItem" ||
         n.type === "blockquote"
       ) {
-        return extractPlainTextForGraphSync(n) + "\n";
+        return (
+          graphPlainTextFromNode(n, onHeading, offsetRef) + appendText("\n")
+        );
       }
       if (
         n.type === "bulletList" ||
         n.type === "orderedList" ||
         n.type === "taskList"
       ) {
-        return extractPlainTextForGraphSync(n);
+        return graphPlainTextFromNode(n, onHeading, offsetRef);
       }
       if (n.type === "codeBlock") {
-        return extractPlainTextForGraphSync(n) + "\n";
+        return (
+          graphPlainTextFromNode(n, onHeading, offsetRef) + appendText("\n")
+        );
       }
       if (n.type === "table") {
-        return extractPlainTextForGraphSync(n) + "\n";
+        return (
+          graphPlainTextFromNode(n, onHeading, offsetRef) + appendText("\n")
+        );
       }
       if (n.type === "tableRow") {
-        const rowText = extractPlainTextForGraphSync(n).trim();
-        return rowText ? rowText + "\n" : "";
+        const rowText = graphPlainTextFromNode(n, onHeading, offsetRef).trim();
+        return rowText ? appendText(rowText + "\n") : "";
       }
       if (n.type === "tableCell" || n.type === "tableHeader") {
-        return extractPlainTextForGraphSync(n) + "\t";
+        return (
+          graphPlainTextFromNode(n, onHeading, offsetRef) + appendText("\t")
+        );
       }
-      return extractPlainTextForGraphSync(n);
+      return graphPlainTextFromNode(n, onHeading, offsetRef);
     })
     .join("");
+}
+
+/** Heading offsets aligned with {@link extractPlainTextForGraphSync} character positions. */
+export function graphHeadingOffsetsFromJson(
+  json: unknown,
+): GraphHeadingAtOffset[] {
+  const headings: GraphHeadingAtOffset[] = [];
+  graphPlainTextFromNode(json, (offset, title) => {
+    headings.push({ offset, title });
+  });
+  return headings;
+}
+
+/** Plain text for graph link extraction — keeps [[title]] literals for wiki-link indexing. */
+export function extractPlainTextForGraphSync(json: unknown): string {
+  return graphPlainTextFromNode(json);
 }
 
 export function extractPlainTextFromTiptap(json: unknown): string {

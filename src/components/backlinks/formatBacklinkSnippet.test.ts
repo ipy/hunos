@@ -70,4 +70,14 @@ describe("formatBacklinkSnippet", () => {
     expect(out).not.toMatch(/(?<!_)_(?!_)/);
     expect(backlinkSnippetHasRawMarkdown(out)).toBe(false);
   });
+
+  it("preserves section prefix for duplicate-source rows (AC62-backlink-snippet-disambiguate)", () => {
+    const tags = formatBacklinkSnippet(
+      "标签与链接 · ... 详见 项目文档 与 项目文档 #42。...",
+    );
+    const tryOwn = formatBacklinkSnippet("自由试炼 · ... 与 项目文档 #42。...");
+    expect(tags.startsWith("标签与链接 ·")).toBe(true);
+    expect(tryOwn.startsWith("自由试炼 ·")).toBe(true);
+    expect(tags).not.toBe(tryOwn);
+  });
 });

@@ -47,16 +47,13 @@ describe("iteration 61 — footer label consistency (AC61-footer-i18n)", () => {
 });
 
 describe("iteration 61 — nav hash mobile setup (AC61-backlinks-nav-hash)", () => {
-  it("re-opens project docs after noteIdFromListItem before expanding backlinks", () => {
+  it("resolves expected note id from row data-note-id before hash assertion", () => {
     const ac61Start = backlinksE2eSource.indexOf("AC61-backlinks-nav-hash");
     expect(ac61Start).toBeGreaterThan(-1);
-    const ac61Block = backlinksE2eSource.slice(ac61Start, ac61Start + 900);
-    const noteIdIdx = ac61Block.indexOf("noteIdFromListItem");
-    const reopenIdx = ac61Block.indexOf("openProjectDocsWithBacklinksPanel");
-    const expandIdx = ac61Block.indexOf("expandBacklinksPanelIfCollapsed");
-    expect(noteIdIdx).toBeGreaterThan(-1);
-    expect(reopenIdx).toBeGreaterThan(noteIdIdx);
-    expect(expandIdx).toBeGreaterThan(reopenIdx);
+    const ac61Block = backlinksE2eSource.slice(ac61Start, ac61Start + 1200);
+    expect(ac61Block).toContain("incomingBacklinkTargetNoteId");
+    expect(ac61Block).toContain("expectBacklinkNavigationHash");
+    expect(ac61Block).not.toContain("noteIdFromListItem");
   });
 });
 
