@@ -76,3 +76,13 @@ export function deriveToc(note: Note, editor: Editor | null): TocItem[] {
   }
   return extractTocFromNote(note);
 }
+
+export type InfoPanelTab = "stats" | "toc";
+
+/** Heading-rich notes open the info panel on TOC for discoverability. */
+export function defaultInfoPanelTab(
+  note: Note,
+  editor: Editor | null,
+): InfoPanelTab {
+  return deriveToc(note, editor).length > 0 ? "toc" : "stats";
+}

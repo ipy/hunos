@@ -16,9 +16,11 @@ import {
   noteContentHasTaskList,
 } from "@/utils/noteContentHasTaskList";
 import { deriveNoteStats } from "@/utils/noteStats";
-import { deriveToc } from "@/utils/noteToc";
-
-type Tab = "stats" | "toc";
+import {
+  defaultInfoPanelTab,
+  deriveToc,
+  type InfoPanelTab,
+} from "@/utils/noteToc";
 
 interface InfoPanelProps {
   note: Note;
@@ -54,16 +56,25 @@ export function InfoPanel({
   const [showHideCompletedToggle, setShowHideCompletedToggle] = useState(
     () => editorHasTaskList(editor) || noteContentHasTaskList(note.content),
   );
-  const [activeTab, setActiveTab] = useState<Tab>("stats");
+  const [activeTab, setActiveTab] = useState<InfoPanelTab>(() =>
+    defaultInfoPanelTab(note, editor),
+  );
   const [statsRevision, setStatsRevision] = useState(0);
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartY = useRef<number | null>(null);
   const dragOffsetRef = useRef(0);
   const panelRef = useRef<HTMLDivElement>(null);
+  const noteIdRef = useRef(note.id);
   const lastTocActivateRef = useRef<{ index: number; time: number } | null>(
     null,
   );
+
+  useEffect(() => {
+    if (noteIdRef.current === note.id) return;
+    noteIdRef.current = note.id;
+    setActiveTab(defaultInfoPanelTab(note, editor));
+  }, [note.id, note, editor]);
 
   useEffect(() => {
     if (!editor) {
@@ -142,7 +153,7 @@ export function InfoPanel({
     activateTocEntry(index, toc[index]?.docPos, entry);
   };
 
-  const tabs: { id: Tab; icon: string }[] = [
+  const tabs: { id: InfoPanelTab; icon: string }[] = [
     { id: "stats", icon: "stats" },
     { id: "toc", icon: "list" },
   ];
@@ -447,16 +458,6 @@ export function InfoPanel({
                     key={i}
                     type="button"
                     data-testid={`info-panel-toc-entry-${i}`}
-                    onPointerDown={(event) => {
-                      if (!editor || event.button !== 0) return;
-                      event.preventDefault();
-                      activateTocEntry(i, item.docPos, event.currentTarget);
-                    }}
-                    onClick={(event) => {
-                      if (!editor) return;
-                      event.preventDefault();
-                      activateTocEntry(i, item.docPos, event.currentTarget);
-                    }}
                     onKeyDown={(event) => {
                       if (!editor) return;
                       if (event.key !== "Enter" && event.key !== " ") return;

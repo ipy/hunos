@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { deriveToc, extractTocFromContent, extractTocFromDoc } from "./noteToc";
+import {
+  defaultInfoPanelTab,
+  deriveToc,
+  extractTocFromContent,
+  extractTocFromDoc,
+} from "./noteToc";
 import type { Note } from "@/types/note";
 import type { Editor } from "@tiptap/react";
 
@@ -121,7 +126,9 @@ describe("deriveToc", () => {
     const editor = {
       state: {
         doc: {
-          descendants: (fn: (node: typeof headingNode, pos: number) => void) => {
+          descendants: (
+            fn: (node: typeof headingNode, pos: number) => void,
+          ) => {
             fn(headingNode, 0);
           },
         },
@@ -140,5 +147,27 @@ describe("deriveToc", () => {
       { level: 1, text: "Intro" },
       { level: 2, text: "Iter92 Live Heading" },
     ]);
+  });
+});
+
+describe("defaultInfoPanelTab", () => {
+  it("opens TOC for heading-rich notes", () => {
+    const note = baseNote({ content: JSON.stringify(sampleDoc) });
+    expect(defaultInfoPanelTab(note, null)).toBe("toc");
+  });
+
+  it("opens stats when note has no headings", () => {
+    const note = baseNote({
+      content: JSON.stringify({
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "Plain note" }],
+          },
+        ],
+      }),
+    });
+    expect(defaultInfoPanelTab(note, null)).toBe("stats");
   });
 });
