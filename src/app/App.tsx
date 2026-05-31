@@ -32,7 +32,10 @@ function AppContent() {
   }, [locale, i18n]);
 
   useEffect(() => {
-    if (typeof __HUNOS_E2E__ !== "undefined" && __HUNOS_E2E__) {
+    if (
+      import.meta.env.DEV ||
+      (typeof __HUNOS_E2E__ !== "undefined" && __HUNOS_E2E__)
+    ) {
       mountHunosE2eBridge();
     }
   }, []);

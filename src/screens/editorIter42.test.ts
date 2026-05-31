@@ -28,6 +28,10 @@ const e2eBridgeSource = readFileSync(
   join(process.cwd(), "src/testing/hunos-e2e-bridge.ts"),
   "utf-8",
 );
+const appSource = readFileSync(
+  join(process.cwd(), "src/app/App.tsx"),
+  "utf-8",
+);
 const noteSearchSource = readFileSync(
   join(process.cwd(), "src/components/editor/EditorNoteSearch.tsx"),
   "utf-8",
@@ -37,15 +41,19 @@ describe("iteration 42 — offscreen wiki-link activation", () => {
   it("resolves wiki-link from composed event path for 0×0 decoration targets", () => {
     expect(wikiLinkSource).toContain("findWikiLinkContentInEventPath");
     expect(wikiLinkSource).toContain("event.composedPath()");
+    expect(wikiLinkSource).toContain("target.closest(\".wiki-link-content\")");
     expect(wikiLinkSource).toContain(
       'addEventListener("click", onClickCapture, true)',
     );
+    expect(wikiLinkSource).toContain('nodeName: "a"');
   });
 
   it("supports programmatic activation by title without scroll", () => {
     expect(wikiLinkSource).toContain("activateWikiLinkByTitle");
     expect(e2eBridgeSource).toContain("activateWikiLink:");
     expect(e2eBridgeSource).toContain("registerWikiLinkActivator");
+    expect(appSource).toContain("import.meta.env.DEV");
+    expect(appSource).toContain("mountHunosE2eBridge");
   });
 });
 

@@ -84,7 +84,24 @@ export function findWikiLinkContentInEventPath(
       return node;
     }
   }
+
+  const target = event.target;
+  if (target instanceof HTMLElement) {
+    return target.closest(".wiki-link-content");
+  }
+
   return null;
+}
+
+function wikiLinkMatchAtPos(
+  doc: ProseMirrorNode,
+  pos: number,
+): WikiLinkMatch | null {
+  return (
+    findWikiLinks(doc).find(
+      (wl) => pos >= wl.contentStart && pos <= wl.contentEnd,
+    ) ?? null
+  );
 }
 
 /** Programmatically open a wiki-link target (works when decoration bbox is 0×0). */
@@ -129,7 +146,9 @@ export function buildWikiLinkDecorations(state: EditorState): DecorationSet {
         class: "wiki-link-bracket-hidden",
       }),
       Decoration.inline(wl.contentStart, wl.contentEnd, {
+        nodeName: "a",
         class: "wiki-link-content",
+        href: "#",
         "data-testid": WIKI_LINK_TARGET_TESTID,
         "data-wiki-title": wl.title,
         role: "link",
@@ -173,17 +192,22 @@ function captureWikiLinkPreClick(
 
 function navigateWikiLinkFromTarget(
   view: EditorView,
-  linkEl: Element,
+  linkEl: Element | null,
   event: MouseEvent | PointerEvent | KeyboardEvent,
   selectionFromBeforeInteraction: number,
   onWikiLinkClick: (title: string) => void,
   navigationInFlight: { current: boolean },
+  linkAtPosOverride?: WikiLinkMatch | null,
 ): boolean {
-  const linkAtPos = wikiLinkMatchFromDomTarget(
-    view,
-    linkEl,
-    event instanceof KeyboardEvent ? undefined : event,
-  );
+  const linkAtPos =
+    linkAtPosOverride ??
+    (linkEl
+      ? wikiLinkMatchFromDomTarget(
+          view,
+          linkEl,
+          event instanceof KeyboardEvent ? undefined : event,
+        )
+      : null);
   if (!linkAtPos) return false;
 
   const navigateOnKeyboard =
@@ -245,6 +269,8 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
           const onClickCapture = (event: MouseEvent) => {
             const linkEl = findWikiLinkContentInEventPath(event);
             if (!linkEl) return;
+
+            event.preventDefault();
 
             const linkAtPos = wikiLinkMatchFromDomTarget(view, linkEl);
             if (!linkAtPos) return;
@@ -327,18 +353,16 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
           },
           handleClick(view, pos, event) {
             const linkEl = findWikiLinkContentInEventPath(event);
-            if (!linkEl) {
+            const linkAtPos = linkEl
+              ? (wikiLinkMatchFromDomTarget(view, linkEl, event) ??
+                wikiLinkMatchAtPos(view.state.doc, pos))
+              : wikiLinkMatchAtPos(view.state.doc, pos);
+
+            if (!linkAtPos) {
               preClickSelectionFrom = null;
               preClickLinkSpan = null;
               return false;
             }
-
-            const linkAtPos =
-              wikiLinkMatchFromDomTarget(view, linkEl, event) ??
-              findWikiLinks(view.state.doc).find(
-                (wl) => pos >= wl.start && pos <= wl.end,
-              );
-            if (!linkAtPos) return false;
 
             const selectionFromBeforeClick =
               preClickLinkSpan?.start === linkAtPos.start &&
@@ -357,6 +381,7 @@ export const WikiLinkDecoration = Extension.create<WikiLinkDecorationOptions>({
               selectionFromBeforeClick,
               onWikiLinkClick,
               navigationInFlight,
+              linkAtPos,
             );
           },
         },
