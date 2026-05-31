@@ -29,6 +29,14 @@ const bootSpecSource = readFileSync(
   join(process.cwd(), "e2e/smoke/boot.spec.ts"),
   "utf-8",
 );
+const wikiLinkE2eSource = readFileSync(
+  join(process.cwd(), "e2e/graph/wiki-link.spec.ts"),
+  "utf-8",
+);
+const playgroundHelperSource = readFileSync(
+  join(process.cwd(), "e2e/helpers/playground.ts"),
+  "utf-8",
+);
 
 describe("iteration 53 — TOC a11y dedup", () => {
   it("labels each TOC row once and skips list capture when the button is the target", () => {
@@ -63,6 +71,12 @@ describe("iteration 53 — editor a11y name", () => {
 });
 
 describe("iteration 53 — wiki-link offscreen", () => {
+  it("AC42 E2E targets zh-CN 项目文档 (default lang=zh-CN)", () => {
+    expect(playgroundHelperSource).toContain('PROJECT_DOCS_NOTE_TITLE = "项目文档"');
+    expect(wikiLinkE2eSource).toContain("PROJECT_DOCS_NOTE_TITLE");
+    expect(wikiLinkE2eSource).not.toContain('data-wiki-title="project docs"');
+  });
+
   it("navigates decoration targets without caret-outside guard", () => {
     expect(wikiLinkSource).toContain("WIKI_LINK_TARGET_TESTID");
     expect(wikiLinkSource).toContain("decorationTarget");

@@ -1,19 +1,18 @@
 import { test, expect } from "../fixtures/app";
 import {
   FORMAT_PLAYGROUND_TITLE,
+  PROJECT_DOCS_NOTE_TITLE,
   WELCOME_NOTE_TITLE,
   editorLocator,
   openCleanFormatPlayground,
 } from "../helpers/playground";
-
-const PROJECT_DOCS_TITLE_EN = "project docs";
 
 test.describe("wiki-link graph navigation", () => {
   test.beforeEach(async ({ page }) => {
     await openCleanFormatPlayground(page);
   });
 
-  test("AC42-wiki-link-offscreen: project docs link at editor scrollTop 0", async ({
+  test("AC42-wiki-link-offscreen: 项目文档 link at editor scrollTop 0", async ({
     page,
   }) => {
     await page.evaluate(() => {
@@ -33,13 +32,13 @@ test.describe("wiki-link graph navigation", () => {
 
     const link = page
       .locator(
-        `[data-testid="wiki-link-target"][data-wiki-title="${PROJECT_DOCS_TITLE_EN}"]`,
+        `[data-testid="wiki-link-target"][data-wiki-title="${PROJECT_DOCS_NOTE_TITLE}"]`,
       )
       .first();
     await link.click({ force: true });
 
     await expect(page.getByTestId("note-title")).toHaveValue(
-      PROJECT_DOCS_TITLE_EN,
+      PROJECT_DOCS_NOTE_TITLE,
       { timeout: 15_000 },
     );
   });

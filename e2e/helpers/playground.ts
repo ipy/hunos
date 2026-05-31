@@ -6,6 +6,8 @@ import { resetHunosDatabase } from "./storage";
 
 export const FORMAT_PLAYGROUND_TITLE = "格式试炼场";
 export const WELCOME_NOTE_TITLE = "欢迎使用 Hunos";
+/** zh-CN seed wiki-link target (matches resolveE2eAppUrl lang=zh-CN). */
+export const PROJECT_DOCS_NOTE_TITLE = "项目文档";
 /** DevLoop gate / AC44 — mobile panel TOC layout (606×844). */
 export const GATE_VIEWPORT = { width: 606, height: 844 } as const;
 /** DevLoop autosave debounce is 400ms; testers waited ≥700–800ms. */
