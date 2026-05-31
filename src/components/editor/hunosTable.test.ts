@@ -1,13 +1,8 @@
 import { Schema } from "@tiptap/pm/model";
 import { EditorState, TextSelection } from "@tiptap/pm/state";
-import {
-  addColumnAfter,
-  deleteColumn,
-  goToNextCell,
-  tableNodes,
-} from "@tiptap/pm/tables";
-import { describe, expect, it } from "vitest";
-import { fixTableHeaderRowInTransaction } from "./tableHeaderPreserve";
+import { addColumnAfter, deleteColumn, tableNodes } from "@tiptap/pm/tables";
+import { describe, expect, it, vi } from "vitest";
+import { withHeaderRowFix } from "./tableColumnCommandUtils";
 
 const schema = new Schema({
   nodes: {
@@ -58,15 +53,10 @@ function runColumnCommand(
   command: typeof addColumnAfter,
   moveSelection: 1 | -1 | null,
 ): EditorState {
+  const run = withHeaderRowFix(command, moveSelection);
   let next = state;
-  command(state, (tr) => {
-    fixTableHeaderRowInTransaction(tr, state);
+  run(state, (tr) => {
     next = state.apply(tr);
-    if (moveSelection != null) {
-      goToNextCell(moveSelection)(next, (moveTr) => {
-        next = next.apply(moveTr);
-      });
-    }
   });
   return next;
 }
@@ -105,5 +95,42 @@ describe("HunosTable column commands", () => {
     }
 
     expect(headerTexts(state)).toEqual(["名称", "类型", "状态"]);
+  });
+
+  it("dispatches the mutated transaction, not a stale tr from post-apply state (AC4-dispatch-mismatch)", () => {
+    const state = buildPlaygroundTableState();
+    const run = withHeaderRowFix(addColumnAfter, 1);
+    let dispatchedTr: ReturnType<EditorState["tr"]> | null = null;
+
+    const ok = run(state, (tr) => {
+      dispatchedTr = tr;
+    });
+
+    expect(ok).toBe(true);
+    expect(dispatchedTr).not.toBeNull();
+    expect(dispatchedTr).not.toBe(state.tr);
+    expect(dispatchedTr!.doc).not.toBe(state.doc);
+    expect(headerTexts(state.apply(dispatchedTr!))).toEqual([
+      "名称",
+      "类型",
+      "状态",
+      "",
+    ]);
+    expect(
+      dispatchedTr!.selection.eq(state.apply(dispatchedTr!).selection),
+    ).toBe(true);
+  });
+
+  it("does not dispatch next.tr built from an intermediate EditorState", () => {
+    const state = buildPlaygroundTableState();
+    const run = withHeaderRowFix(addColumnAfter, 1);
+    const dispatch = vi.fn((tr) => {
+      expect(tr).not.toBe(state.tr);
+      const applied = state.apply(tr);
+      expect(tr.doc).toBe(applied.doc);
+    });
+
+    expect(run(state, dispatch)).toBe(true);
+    expect(dispatch).toHaveBeenCalledTimes(1);
   });
 });
