@@ -13,7 +13,7 @@ import { sanitizeBlockImageNoteContent } from "@/utils/migrateBlockImageFloor";
 
 type PlaygroundLocale = "en" | "zh";
 
-export const PLAYGROUND_CONTENT_VERSION = 22;
+export const PLAYGROUND_CONTENT_VERSION = 23;
 
 export const FORMAT_PLAYGROUND_TITLES: readonly string[] = [
   "Format Playground",
@@ -36,6 +36,12 @@ interface PlaygroundStrings {
   h3Sample: string;
   inlinePrefix: string;
   inlineSuffix: string;
+  inlineBold: string;
+  inlineItalic: string;
+  inlineCode: string;
+  inlineStrike: string;
+  inlineUnderline: string;
+  inlineHighlight: string;
   bullet1: string;
   bullet2: string;
   bullet3: string;
@@ -87,6 +93,12 @@ const STRINGS: Record<PlaygroundLocale, PlaygroundStrings> = {
     h3Sample: "Heading 3",
     inlinePrefix: "Mix ",
     inlineSuffix: " in one line.",
+    inlineBold: "bold",
+    inlineItalic: "italic",
+    inlineCode: "code",
+    inlineStrike: "strike",
+    inlineUnderline: "underline",
+    inlineHighlight: "highlight",
     bullet1: "Unordered item one",
     bullet2: "Unordered item two",
     bullet3: "Unordered item three",
@@ -146,6 +158,12 @@ const STRINGS: Record<PlaygroundLocale, PlaygroundStrings> = {
     h3Sample: "三级标题",
     inlinePrefix: "混排 ",
     inlineSuffix: " 于同一行。",
+    inlineBold: "粗体",
+    inlineItalic: "斜体",
+    inlineCode: "代码",
+    inlineStrike: "删除线",
+    inlineUnderline: "下划线",
+    inlineHighlight: "高亮",
     bullet1: "无序列表第一项",
     bullet2: "无序列表第二项",
     bullet3: "无序列表第三项",
@@ -288,17 +306,17 @@ export function buildPlaygroundContent(locale: Locale) {
       heading(2, s.sectionInline),
       paragraph(
         text(s.inlinePrefix),
-        text("bold", [{ type: "bold" }]),
+        text(s.inlineBold, [{ type: "bold" }]),
         text(", "),
-        text("italic", [{ type: "italic" }]),
+        text(s.inlineItalic, [{ type: "italic" }]),
         text(", "),
-        text("code", [{ type: "code" }]),
+        text(s.inlineCode, [{ type: "code" }]),
         text(", "),
-        text("strike", [{ type: "strike" }]),
+        text(s.inlineStrike, [{ type: "strike" }]),
         text(", "),
-        text("underline", [{ type: "underline" }]),
+        text(s.inlineUnderline, [{ type: "underline" }]),
         text(", "),
-        text("highlight", [{ type: "highlight" }]),
+        text(s.inlineHighlight, [{ type: "highlight" }]),
         text(s.inlineSuffix),
       ),
 
@@ -445,6 +463,50 @@ function normalizePlaygroundDocForFingerprint(
     },
     content,
   };
+}
+
+function stripPlaygroundInlineMarks(node: PlaygroundDocNode): PlaygroundDocNode {
+  if (node.type === "text") {
+    return { type: "text", text: node.text ?? "" };
+  }
+  if (!node.content?.length) {
+    return node;
+  }
+  return {
+    ...node,
+    content: node.content.map(stripPlaygroundInlineMarks),
+  };
+}
+
+function normalizePlaygroundDocStructureForFingerprint(
+  parsed: PlaygroundDoc,
+  seedLocale: PlaygroundLocale,
+): PlaygroundDoc {
+  const stripped: PlaygroundDoc = {
+    ...parsed,
+    content: parsed.content.map(stripPlaygroundInlineMarks),
+  };
+  return normalizePlaygroundDocForFingerprint(stripped, seedLocale);
+}
+
+/** Structure + text fingerprint ignoring inline marks — for format QA restore gating. */
+export function normalizePlaygroundStructureSnapshot(
+  content: string,
+  locale: Locale,
+): string {
+  const migrated = migratePlaygroundContentIfStale(content, locale) ?? content;
+  try {
+    const parsed = JSON.parse(migrated) as PlaygroundDoc;
+    if (parsed.type !== "doc" || !Array.isArray(parsed.content)) {
+      return migrated;
+    }
+    const seedLocale = resolvePlaygroundSeedLocale(migrated, locale);
+    return JSON.stringify(
+      normalizePlaygroundDocStructureForFingerprint(parsed, seedLocale),
+    );
+  } catch {
+    return migrated;
+  }
 }
 
 /** True when live editor JSON matches persisted playground content (round-trip tolerant). */
@@ -626,6 +688,19 @@ function playgroundLiveContentNeedsRestore(options: {
   if (liveFingerprint === storedFingerprint) {
     return false;
   }
+
+  const storedStructure = normalizePlaygroundStructureSnapshot(
+    storedContent,
+    fallbackLocale,
+  );
+  const liveStructure = normalizePlaygroundStructureSnapshot(
+    liveContent,
+    fallbackLocale,
+  );
+  if (liveStructure === storedStructure) {
+    return false;
+  }
+
   return formatPlaygroundNeedsRestore(
     displayTitle,
     liveContent,

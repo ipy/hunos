@@ -17,6 +17,7 @@ import {
   runToolbarChain,
 } from "@/utils/editorOverlaySelection";
 import { getToolbarItemLabel } from "./toolbarItemLabels";
+import { resolveMobileToolbarItems } from "./editorToolbarItems";
 
 interface EditorToolbarProps {
   editor: Editor | null;
@@ -257,16 +258,12 @@ export function EditorToolbar({
   const isMobile = layout === "mobile";
   const canUndo = editor.can().undo();
   const canRedo = editor.can().redo();
-  const mobileTabItems =
-    activeTab === "format"
-      ? INLINE_FORMAT_ITEMS
-      : activeTab === "blocks"
-        ? BLOCK_ITEMS
-        : INSERT_ITEMS;
   const items = isMobile
-    ? formatOverlayOpen && activeTab !== "format"
-      ? [...INLINE_FORMAT_ITEMS, ...mobileTabItems]
-      : mobileTabItems
+    ? resolveMobileToolbarItems(activeTab, {
+        format: INLINE_FORMAT_ITEMS,
+        blocks: BLOCK_ITEMS,
+        insert: INSERT_ITEMS,
+      })
     : [...INLINE_FORMAT_ITEMS, ...BLOCK_ITEMS, ...INSERT_ITEMS];
 
   return (

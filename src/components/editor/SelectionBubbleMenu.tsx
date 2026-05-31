@@ -165,11 +165,13 @@ export function SelectionBubbleMenu({ editor }: SelectionBubbleMenuProps) {
         >
           {INLINE_FORMAT_ITEMS.map((item) => {
             const active = item.isActive?.(editor) ?? false;
+            const ariaLabel = getToolbarItemLabel(t, item.icon, item.label);
             return (
               <button
                 key={item.icon}
                 type="button"
-                aria-label={getToolbarItemLabel(t, item.icon, item.label)}
+                aria-label={ariaLabel}
+                title={ariaLabel}
                 aria-pressed={active}
                 onMouseDown={(e) => {
                   e.preventDefault();

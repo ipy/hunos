@@ -165,19 +165,32 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     if (editorInstanceRef.current) {
       restoreEditorSelectionOnOverlayDismiss(editorInstanceRef.current);
     }
+    setEditorFormatOverlayPanelOpen(false);
     setShowStats(false);
   }, []);
+
+  const openStatsOverlay = useCallback(() => {
+    captureSelectionForOverlay();
+    setEditorFormatOverlayPanelOpen(true);
+    setShowStats(true);
+  }, [captureSelectionForOverlay]);
 
   const dismissActionsOverlay = useCallback(() => {
     if (editorInstanceRef.current) {
       restoreEditorSelectionOnOverlayDismiss(editorInstanceRef.current);
     }
+    setEditorFormatOverlayPanelOpen(false);
     setShowActions(false);
   }, []);
 
+  const openActionsOverlay = useCallback(() => {
+    captureSelectionForOverlay();
+    setEditorFormatOverlayPanelOpen(true);
+    setShowActions(true);
+  }, [captureSelectionForOverlay]);
+
   useEffect(() => {
     const overlayOpen = showActions || showStats;
-    setEditorFormatOverlayPanelOpen(overlayOpen);
     if (!overlayOpen) {
       return;
     }
@@ -1007,7 +1020,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
                 if (!showStats) captureSelectionForOverlay();
               }}
               onClick={() =>
-                showStats ? dismissStatsOverlay() : setShowStats(true)
+                showStats ? dismissStatsOverlay() : openStatsOverlay()
               }
               title={t("editor.stats.title")}
               aria-label={t("editor.stats.title")}
@@ -1126,7 +1139,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
                     if (!showStats) captureSelectionForOverlay();
                   }}
                   onClick={() =>
-                    showStats ? dismissStatsOverlay() : setShowStats(true)
+                    showStats ? dismissStatsOverlay() : openStatsOverlay()
                   }
                   title={t("editor.stats.title")}
                   aria-label={t("editor.stats.title")}
@@ -1171,7 +1184,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
                     if (!showActions) captureSelectionForOverlay();
                   }}
                   onClick={() =>
-                    showActions ? dismissActionsOverlay() : setShowActions(true)
+                    showActions ? dismissActionsOverlay() : openActionsOverlay()
                   }
                   aria-label={t("common.actions.more")}
                   style={{

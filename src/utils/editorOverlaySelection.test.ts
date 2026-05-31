@@ -166,6 +166,31 @@ describe("editorOverlaySelection", () => {
     );
   });
 
+  it("clears a collapsed bookmark when the user makes a new non-empty selection", () => {
+    clearEditorOverlaySelection();
+    setEditorFormatOverlayPanelOpen(false);
+    captureEditorOverlaySelection(mockEditor({ from: 5, to: 5 }) as never);
+
+    const handlers: Record<string, () => void> = {};
+    const editor = {
+      isDestroyed: false,
+      state: {
+        selection: { from: 5, to: 5 },
+        doc: { content: { size: 100 } },
+      },
+      on: vi.fn((event: string, handler: () => void) => {
+        handlers[event] = handler;
+      }),
+      off: vi.fn(),
+    };
+
+    attachEditorOverlaySelectionSync(editor as never);
+    editor.state.selection = { from: 50, to: 60 };
+    handlers.selectionUpdate();
+
+    expect(getSavedEditorOverlaySelection()).toBeNull();
+  });
+
   it("clears a post-dismiss bookmark when the user makes a new non-empty selection", () => {
     clearEditorOverlaySelection();
     setEditorFormatOverlayPanelOpen(false);

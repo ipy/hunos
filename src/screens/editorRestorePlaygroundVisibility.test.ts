@@ -240,4 +240,34 @@ describe("playground restore visibility", () => {
       }),
     ).toBe(false);
   });
+
+  it("hides restore when format QA only toggles inline marks on list text", () => {
+    const parsed = JSON.parse(seedContent) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          content?: Array<{
+            content?: Array<{ text?: string; marks?: Array<{ type: string }> }>;
+          }>;
+        }>;
+      }>;
+    };
+    const listsIndex = parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
+    );
+    const bulletList = parsed.content[listsIndex + 1];
+    const secondItemText = bulletList?.content?.[1]?.content?.[0]?.content?.[0];
+    if (secondItemText) {
+      secondItemText.marks = [{ type: "bold" }];
+    }
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seedContent,
+        pendingDraftContent: JSON.stringify(parsed),
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
 });

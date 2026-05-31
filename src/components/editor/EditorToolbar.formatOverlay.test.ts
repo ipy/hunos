@@ -1,35 +1,29 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { resolveMobileToolbarItems } from "./editorToolbarItems";
+import { getToolbarItemLabel, TOOLBAR_I18N_KEYS } from "./toolbarItemLabels";
 
-describe("EditorToolbar format overlay (iter 17)", () => {
-  const toolbar = readFileSync(
-    resolve(process.cwd(), "src/components/editor/EditorToolbar.tsx"),
-    "utf8",
-  );
-  const bubble = readFileSync(
-    resolve(process.cwd(), "src/components/editor/SelectionBubbleMenu.tsx"),
-    "utf8",
-  );
-  const editorScreen = readFileSync(
-    resolve(process.cwd(), "src/screens/EditorScreen.tsx"),
-    "utf8",
-  );
+describe("EditorToolbar format overlay (iter 18)", () => {
+  it("keeps each mobile tab exclusive — no inline+block hybrid row", () => {
+    const format = [{ icon: "bold" }, { icon: "italic" }];
+    const blocks = [{ icon: "heading1" }, { icon: "list" }];
+    const insert = [{ icon: "image" }];
 
-  it("keeps inline format controls on non-Aa tabs while stats or actions overlay is open", () => {
-    expect(toolbar).toContain("formatOverlayOpen && activeTab !== \"format\"");
-    expect(toolbar).toContain("[...INLINE_FORMAT_ITEMS, ...mobileTabItems]");
+    expect(
+      resolveMobileToolbarItems("blocks", { format, blocks, insert }),
+    ).toEqual(blocks);
+    expect(
+      resolveMobileToolbarItems("format", { format, blocks, insert }),
+    ).toEqual(format);
   });
 
   it("localizes toolbar control labels via shared i18n keys", () => {
-    expect(toolbar).toContain("getToolbarItemLabel");
-    expect(toolbar).not.toContain("TOOLBAR_I18N_KEYS");
-    expect(bubble).toContain("getToolbarItemLabel");
-    expect(bubble).not.toMatch(/aria-label=\{item\.label\}/);
-  });
+    const t = (key: string, opts?: { defaultValue?: string }) => {
+      if (key === TOOLBAR_I18N_KEYS.bold) return "粗体";
+      if (key === TOOLBAR_I18N_KEYS.italic) return "斜体";
+      return opts?.defaultValue ?? key;
+    };
 
-  it("hides the selection bubble while format overlay panels are open", () => {
-    expect(bubble).toContain("isEditorFormatOverlayPanelOpen");
-    expect(editorScreen).toContain("setEditorFormatOverlayPanelOpen");
+    expect(getToolbarItemLabel(t, "bold", "Bold")).toBe("粗体");
+    expect(getToolbarItemLabel(t, "italic", "Italic")).toBe("斜体");
   });
 });

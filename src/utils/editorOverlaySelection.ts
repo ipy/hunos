@@ -49,6 +49,8 @@ export function attachEditorOverlaySelectionSync(editor: Editor): () => void {
 
     if (hasNonEmptySavedEditorOverlaySelection()) {
       clearEditorOverlaySelection();
+    } else if (hasSavedEditorOverlaySelection()) {
+      clearEditorOverlaySelection();
     }
   };
   editor.on("selectionUpdate", onSelectionUpdate);

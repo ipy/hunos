@@ -1537,6 +1537,63 @@ describe("formatPlayground restore gating", () => {
       }),
     ).toBe(false);
   });
+
+  it("hides restore for canonical zh seed when pending draft only adds inline marks", () => {
+    const seed = JSON.stringify(buildPlaygroundContent("zh"));
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          type?: string;
+          text?: string;
+          marks?: Array<{ type: string }>;
+        }>;
+      }>;
+    };
+    const listsIndex = parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
+    );
+    const bulletList = parsed.content[listsIndex + 1];
+    const secondItem = bulletList?.content?.[1];
+    const paragraphNode = secondItem?.content?.[0];
+    const textNode = paragraphNode?.content?.[0];
+    if (textNode) {
+      textNode.marks = [{ type: "bold" }];
+    }
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        pendingDraftContent: JSON.stringify(parsed),
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
+
+  it("uses zh sample words in the inline marks demo paragraph", () => {
+    const content = buildPlaygroundContent("zh") as {
+      content: Array<{
+        type: string;
+        content?: Array<{ text?: string; marks?: Array<{ type: string }> }>;
+      }>;
+    };
+    const inlineSectionIndex = content.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "行内样式",
+    );
+    const demoParagraph = content.content[inlineSectionIndex + 1];
+    const markedTexts = (demoParagraph?.content ?? [])
+      .filter((node) => node.marks?.length)
+      .map((node) => node.text);
+    expect(markedTexts).toEqual([
+      "粗体",
+      "斜体",
+      "代码",
+      "删除线",
+      "下划线",
+      "高亮",
+    ]);
+  });
 });
 
 describe("restoreFormatPlaygroundContent", () => {
