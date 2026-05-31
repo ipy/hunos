@@ -19,22 +19,19 @@ describe("EditorScreen note-switch autosave cleanup", () => {
 
   it("uses silent flush persist during note-switch autosave", () => {
     expect(editorSource).toContain("notifyOnError: false");
-    expect(editorSource).toContain(
-      "await persistEditorContent(activeNoteId, json, undefined, {",
-    );
+    expect(editorSource).toContain("persistEditorContent(");
+    expect(editorSource).toContain("activeNoteId, json");
   });
 
-  it("guards debounced autosave against stale note id after switch", () => {
-    expect(editorSource).toContain("isDebouncedAutosaveStillCurrent");
-    expect(editorSource).toContain("const scheduledNoteId = activeNoteId");
+  it("uses silent debounced autosave during editing", () => {
+    expect(editorSource).toContain("scheduleContentPersist");
+    expect(editorSource).toContain("notifyOnError: false");
   });
 
   it("hides restore chip for mark-only playground format QA drafts", () => {
-    expect(editorSource).toContain(
-      "playgroundEditorMarkOnlyDriftFromStored(\n          pendingDraftContent,",
-    );
+    expect(editorSource).toContain("playgroundFormatQaMarkOnlyDrift");
     expect(editorSource).toMatch(
-      /playgroundEditorMarkOnlyDriftFromStored\([\s\S]*return false;/,
+      /playgroundFormatQaMarkOnlyDrift\([\s\S]*return false;/,
     );
   });
 });

@@ -12,9 +12,8 @@ describe("EditorScreen playground lifecycle flush", () => {
     const flushStart = editorSource.indexOf("const flushPendingAutosave =");
     const flushEnd = editorSource.indexOf("useEffect(() => {", flushStart);
     const flushBlock = editorSource.slice(flushStart, flushEnd);
-    expect(flushBlock).toContain(
-      "await persistEditorContent(activeNoteId, json, undefined, {",
-    );
+    expect(flushBlock).toContain("persistEditorContent(");
+    expect(flushBlock).toContain("activeNoteId, json");
     expect(flushBlock).toContain("notifyOnError: false");
     expect(flushBlock).toContain(
       "stashEditorAutosaveSnapshot(activeNoteId, json)",

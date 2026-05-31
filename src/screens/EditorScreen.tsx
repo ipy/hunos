@@ -41,6 +41,7 @@ import {
   normalizePlaygroundContentSnapshot,
   playgroundEditorContentMatchesStored,
   playgroundEditorMarkOnlyDriftFromStored,
+  playgroundFormatQaMarkOnlyDrift,
   playgroundPersistedContentForRow,
   playgroundWriteRegressesCanonicalStored,
   resolvePlaygroundSeedLocale,
@@ -278,12 +279,14 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       noteId: string,
       title: string,
       writeEpoch = contentWriteEpochRef.current,
+      options: PersistNoteOptions = {},
     ): Promise<boolean> => {
       const saved = await persistNoteTitle(
         saveNoteTitle,
         noteId,
         title,
         writeEpoch,
+        options,
       );
       if (!saved) {
         pendingTitleRef.current = title;
@@ -331,6 +334,32 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     );
   };
 
+  const scheduleContentPersist = useCallback(
+    (noteId: string, json: string, writeEpoch: number, flushSave?: boolean) => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      if (flushSave) {
+        void persistEditorContent(noteId, json, writeEpoch, {
+          notifyOnError: false,
+        });
+        return;
+      }
+      saveTimeoutRef.current = setTimeout(() => {
+        if (
+          !isDebouncedAutosaveStillCurrent(
+            noteId,
+            useNoteStore.getState().activeNoteId,
+          )
+        ) {
+          return;
+        }
+        void persistEditorContent(noteId, json, writeEpoch, {
+          notifyOnError: false,
+        });
+      }, 400);
+    },
+    [persistEditorContent],
+  );
+
   const handleContentChange = useCallback(
     (json: string, flushSave?: boolean) => {
       if (!activeNoteId) return;
@@ -354,41 +383,22 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           settings.locale,
         );
         if (
-          playgroundEditorMarkOnlyDriftFromStored(
+          playgroundFormatQaMarkOnlyDrift(
             json,
+            note.title,
             noteContentForEditor,
             playgroundLocale,
           )
         ) {
-          if (
-            formatPlaygroundMatchesCanonicalSeed(
-              note.title,
-              noteContentForEditor,
-              playgroundLocale,
-            )
-          ) {
-            setRestoreChipSuppressed(true);
-          }
+          setRestoreChipSuppressed(true);
           pendingContentRef.current = json;
           setRestoreEditorSyncTick((tick) => tick + 1);
-          const writeEpoch = contentWriteEpochRef.current;
-          const scheduledNoteId = activeNoteId;
-          if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-          if (flushSave) {
-            void persistEditorContent(scheduledNoteId, json, writeEpoch);
-          } else {
-            saveTimeoutRef.current = setTimeout(() => {
-              if (
-                !isDebouncedAutosaveStillCurrent(
-                  scheduledNoteId,
-                  useNoteStore.getState().activeNoteId,
-                )
-              ) {
-                return;
-              }
-              void persistEditorContent(scheduledNoteId, json, writeEpoch);
-            }, 400);
-          }
+          scheduleContentPersist(
+            activeNoteId,
+            json,
+            contentWriteEpochRef.current,
+            flushSave,
+          );
           return;
         }
         if (
@@ -434,14 +444,27 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
             noteContentForEditor,
             playgroundLocale,
           ) ||
-            playgroundEditorMarkOnlyDriftFromStored(
+            playgroundFormatQaMarkOnlyDrift(
               json,
+              note.title,
               noteContentForEditor,
               playgroundLocale,
             ))
         ) {
           clearRestoreSuppress = false;
         }
+      } else if (
+        note &&
+        isFormatPlaygroundNote(note.title, noteContentForEditor) &&
+        playgroundFormatQaMarkOnlyDrift(
+          json,
+          note.title,
+          noteContentForEditor,
+          resolvePlaygroundSeedLocale(noteContentForEditor, settings.locale),
+        )
+      ) {
+        clearRestoreSuppress = false;
+        setRestoreChipSuppressed(true);
       }
       if (clearRestoreSuppress) {
         setRestoreChipSuppressed(false);
@@ -450,30 +473,18 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       if (note && isFormatPlaygroundNote(note.title, noteContentForEditor)) {
         setRestoreEditorSyncTick((tick) => tick + 1);
       }
-      const writeEpoch = contentWriteEpochRef.current;
-      const scheduledNoteId = activeNoteId;
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      if (flushSave) {
-        void persistEditorContent(scheduledNoteId, json, writeEpoch);
-        return;
-      }
-      saveTimeoutRef.current = setTimeout(() => {
-        if (
-          !isDebouncedAutosaveStillCurrent(
-            scheduledNoteId,
-            useNoteStore.getState().activeNoteId,
-          )
-        ) {
-          return;
-        }
-        void persistEditorContent(scheduledNoteId, json, writeEpoch);
-      }, 400);
+      scheduleContentPersist(
+        activeNoteId,
+        json,
+        contentWriteEpochRef.current,
+        flushSave,
+      );
     },
     [
       activeNoteId,
       note,
       noteContentForEditor,
-      persistEditorContent,
+      scheduleContentPersist,
       settings.locale,
     ],
   );
@@ -524,7 +535,9 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     if (!noteId) return true;
     const pendingTitle = takePendingTitle(pendingTitleRef, titleTimeoutRef);
     if (pendingTitle == null) return true;
-    return persistEditorTitle(noteId, pendingTitle);
+    return persistEditorTitle(noteId, pendingTitle, undefined, {
+      notifyOnError: false,
+    });
   }, [activeNoteId, persistEditorTitle]);
 
   const flushPendingAutosave =
@@ -923,21 +936,15 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     }
     if (
       pendingDraftContent &&
-      isFormatPlaygroundNote(note.title, noteContentForEditor)
-    ) {
-      const playgroundLocale = resolvePlaygroundSeedLocale(
+      isFormatPlaygroundNote(note.title, noteContentForEditor) &&
+      playgroundFormatQaMarkOnlyDrift(
+        pendingDraftContent,
+        note.title,
         noteContentForEditor,
         settings.locale,
-      );
-      if (
-        playgroundEditorMarkOnlyDriftFromStored(
-          pendingDraftContent,
-          noteContentForEditor,
-          playgroundLocale,
-        )
-      ) {
-        return false;
-      }
+      )
+    ) {
+      return false;
     }
     return shouldShowPlaygroundRestoreButton({
       displayTitle: titleValue.trim() || note.title,

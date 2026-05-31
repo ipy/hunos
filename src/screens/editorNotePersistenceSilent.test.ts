@@ -14,6 +14,12 @@ vi.mock("@/i18n", () => ({
   },
 }));
 
+vi.mock("@/store/noteStore", () => ({
+  useNoteStore: {
+    getState: () => ({ activeNoteId: "note-a" }),
+  },
+}));
+
 import { persistNoteContent } from "./editorNotePersistence";
 
 describe("persistNoteContent notifyOnError", () => {
@@ -27,6 +33,17 @@ describe("persistNoteContent notifyOnError", () => {
     expect(
       await persistNoteContent(save, "note-1", "{}", undefined, {
         notifyOnError: false,
+      }),
+    ).toBe(false);
+    expect(showToast).not.toHaveBeenCalled();
+  });
+
+  it("suppresses save-failed toast when the note is no longer active", async () => {
+    const save = vi.fn().mockRejectedValue(new Error("disk full"));
+
+    expect(
+      await persistNoteContent(save, "note-b", "{}", undefined, {
+        notifyOnError: true,
       }),
     ).toBe(false);
     expect(showToast).not.toHaveBeenCalled();

@@ -14,6 +14,12 @@ vi.mock("@/i18n", () => ({
   },
 }));
 
+vi.mock("@/store/noteStore", () => ({
+  useNoteStore: {
+    getState: () => ({ activeNoteId: "note-1" }),
+  },
+}));
+
 import { persistNoteContent, persistNoteTitle } from "./editorNotePersistence";
 
 describe("editorNotePersistence", () => {

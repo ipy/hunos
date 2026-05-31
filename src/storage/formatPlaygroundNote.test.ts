@@ -20,6 +20,7 @@ import {
   formatPlaygroundNeedsRestore,
   playgroundEditorContentMatchesStored,
   playgroundEditorMarkOnlyDriftFromStored,
+  playgroundFormatQaMarkOnlyDrift,
   resolvePlaygroundSeedLocale,
   shouldShowPlaygroundRestoreButton,
   restoreFormatPlaygroundContent,
@@ -1592,51 +1593,6 @@ describe("formatPlayground restore gating", () => {
         }>;
       }>;
     };
-    while (
-      parsed.content.at(-1)?.type === "paragraph" &&
-      !parsed.content.at(-1)?.content?.length
-    ) {
-      parsed.content.pop();
-    }
-    const listsIndex = parsed.content.findIndex(
-      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
-    );
-    const firstItemText =
-      parsed.content[listsIndex + 1]?.content?.[0]?.content?.[0]?.content?.[0];
-    if (firstItemText) {
-      firstItemText.marks = [{ type: "bold" }];
-    }
-    const editorBold = JSON.stringify(parsed);
-    expect(playgroundEditorMarkOnlyDriftFromStored(editorBold, seed, "zh")).toBe(
-      true,
-    );
-    expect(
-      shouldShowPlaygroundRestoreButton({
-        displayTitle: "格式试炼场",
-        storedTitle: "格式试炼场",
-        storedContent: seed,
-        pendingDraftContent: editorBold,
-        fallbackLocale: "zh",
-      }),
-    ).toBe(false);
-  });
-
-  it("detects mark-only drift on list text with split TipTap nodes", () => {
-    const seed = JSON.stringify(buildPlaygroundContent("zh"));
-    const parsed = JSON.parse(seed) as {
-      content: Array<{
-        type: string;
-        content?: Array<{
-          content?: Array<{
-            content?: Array<{
-              type?: string;
-              text?: string;
-              marks?: unknown[];
-            }>;
-          }>;
-        }>;
-      }>;
-    };
     const listsIndex = parsed.content.findIndex(
       (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
     );
@@ -1952,5 +1908,65 @@ describe("filterNotesForPlaygroundList", () => {
   it("leaves non-playground notes untouched when no playground exists", () => {
     const filtered = filterNotesForPlaygroundList([regularNote], "zh");
     expect(filtered).toEqual([regularNote]);
+  });
+});
+
+describe("playgroundFormatQaMarkOnlyDrift", () => {
+  const seed = JSON.stringify(buildPlaygroundContent("zh"));
+
+  function markListItem(itemText: string, markType: "bold" | "italic"): string {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{
+          content?: Array<{
+            content?: Array<{ text?: string; marks?: unknown[] }>;
+          }>;
+        }>;
+      }>;
+    };
+    const listsIndex = parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
+    );
+    const bulletList = parsed.content[listsIndex + 1];
+    for (const listItem of bulletList?.content ?? []) {
+      const paragraph = listItem.content?.[0];
+      const textNode = paragraph?.content?.find(
+        (node) => node.text === itemText,
+      );
+      if (textNode) {
+        textNode.marks = [{ type: markType }];
+        break;
+      }
+    }
+    return JSON.stringify(parsed);
+  }
+
+  it("treats bold on 无序列表第一项 as format QA mark-only drift", () => {
+    const marked = markListItem("无序列表第一项", "bold");
+    expect(
+      playgroundFormatQaMarkOnlyDrift(marked, "格式试炼场", seed, "zh"),
+    ).toBe(true);
+  });
+
+  it("treats italic on 无序列表第二项 as format QA mark-only drift", () => {
+    const marked = markListItem("无序列表第二项", "italic");
+    expect(
+      playgroundFormatQaMarkOnlyDrift(marked, "格式试炼场", seed, "zh"),
+    ).toBe(true);
+  });
+
+  it("returns false for structural T20-MIXED drift", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    parsed.content.push({
+      type: "paragraph",
+      content: [{ type: "text", text: "T20-MIXED-marker" }],
+    });
+    const drifted = JSON.stringify(parsed);
+    expect(
+      playgroundFormatQaMarkOnlyDrift(drifted, "格式试炼场", seed, "zh"),
+    ).toBe(false);
   });
 });

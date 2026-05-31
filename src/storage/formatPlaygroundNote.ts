@@ -571,15 +571,49 @@ export function playgroundEditorMarkOnlyDriftFromStored(
     editorRow,
     seedLocale,
   );
-  if (editorStructure === normalizePlaygroundStructureSnapshot(storedRow, seedLocale)) {
+  if (
+    editorStructure ===
+    normalizePlaygroundStructureSnapshot(storedRow, seedLocale)
+  ) {
     return true;
   }
 
   const canonicalRow = playgroundPersistedContentForRow(
     JSON.stringify(buildPlaygroundContent(seedLocale)),
   );
-  return editorStructure === normalizePlaygroundStructureSnapshot(
-    canonicalRow,
+  return (
+    editorStructure ===
+    normalizePlaygroundStructureSnapshot(canonicalRow, seedLocale)
+  );
+}
+
+/** True when live playground JSON differs from stored/canonical seed only by inline marks. */
+export function playgroundFormatQaMarkOnlyDrift(
+  liveContent: string,
+  storedTitle: string,
+  storedContent: string,
+  fallbackLocale: Locale,
+): boolean {
+  const rowContent = playgroundPersistedContentForRow(storedContent);
+  if (!isFormatPlaygroundNote(storedTitle, rowContent)) {
+    return false;
+  }
+  if (
+    playgroundEditorMarkOnlyDriftFromStored(
+      liveContent,
+      rowContent,
+      fallbackLocale,
+    )
+  ) {
+    return true;
+  }
+  const seedLocale = resolvePlaygroundSeedLocale(rowContent, fallbackLocale);
+  const canonical = playgroundPersistedContentForRow(
+    JSON.stringify(buildPlaygroundContent(seedLocale)),
+  );
+  return playgroundEditorMarkOnlyDriftFromStored(
+    liveContent,
+    canonical,
     seedLocale,
   );
 }
