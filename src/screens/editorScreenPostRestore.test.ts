@@ -16,13 +16,11 @@ describe("EditorScreen post-restore AC1 fixes", () => {
     expect(source).toContain(
       "const restoredTitle =\n        restoredNote?.title ?? getFormatPlaygroundTitle(seedLocale)",
     );
-    expect(source).toContain("playgroundRestoreChipOverridesSuppress");
-    expect(source).toMatch(
-      /playgroundRestoreChipOverridesSuppress\([\s\S]*return true;/,
-    );
-    expect(source).toMatch(
+    expect(source).toContain("shouldShowPlaygroundRestoreButton");
+    expect(source).not.toMatch(
       /if \(restoreChipSuppressed \|\| restoreChipSuppressedRef\.current\) \{\s*return false;\s*\}/,
     );
+    expect(source).toContain("titleInputRef.current?.blur()");
     expect(source).toContain("skipTitleSyncOnceRef.current = true");
     expect(source).toContain("setTitleValue(restoredTitle)");
     expect(source).toContain("titleInputRef.current?.blur()");

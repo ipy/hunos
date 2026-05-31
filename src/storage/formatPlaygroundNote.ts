@@ -627,6 +627,291 @@ export function normalizePlaygroundNodeTreeSnapshot(
   }
 }
 
+const PLAYGROUND_MIXED_MARKER_RE = /T\d+-MIXED(?:-marker)?/i;
+const PLAYGROUND_QA_TAIL_APPEND_RE = /T\d+-doc-end(?!-v\d)/i;
+const PLAYGROUND_QA_AC2_TAIL_RE = /T\d+-doc-end-v2/i;
+
+function collectPlaygroundNodeText(node: PlaygroundDocNode): string {
+  if (node.type === "text") {
+    return node.text ?? "";
+  }
+  return (node.content ?? []).map(collectPlaygroundNodeText).join("");
+}
+
+type PlaygroundQaAnchors = {
+  intro: string;
+  bullet1: string;
+  lastParagraph: string;
+};
+
+function extractPlaygroundQaAnchors(
+  content: string,
+  fallbackLocale: Locale,
+): PlaygroundQaAnchors | null {
+  const row = playgroundPersistedContentForRow(content);
+  if (!row) return null;
+  try {
+    const parsed = JSON.parse(row) as PlaygroundDoc;
+    if (parsed.type !== "doc" || !Array.isArray(parsed.content)) {
+      return null;
+    }
+    const seedLocale = resolvePlaygroundSeedLocale(row, fallbackLocale);
+    const s = STRINGS[seedLocale];
+    const introPrefix = s.intro.slice(0, 24);
+
+    let intro = "";
+    let bullet1 = "";
+    let listsHeadingIndex = -1;
+
+    for (let i = 0; i < parsed.content.length; i += 1) {
+      const node = parsed.content[i];
+      if (
+        !intro &&
+        node.type === "paragraph" &&
+        collectPlaygroundNodeText(node).includes(introPrefix)
+      ) {
+        intro = collectPlaygroundNodeText(node);
+      }
+      if (
+        listsHeadingIndex < 0 &&
+        node.type === "heading" &&
+        collectPlaygroundNodeText(node) === s.sectionLists
+      ) {
+        listsHeadingIndex = i;
+      }
+      if (listsHeadingIndex >= 0 && i === listsHeadingIndex + 1) {
+        if (node.type === "bulletList") {
+          const firstItem = node.content?.[0];
+          if (firstItem) {
+            bullet1 = collectPlaygroundNodeText(firstItem);
+          }
+        }
+      }
+    }
+
+    let lastParagraph = "";
+    for (let i = parsed.content.length - 1; i >= 0; i -= 1) {
+      const node = parsed.content[i];
+      if (node.type === "paragraph") {
+        lastParagraph = collectPlaygroundNodeText(node);
+        break;
+      }
+    }
+
+    return { intro, bullet1, lastParagraph };
+  } catch {
+    return null;
+  }
+}
+
+/** True when a Lists-section list item contains a Txx-MIXED QA drift marker. */
+export function playgroundListsSectionHasMixedMarker(
+  content: string,
+  fallbackLocale: Locale,
+): boolean {
+  const row = playgroundPersistedContentForRow(content);
+  if (!row) return false;
+  try {
+    const parsed = JSON.parse(row) as PlaygroundDoc;
+    if (parsed.type !== "doc" || !Array.isArray(parsed.content)) {
+      return false;
+    }
+    const seedLocale = resolvePlaygroundSeedLocale(row, fallbackLocale);
+    const s = STRINGS[seedLocale];
+    const listsHeadingIndex = parsed.content.findIndex(
+      (node) =>
+        node.type === "heading" &&
+        collectPlaygroundNodeText(node) === s.sectionLists,
+    );
+    if (listsHeadingIndex < 0) return false;
+
+    for (let i = listsHeadingIndex + 1; i < parsed.content.length; i += 1) {
+      const node = parsed.content[i];
+      if (node.type === "heading") break;
+      if (node.type !== "bulletList" && node.type !== "orderedList") {
+        continue;
+      }
+      const listText = collectPlaygroundNodeText(node);
+      if (PLAYGROUND_MIXED_MARKER_RE.test(listText)) {
+        return true;
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+function playgroundTailQaAnchorsMatchCanonical(
+  liveContent: string,
+  fallbackLocale: Locale,
+): boolean {
+  const seedLocale = resolvePlaygroundSeedLocale(liveContent, fallbackLocale);
+  const anchors = extractPlaygroundQaAnchors(liveContent, seedLocale);
+  if (!anchors) return false;
+  const s = STRINGS[seedLocale];
+  return anchors.intro === s.intro && anchors.bullet1 === s.bullet1;
+}
+
+function playgroundContentMatchesQaAc2Prep(
+  liveContent: string,
+  fallbackLocale: Locale,
+): boolean {
+  if (playgroundListsSectionHasMixedMarker(liveContent, fallbackLocale)) {
+    return false;
+  }
+  const seedLocale = resolvePlaygroundSeedLocale(liveContent, fallbackLocale);
+  const anchors = extractPlaygroundQaAnchors(liveContent, seedLocale);
+  if (!anchors) return false;
+  const s = STRINGS[seedLocale];
+  return (
+    anchors.intro.endsWith("Q") &&
+    anchors.intro.startsWith(s.intro) &&
+    anchors.bullet1.endsWith("Z") &&
+    anchors.bullet1.startsWith(s.bullet1) &&
+    PLAYGROUND_QA_AC2_TAIL_RE.test(anchors.lastParagraph)
+  );
+}
+
+function playgroundContentMatchesQaTailAppend(
+  liveContent: string,
+  fallbackLocale: Locale,
+): boolean {
+  if (playgroundListsSectionHasMixedMarker(liveContent, fallbackLocale)) {
+    return false;
+  }
+  if (!playgroundTailQaAnchorsMatchCanonical(liveContent, fallbackLocale)) {
+    return false;
+  }
+  const seedLocale = resolvePlaygroundSeedLocale(liveContent, fallbackLocale);
+  const anchors = extractPlaygroundQaAnchors(liveContent, seedLocale);
+  if (!anchors) return false;
+  return (
+    PLAYGROUND_QA_TAIL_APPEND_RE.test(anchors.lastParagraph) &&
+    !PLAYGROUND_QA_AC2_TAIL_RE.test(anchors.lastParagraph)
+  );
+}
+
+export type PlaygroundDriftKind =
+  | "none"
+  | "titleDrift"
+  | "structural"
+  | "markOnly"
+  | "qaTailAppend"
+  | "qaAc2Prep";
+
+/** Single drift classifier for restore chip + persist policy (iter 23 SSOT). */
+export function classifyPlaygroundDrift(options: {
+  displayTitle: string;
+  storedTitle: string;
+  storedContent: string;
+  liveContent: string | null;
+  pendingTitleDraft?: string | null;
+  fallbackLocale: Locale;
+}): PlaygroundDriftKind {
+  const {
+    displayTitle,
+    storedTitle,
+    storedContent,
+    liveContent,
+    pendingTitleDraft = null,
+    fallbackLocale,
+  } = options;
+
+  const storedRow = readFormatPlaygroundCanonicalRow(
+    storedTitle,
+    storedContent,
+    fallbackLocale,
+  );
+  if (!storedRow) {
+    return "none";
+  }
+
+  const { rowContent, seedLocale, canonicalTitle } = storedRow;
+
+  if (
+    playgroundTitleDriftedFromCanonical(
+      storedTitle,
+      pendingTitleDraft,
+      canonicalTitle,
+    )
+  ) {
+    return "titleDrift";
+  }
+
+  if (
+    (pendingTitleDraft != null || liveContent != null) &&
+    playgroundLiveTitleDriftedFromCanonical(
+      displayTitle,
+      storedTitle,
+      pendingTitleDraft,
+      canonicalTitle,
+    )
+  ) {
+    return "titleDrift";
+  }
+
+  const bodyForClassify = liveContent ?? rowContent;
+  const rowForClassify = playgroundPersistedContentForRow(bodyForClassify);
+  if (!rowForClassify) {
+    return "none";
+  }
+
+  if (playgroundListsSectionHasMixedMarker(rowForClassify, seedLocale)) {
+    return "structural";
+  }
+
+  const canonicalRow = playgroundPersistedContentForRow(
+    JSON.stringify(buildPlaygroundContent(seedLocale)),
+  );
+
+  if (playgroundContentMatchesQaAc2Prep(rowForClassify, seedLocale)) {
+    return "qaAc2Prep";
+  }
+
+  if (playgroundContentMatchesQaTailAppend(rowForClassify, seedLocale)) {
+    return "qaTailAppend";
+  }
+
+  if (
+    comparePlaygroundStructuralDrift(rowForClassify, canonicalRow, seedLocale)
+  ) {
+    return "structural";
+  }
+
+  if (
+    playgroundEditorMarkOnlyDriftFromStored(
+      rowForClassify,
+      rowContent,
+      seedLocale,
+    ) ||
+    playgroundEditorMarkOnlyDriftFromStored(
+      rowForClassify,
+      canonicalRow,
+      seedLocale,
+    )
+  ) {
+    return "markOnly";
+  }
+
+  if (
+    !storedRow.isCanonical &&
+    formatPlaygroundNeedsRestore(storedTitle, rowContent, seedLocale)
+  ) {
+    return "structural";
+  }
+
+  if (
+    liveContent != null &&
+    liveContent !== rowContent &&
+    formatPlaygroundNeedsRestore(displayTitle, rowForClassify, seedLocale)
+  ) {
+    return "structural";
+  }
+
+  return "none";
+}
+
 /** True when live JSON structurally drifts from reference (marks and text edits allowed). */
 export function comparePlaygroundStructuralDrift(
   liveContent: string,
@@ -753,22 +1038,18 @@ export function playgroundFormatQaDraftHidesRestoreChip(
   storedContent: string,
   fallbackLocale: Locale,
 ): boolean {
-  const rowContent = playgroundPersistedContentForRow(storedContent);
-  if (!isFormatPlaygroundNote(storedTitle, rowContent)) {
-    return false;
-  }
-  const seedLocale = resolvePlaygroundSeedLocale(rowContent, fallbackLocale);
-  const canonical = playgroundPersistedContentForRow(
-    JSON.stringify(buildPlaygroundContent(seedLocale)),
-  );
-  if (!comparePlaygroundStructuralDrift(liveContent, canonical, seedLocale)) {
-    return true;
-  }
-  return playgroundFormatQaMarkOnlyDrift(
-    liveContent,
+  const kind = classifyPlaygroundDrift({
+    displayTitle: storedTitle,
     storedTitle,
     storedContent,
+    liveContent,
     fallbackLocale,
+  });
+  return (
+    kind === "none" ||
+    kind === "markOnly" ||
+    kind === "qaTailAppend" ||
+    kind === "qaAc2Prep"
   );
 }
 
@@ -935,7 +1216,13 @@ export function playgroundLiveTitleDriftedFromCanonical(
   pendingTitleDraft: string | null,
   canonicalTitle: string,
 ): boolean {
-  if (playgroundTitleDriftedFromCanonical(storedTitle, pendingTitleDraft, canonicalTitle)) {
+  if (
+    playgroundTitleDriftedFromCanonical(
+      storedTitle,
+      pendingTitleDraft,
+      canonicalTitle,
+    )
+  ) {
     return true;
   }
   if (pendingTitleDraft != null) {
@@ -963,6 +1250,10 @@ export function formatPlaygroundNeedsRestore(
 
   const seedLocale = resolvePlaygroundSeedLocale(body, fallbackLocale);
   if (title !== getFormatPlaygroundTitle(seedLocale)) {
+    return true;
+  }
+
+  if (playgroundListsSectionHasMixedMarker(body, seedLocale)) {
     return true;
   }
 
@@ -1024,7 +1315,7 @@ function playgroundLiveContentNeedsRestore(options: {
   );
 }
 
-/** True when title or structural drift must show restore chip despite mark-only suppress. */
+/** @deprecated Use classifyPlaygroundDrift + shouldShowPlaygroundRestoreButton (iter 23 SSOT). */
 export function playgroundRestoreChipOverridesSuppress(options: {
   displayTitle: string;
   storedTitle: string;
@@ -1033,76 +1324,13 @@ export function playgroundRestoreChipOverridesSuppress(options: {
   pendingTitleDraft?: string | null;
   fallbackLocale: Locale;
 }): boolean {
-  const {
-    displayTitle,
-    storedTitle,
-    storedContent,
-    pendingDraftContent,
-    pendingTitleDraft = null,
-    fallbackLocale,
-  } = options;
-
-  const storedRow = readFormatPlaygroundCanonicalRow(
-    storedTitle,
-    storedContent,
-    fallbackLocale,
-  );
-  if (!storedRow) {
-    return false;
-  }
-
-  const { rowContent, seedLocale, canonicalTitle, isCanonical } = storedRow;
-
-  if (
-    playgroundTitleDriftedFromCanonical(
-      storedTitle,
-      pendingTitleDraft,
-      canonicalTitle,
-    )
-  ) {
-    return true;
-  }
-
-  if (
-    playgroundLiveTitleDriftedFromCanonical(
-      displayTitle,
-      storedTitle,
-      pendingTitleDraft,
-      canonicalTitle,
-    )
-  ) {
-    return true;
-  }
-
-  if (
-    !isCanonical &&
-    formatPlaygroundNeedsRestore(storedTitle, rowContent, seedLocale)
-  ) {
-    return true;
-  }
-
-  if (pendingDraftContent != null) {
-    if (
-      playgroundFormatQaDraftHidesRestoreChip(
-        pendingDraftContent,
-        storedTitle,
-        rowContent,
-        seedLocale,
-      )
-    ) {
-      return false;
-    }
-    return formatPlaygroundNeedsRestore(
-      displayTitle,
-      pendingDraftContent,
-      seedLocale,
-    );
-  }
-
-  return false;
+  return shouldShowPlaygroundRestoreButton({
+    ...options,
+    liveContent: options.pendingDraftContent,
+  });
 }
 
-/** Header restore chip — persisted row settles UI; live editor draft still gates drift. */
+/** Header restore chip — classifyPlaygroundDrift SSOT; live draft wins over persisted row. */
 export function shouldShowPlaygroundRestoreButton(options: {
   displayTitle: string;
   storedTitle: string;
@@ -1111,6 +1339,8 @@ export function shouldShowPlaygroundRestoreButton(options: {
   pendingTitleDraft?: string | null;
   fallbackLocale: Locale;
   isRestoringPlayground?: boolean;
+  /** @internal Alias for classifyPlaygroundDrift */
+  liveContent?: string | null;
 }): boolean {
   const {
     displayTitle,
@@ -1120,6 +1350,7 @@ export function shouldShowPlaygroundRestoreButton(options: {
     pendingTitleDraft = null,
     fallbackLocale,
     isRestoringPlayground = false,
+    liveContent = pendingDraftContent,
   } = options;
 
   const storedRow = readFormatPlaygroundCanonicalRow(
@@ -1131,84 +1362,20 @@ export function shouldShowPlaygroundRestoreButton(options: {
     return false;
   }
 
-  const { rowContent, seedLocale, canonicalTitle, isCanonical } = storedRow;
-
-  if (isRestoringPlayground && isCanonical) {
+  if (isRestoringPlayground && storedRow.isCanonical) {
     return false;
   }
 
-  if (
-    playgroundTitleDriftedFromCanonical(
-      storedTitle,
-      pendingTitleDraft,
-      canonicalTitle,
-    )
-  ) {
-    return true;
-  }
+  const kind = classifyPlaygroundDrift({
+    displayTitle,
+    storedTitle,
+    storedContent,
+    liveContent,
+    pendingTitleDraft,
+    fallbackLocale,
+  });
 
-  if (isCanonical) {
-    if (pendingDraftContent != null) {
-      if (
-        playgroundLiveTitleDriftedFromCanonical(
-          displayTitle,
-          storedTitle,
-          pendingTitleDraft,
-          canonicalTitle,
-        )
-      ) {
-        return true;
-      }
-      if (
-        playgroundFormatQaDraftHidesRestoreChip(
-          pendingDraftContent,
-          storedTitle,
-          rowContent,
-          seedLocale,
-        )
-      ) {
-        return false;
-      }
-      return playgroundLiveContentNeedsRestore({
-        displayTitle,
-        storedContent: rowContent,
-        liveContent: pendingDraftContent,
-        fallbackLocale: seedLocale,
-      });
-    }
-    return false;
-  }
-
-  if (
-    playgroundLiveTitleDriftedFromCanonical(
-      displayTitle,
-      storedTitle,
-      pendingTitleDraft,
-      canonicalTitle,
-    )
-  ) {
-    return true;
-  }
-
-  if (pendingDraftContent != null) {
-    if (
-      playgroundFormatQaDraftHidesRestoreChip(
-        pendingDraftContent,
-        storedTitle,
-        rowContent,
-        seedLocale,
-      )
-    ) {
-      return false;
-    }
-    return formatPlaygroundNeedsRestore(
-      displayTitle,
-      pendingDraftContent,
-      seedLocale,
-    );
-  }
-
-  return formatPlaygroundNeedsRestore(storedTitle, rowContent, seedLocale);
+  return kind === "titleDrift" || kind === "structural";
 }
 
 export async function createFormatPlaygroundNote(

@@ -42,7 +42,6 @@ import {
   playgroundEditorContentMatchesStored,
   playgroundEditorMarkOnlyDriftFromStored,
   playgroundFormatQaDraftHidesRestoreChip,
-  playgroundRestoreChipOverridesSuppress,
   playgroundPersistedContentForRow,
   playgroundWriteRegressesCanonicalStored,
   resolvePlaygroundSeedLocale,
@@ -257,6 +256,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     pendingContentRef.current = null;
     setEditorSeedContent(null);
     clearEditorOverlaySelection();
+    titleInputRef.current?.blur();
     setTitleValue(note?.title ?? "");
     if (note?.id) {
       contentWriteEpochRef.current = getPlaygroundWriteEpoch(note.id);
@@ -967,22 +967,6 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       }
     }
     const displayTitle = titleValue.trim() || note.title;
-    if (
-      isFormatPlaygroundNote(note.title, noteContentForEditor) &&
-      playgroundRestoreChipOverridesSuppress({
-        displayTitle,
-        storedTitle: note.title,
-        storedContent: noteContentForEditor,
-        pendingDraftContent,
-        pendingTitleDraft: pendingTitleRef.current,
-        fallbackLocale: settings.locale,
-      })
-    ) {
-      return true;
-    }
-    if (restoreChipSuppressed || restoreChipSuppressedRef.current) {
-      return false;
-    }
     return shouldShowPlaygroundRestoreButton({
       displayTitle,
       storedTitle: note.title,
@@ -998,7 +982,6 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     titleValue,
     settings.locale,
     restoreEditorSyncTick,
-    restoreChipSuppressed,
     editorInstance,
   ]);
 

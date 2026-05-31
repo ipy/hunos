@@ -26,6 +26,8 @@ import {
   playgroundFormatQaMarkOnlyDrift,
   playgroundFormatQaStructureMatchesCanonical,
   playgroundRestoreChipOverridesSuppress,
+  classifyPlaygroundDrift,
+  playgroundListsSectionHasMixedMarker,
   comparePlaygroundStructuralDrift,
   normalizePlaygroundNodeTreeSnapshot,
   resolvePlaygroundSeedLocale,
@@ -2034,10 +2036,7 @@ describe("comparePlaygroundStructuralDrift", () => {
 
   it("treats captured TipTap editor echo with default attrs as no drift vs stored seed", () => {
     const stored = readFileSync(
-      join(
-        process.cwd(),
-        "src/storage/fixtures/playground-zh-stored.json",
-      ),
+      join(process.cwd(), "src/storage/fixtures/playground-zh-stored.json"),
       "utf-8",
     );
     const live = readFileSync(
@@ -2569,6 +2568,197 @@ describe("iter 22 restore chip and persist policy", () => {
         fallbackLocale: "zh",
       }),
     ).toBe(false);
+  });
+});
+
+describe("iter 23 drift classifier", () => {
+  const seed = JSON.stringify(buildPlaygroundContent("zh"));
+
+  function listsIndex(parsed: {
+    content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+  }) {
+    return parsed.content.findIndex(
+      (node) => node.type === "heading" && node.content?.[0]?.text === "列表",
+    );
+  }
+
+  function firstBulletText(parsed: {
+    content: Array<{
+      type: string;
+      content?: Array<{
+        content?: Array<{
+          content?: Array<{ text?: string }>;
+        }>;
+      }>;
+    }>;
+  }) {
+    const idx = listsIndex(parsed);
+    return parsed.content[idx + 1]?.content?.[0]?.content?.[0]?.content?.[0];
+  }
+
+  it("shows chip for T23-MIXED-marker in first unordered list item", () => {
+    const parsed = JSON.parse(seed) as Parameters<typeof firstBulletText>[0];
+    const textNode = firstBulletText(parsed);
+    if (textNode) {
+      textNode.text = `${textNode.text} T23-MIXED-marker`;
+    }
+    const drifted = JSON.stringify(parsed);
+
+    expect(playgroundListsSectionHasMixedMarker(drifted, "zh")).toBe(true);
+    expect(
+      classifyPlaygroundDrift({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        liveContent: drifted,
+        fallbackLocale: "zh",
+      }),
+    ).toBe("structural");
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        pendingDraftContent: drifted,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(true);
+  });
+
+  it("shows chip for T23-Drift title with in-list marker", () => {
+    const parsed = JSON.parse(seed) as Parameters<typeof firstBulletText>[0];
+    const textNode = firstBulletText(parsed);
+    if (textNode) {
+      textNode.text = `${textNode.text} T23-MIXED-marker`;
+    }
+    const drifted = JSON.stringify(parsed);
+
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "T23-Drift",
+        storedTitle: "T23-Drift",
+        storedContent: drifted,
+        pendingDraftContent: null,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(true);
+  });
+
+  it("hides chip for combined AC2 prep (Q, Z, T23-doc-end-v2)", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{ type?: string; text?: string }>;
+      }>;
+    };
+    const introParagraph = parsed.content.find(
+      (node) =>
+        node.type === "paragraph" &&
+        node.content?.[0]?.text?.includes("在这一篇笔记里测试所有格式"),
+    );
+    if (introParagraph?.content?.[0]) {
+      introParagraph.content[0].text = `${introParagraph.content[0].text}Q`;
+    }
+    const bullet = firstBulletText(parsed);
+    if (bullet) {
+      bullet.text = `${bullet.text}Z`;
+    }
+    const lastParagraph = [...parsed.content]
+      .reverse()
+      .find((node) => node.type === "paragraph");
+    if (lastParagraph) {
+      if (!lastParagraph.content?.length) {
+        lastParagraph.content = [{ type: "text", text: "T23-doc-end-v2" }];
+      } else if (lastParagraph.content[0]) {
+        lastParagraph.content[0].text = `${lastParagraph.content[0].text ?? ""} T23-doc-end-v2`;
+      }
+    }
+    const edited = JSON.stringify(parsed);
+
+    expect(
+      classifyPlaygroundDrift({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        liveContent: edited,
+        fallbackLocale: "zh",
+      }),
+    ).toBe("qaAc2Prep");
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        pendingDraftContent: edited,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
+
+  it("hides chip for trailing-only T23-doc-end append", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        content?: Array<{ type?: string; text?: string }>;
+      }>;
+    };
+    const lastParagraph = [...parsed.content]
+      .reverse()
+      .find((node) => node.type === "paragraph");
+    if (lastParagraph) {
+      if (!lastParagraph.content?.length) {
+        lastParagraph.content = [{ type: "text", text: "T23-doc-end" }];
+      } else if (lastParagraph.content[0]) {
+        lastParagraph.content[0].text = `${lastParagraph.content[0].text ?? ""} T23-doc-end`;
+      }
+    }
+    const edited = JSON.stringify(parsed);
+
+    expect(
+      classifyPlaygroundDrift({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        liveContent: edited,
+        fallbackLocale: "zh",
+      }),
+    ).toBe("qaTailAppend");
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: seed,
+        pendingDraftContent: edited,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
+
+  it("override layer agrees with shouldShow for structural drift", () => {
+    const parsed = JSON.parse(seed) as Parameters<typeof firstBulletText>[0];
+    const textNode = firstBulletText(parsed);
+    if (textNode) {
+      textNode.text = `${textNode.text} T23-MIXED-marker`;
+    }
+    const drifted = JSON.stringify(parsed);
+
+    expect(
+      playgroundRestoreChipOverridesSuppress({
+        displayTitle: "T23-Drift",
+        storedTitle: "T23-Drift",
+        storedContent: drifted,
+        pendingDraftContent: drifted,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "T23-Drift",
+        storedTitle: "T23-Drift",
+        storedContent: drifted,
+        pendingDraftContent: drifted,
+        fallbackLocale: "zh",
+      }),
+    );
   });
 });
 
