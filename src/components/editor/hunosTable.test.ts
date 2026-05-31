@@ -68,6 +68,10 @@ function headerTexts(state: EditorState): string[] {
   return texts;
 }
 
+function headerColumnCount(state: EditorState): number {
+  return state.doc.firstChild?.firstChild?.childCount ?? 0;
+}
+
 function runColumnCommand(
   state: EditorState,
   command: typeof addColumnAfter,
@@ -133,6 +137,7 @@ describe("HunosTable column commands (prosemirror-tables schema)", () => {
     }
 
     expect(headerTexts(state)).toEqual(["名称", "类型", "状态"]);
+    expect(headerColumnCount(state)).toBe(3);
   }
 
   it("preserves header labels through add/delete column cycles from last header (AC4)", () => {
@@ -212,10 +217,25 @@ describe("HunosTable column commands (TipTap tableHeader schema)", () => {
     }
 
     expect(headerTexts(state)).toEqual(["名称", "类型", "状态"]);
+    expect(headerColumnCount(state)).toBe(3);
     const headerRow = state.doc.firstChild?.firstChild;
     headerRow?.forEach((cell) => {
       expect(cell.type.name).toBe("tableHeader");
     });
   });
 
+  it("does not leave a trailing empty header column after insert/delete (AC4-table-header-delete)", () => {
+    let state = buildPlaygroundTableState(
+      tiptapTableSchema,
+      "tableHeader",
+      "tableCell",
+      "tableRow",
+      "类型",
+    );
+    state = runColumnCommand(state, addColumnAfter, 1);
+    expect(headerColumnCount(state)).toBe(4);
+    state = runColumnCommand(state, deleteColumn, null);
+    expect(headerColumnCount(state)).toBe(3);
+    expect(headerTexts(state)).toEqual(["名称", "类型", "状态"]);
+  });
 });
