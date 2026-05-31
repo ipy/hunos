@@ -51,38 +51,28 @@ export function filterNotesByTitleFirstSearch<T extends NoteSearchMatchFields>(
   return filtered.map(({ note }) => note);
 }
 
-export interface MergePinnedNotesForSearchOptions {
+export interface ActivePinnedNotesDuringSearchOptions {
   /** Pinned note currently open in the editor (AC39-search-restore-ghost). */
   activeNoteId?: string | null;
 }
 
 /**
- * Keep the active pinned note visible while a search filter is active
- * (AC39-search-restore-ghost). Does not inject every pinned note — that would
- * break AC37 title-first search (e.g. 格式试炼场 must stay excluded for 欢迎).
+ * Pinned strip while search is active: only the active pinned note, never merged
+ * into title-first search hits (AC37 vs AC39-search-restore-ghost).
  */
-export function mergePinnedNotesForSearchDisplay<
+export function activePinnedNotesDuringSearch<
   T extends NoteSearchMatchFields,
 >(
-  searchResults: T[],
   allNotes: T[],
-  options: MergePinnedNotesForSearchOptions = {},
+  options: ActivePinnedNotesDuringSearchOptions = {},
 ): T[] {
   const activeNoteId = options.activeNoteId?.trim();
   if (!activeNoteId) {
-    return searchResults;
-  }
-
-  if (searchResults.some((note) => note.id === activeNoteId)) {
-    return searchResults;
+    return [];
   }
 
   const activePinned = allNotes.find(
     (note) => note.id === activeNoteId && note.isPinned,
   );
-  if (!activePinned) {
-    return searchResults;
-  }
-
-  return [activePinned, ...searchResults];
+  return activePinned ? [activePinned] : [];
 }

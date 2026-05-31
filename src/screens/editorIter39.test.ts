@@ -42,8 +42,8 @@ describe("iteration 39 — wiki-link navigation", () => {
 });
 
 describe("iteration 39 — search restore ghost", () => {
-  it("merges pinned notes into filtered search results for the sidebar list", () => {
-    expect(noteListSource).toContain("mergePinnedNotesForSearchDisplay");
+  it("keeps active pinned note visible via dedicated pin strip during search", () => {
+    expect(noteListSource).toContain("activePinnedNotesDuringSearch");
     expect(noteListSource).toContain("activeNoteId");
   });
 
@@ -58,10 +58,10 @@ describe("iteration 39 — search restore ghost", () => {
 });
 
 describe("iteration 39 — checkbox a11y", () => {
-  it("uses short checkbox labels that do not repeat task item text", () => {
+  it("uses state labels composed with adjacent task text", () => {
     expect(zh.editor.task.checkboxOpen).toBe("未完成任务");
     expect(tiptapSource).toContain('i18n.t("editor.task.checkboxOpen")');
-    expect(tiptapSource).not.toMatch(/checkboxOpen[\s\S]*\{\s*text\s*\}/);
+    expect(tiptapSource).toContain("node.textContent.trim()");
   });
 });
 

@@ -6,7 +6,7 @@ import { useSettingsStore } from "@/store/settingsStore";
 import { useUIStore } from "@/store/uiStore";
 import { useTagStore } from "@/store/tagStore";
 import { filterNotesForPlaygroundList } from "@/storage/formatPlaygroundNote";
-import { mergePinnedNotesForSearchDisplay } from "@/storage/noteSearchRank";
+import { activePinnedNotesDuringSearch } from "@/storage/noteSearchRank";
 import {
   deriveNoteListPreview,
   formatNoteListPreviewDisplay,
@@ -327,17 +327,20 @@ export function NoteListScreen({ layout = "mobile" }: NoteListScreenProps) {
   const title = activeTag
     ? `#${activeTag.displayName}`
     : t("tags.sections.allNotes");
-  const displayedNotes = filterNotesForPlaygroundList(
-    searchQuery
-      ? mergePinnedNotesForSearchDisplay(searchResults, notes, {
-          activeNoteId,
-        })
-      : notes,
-    locale,
-  );
-
-  const pinnedNotes = displayedNotes.filter((n) => n.isPinned);
-  const unpinnedNotes = displayedNotes.filter((n) => !n.isPinned);
+  const allListNotes = filterNotesForPlaygroundList(notes, locale);
+  const searchHitNotes = searchQuery
+    ? filterNotesForPlaygroundList(searchResults, locale)
+    : [];
+  const pinnedNotes = searchQuery
+    ? filterNotesForPlaygroundList(
+        activePinnedNotesDuringSearch(notes, { activeNoteId }),
+        locale,
+      )
+    : allListNotes.filter((n) => n.isPinned);
+  const unpinnedNotes = searchQuery
+    ? searchHitNotes
+    : allListNotes.filter((n) => !n.isPinned);
+  const listIsEmpty = pinnedNotes.length === 0 && unpinnedNotes.length === 0;
   const playgroundListPreview = t("notes.list.playgroundPreview");
   const emptyPreviewLabel = t("notes.list.emptyPreview");
 
@@ -550,7 +553,7 @@ export function NoteListScreen({ layout = "mobile" }: NoteListScreenProps) {
           >
             {t("notes.loading", { defaultValue: "Loading notes…" })}
           </div>
-        ) : displayedNotes.length === 0 ? (
+        ) : listIsEmpty ? (
           <div
             style={{
               display: "flex",

@@ -78,6 +78,14 @@ describe("buildWikiLinkDecorations", () => {
     expect(attrs?.["data-wiki-title"]).toBe("欢迎使用 Hunos");
   });
 
+  it("exposes link role and accessible name (AC39-wiki-link-a11y)", () => {
+    const state = stateWithWikiCaret(4);
+    const attrs = wikiLinkContentDecoration(state);
+
+    expect(attrs?.role).toBe("link");
+    expect(attrs?.["aria-label"]).toBe("欢迎使用 Hunos");
+  });
+
   it("captures pre-click on pointerdown and mousedown for navigation", () => {
     expect(wikiLinkSource).toContain("captureWikiLinkPreClick");
     expect(wikiLinkSource).toContain("mousedown(view, event)");

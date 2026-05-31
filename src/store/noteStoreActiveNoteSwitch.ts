@@ -1,4 +1,5 @@
 import { flushEditorAutosave } from "@/store/editorAutosaveRegistry";
+import { syncActiveNoteUrl } from "@/utils/noteRoute";
 
 let activeNoteSwitchQueue: Promise<void> = Promise.resolve();
 
@@ -13,6 +14,7 @@ export function enqueueActiveNoteSwitch(
     if (nextId === currentId) return;
     await flushEditorAutosave();
     apply(nextId);
+    syncActiveNoteUrl(nextId);
   });
 
   return activeNoteSwitchQueue;

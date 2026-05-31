@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  activePinnedNotesDuringSearch,
   filterNotesByTitleFirstSearch,
-  mergePinnedNotesForSearchDisplay,
   noteSearchBodyPlain,
   noteSearchMatchFlags,
 } from "./noteSearchRank";
@@ -61,41 +61,30 @@ describe("noteSearchRank", () => {
     expect(filterNotesByTitleFirstSearch([welcome], "   ")).toEqual([]);
   });
 
-  it("keeps the active pinned note visible during search (AC39-search-restore-ghost)", () => {
-    const merged = mergePinnedNotesForSearchDisplay(
-      [welcome],
-      [playground, welcome],
-      { activeNoteId: playground.id },
-    );
-    expect(merged.map((n) => n.title)).toEqual([
-      "格式试炼场",
-      "欢迎使用 Hunos",
-    ]);
-  });
-
-  it("does not inject pinned notes that are not active (AC37-search-title-first)", () => {
-    const merged = mergePinnedNotesForSearchDisplay(
-      [welcome],
-      [playground, welcome],
-    );
-    expect(merged.map((n) => n.title)).toEqual(["欢迎使用 Hunos"]);
-  });
-
-  it("does not duplicate pinned notes already in search results", () => {
-    const pinnedPlayground = { ...playground, isPinned: true };
-    const merged = mergePinnedNotesForSearchDisplay(
-      [pinnedPlayground],
-      [pinnedPlayground, welcome],
-      { activeNoteId: pinnedPlayground.id },
-    );
-    expect(merged).toHaveLength(1);
-    expect(merged[0]?.title).toBe("格式试炼场");
-  });
-
-  it("keeps active pinned note visible when search has no matches (AC39-search-restore-ghost)", () => {
-    const merged = mergePinnedNotesForSearchDisplay([], [playground, welcome], {
+  it("returns active pinned note for pin strip only (AC39-search-restore-ghost)", () => {
+    const pinned = activePinnedNotesDuringSearch([playground, welcome], {
       activeNoteId: playground.id,
     });
-    expect(merged.map((n) => n.title)).toEqual(["格式试炼场"]);
+    expect(pinned.map((n) => n.title)).toEqual(["格式试炼场"]);
+  });
+
+  it("does not return pinned notes when none are active (AC37-search-title-first)", () => {
+    const pinned = activePinnedNotesDuringSearch([playground, welcome]);
+    expect(pinned).toEqual([]);
+  });
+
+  it("does not return unpinned active note in pin strip", () => {
+    const unpinnedWelcome = { ...welcome, isPinned: false };
+    const pinned = activePinnedNotesDuringSearch([playground, unpinnedWelcome], {
+      activeNoteId: welcome.id,
+    });
+    expect(pinned).toEqual([]);
+  });
+
+  it("keeps active pinned visible when search has no matches (AC39-search-restore-ghost)", () => {
+    const pinned = activePinnedNotesDuringSearch([playground, welcome], {
+      activeNoteId: playground.id,
+    });
+    expect(pinned.map((n) => n.title)).toEqual(["格式试炼场"]);
   });
 });

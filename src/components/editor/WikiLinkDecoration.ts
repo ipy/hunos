@@ -62,6 +62,9 @@ export function buildWikiLinkDecorations(state: EditorState): DecorationSet {
         class: "wiki-link-content",
         "data-testid": WIKI_LINK_TARGET_TESTID,
         "data-wiki-title": wl.title,
+        role: "link",
+        tabindex: "-1",
+        "aria-label": wl.title,
       }),
       Decoration.inline(wl.contentEnd, wl.end, {
         class: "wiki-link-bracket-hidden",

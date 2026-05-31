@@ -206,10 +206,14 @@ export function TiptapEditor({
       MarkdownTaskItem.configure({
         nested: true,
         a11y: {
-          checkboxLabel: (_node, checked) =>
-            checked
+          checkboxLabel: (node, checked) => {
+            const taskText =
+              node.textContent.trim() || i18n.t("editor.task.empty");
+            const stateLabel = checked
               ? i18n.t("editor.task.checkboxDone")
-              : i18n.t("editor.task.checkboxOpen"),
+              : i18n.t("editor.task.checkboxOpen");
+            return `${stateLabel}：${taskText}`;
+          },
         },
       }),
       MarkdownHighlight.configure({ multicolor: true }),
