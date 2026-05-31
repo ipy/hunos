@@ -63,24 +63,44 @@ export function editorScrollDeltaForTocReveal(options: {
   return Math.min(delta, options.headingTop - targetTop);
 }
 
+function isVerticalScrollport(el: HTMLElement): boolean {
+  const { overflowY } = getComputedStyle(el);
+  return (
+    overflowY === "auto" || overflowY === "scroll" || overflowY === "overlay"
+  );
+}
+
+function scrollportOverflows(el: HTMLElement): boolean {
+  return el.scrollHeight > el.clientHeight + 1;
+}
+
 /** Scrollport for the TOC list (list itself, else the panel content pane). */
 export function resolvePanelTocScrollContainer(
   listEl: HTMLElement,
   preferredScrollEl?: HTMLElement | null,
 ): HTMLElement | null {
+  if (isVerticalScrollport(listEl) && scrollportOverflows(listEl)) {
+    return listEl;
+  }
   if (
     preferredScrollEl &&
-    preferredScrollEl.scrollHeight > preferredScrollEl.clientHeight + 1
+    preferredScrollEl !== listEl &&
+    isVerticalScrollport(preferredScrollEl) &&
+    scrollportOverflows(preferredScrollEl)
   ) {
     return preferredScrollEl;
   }
-  if (listEl.scrollHeight > listEl.clientHeight + 1) {
-    return listEl;
-  }
-  return (
+  const pane =
     listEl.closest<HTMLElement>('[data-testid="info-panel-content-scroll"]') ??
-    listEl.parentElement
-  );
+    listEl.parentElement;
+  if (pane && isVerticalScrollport(pane) && scrollportOverflows(pane)) {
+    return pane;
+  }
+  if (isVerticalScrollport(listEl)) return listEl;
+  if (preferredScrollEl && isVerticalScrollport(preferredScrollEl)) {
+    return preferredScrollEl;
+  }
+  return pane ?? listEl;
 }
 
 /** Scroll a panel TOC button into the info-panel content viewport. */

@@ -1,10 +1,11 @@
 import { Schema } from "@tiptap/pm/model";
 import { EditorState } from "@tiptap/pm/state";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { extractTocFromDoc } from "./noteToc";
 import {
   editorScrollDeltaForTocReveal,
   scrollToTocIndex,
+  scrollToTocDocPos,
   handleInfoPanelTocTap,
   findPanelTocEntryAtPointerY,
   resolvePanelTocScrollContainer,
@@ -327,7 +328,27 @@ describe("handleInfoPanelTocTap", () => {
 });
 
 describe("panel TOC pointer helpers", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  beforeEach(() => {
+    vi.stubGlobal(
+      "getComputedStyle",
+      vi.fn(() => ({ overflowY: "auto" }) as CSSStyleDeclaration),
+    );
+  });
+
   it("prefers the TOC list as scrollport when it overflows", () => {
+    vi.stubGlobal(
+      "getComputedStyle",
+      vi.fn((el: HTMLElement) => {
+        const isList = (el as { scrollHeight?: number }).scrollHeight === 500;
+        return {
+          overflowY: isList ? "auto" : "hidden",
+        } as CSSStyleDeclaration;
+      }),
+    );
     const list = {
       scrollHeight: 500,
       clientHeight: 300,
@@ -335,8 +356,32 @@ describe("panel TOC pointer helpers", () => {
       parentElement: null,
     } as unknown as HTMLElement;
     const pane = {
-      scrollHeight: 300,
+      scrollHeight: 800,
       clientHeight: 300,
+    } as unknown as HTMLElement;
+
+    expect(resolvePanelTocScrollContainer(list, pane)).toBe(list);
+  });
+
+  it("ignores hidden-overflow parent even when its scrollHeight exceeds clientHeight", () => {
+    vi.stubGlobal(
+      "getComputedStyle",
+      vi.fn((el: HTMLElement) => {
+        const isList = (el as { scrollHeight?: number }).scrollHeight === 500;
+        return {
+          overflowY: isList ? "auto" : "hidden",
+        } as CSSStyleDeclaration;
+      }),
+    );
+    const pane = {
+      scrollHeight: 900,
+      clientHeight: 300,
+    } as unknown as HTMLElement;
+    const list = {
+      scrollHeight: 500,
+      clientHeight: 300,
+      closest: () => pane,
+      parentElement: pane,
     } as unknown as HTMLElement;
 
     expect(resolvePanelTocScrollContainer(list, pane)).toBe(list);
@@ -359,16 +404,9 @@ describe("panel TOC pointer helpers", () => {
     } as unknown as HTMLElement;
     const list = {
       querySelectorAll: () => [entry],
+      scrollHeight: 900,
+      clientHeight: 412,
       closest: () => null,
-    } as unknown as HTMLElement;
-
-    expect(findPanelTocEntryAtPointerY(list, 838)).toBe(entry);
-    expect(findPanelTocEntryAtPointerY(list, 850)).toBeNull();
-    expect(panelTocEntryIndex(entry)).toBe(3);
-  });
-
-  it("prefers the last clipped row on bottom-edge taps", () => {
-    const scrollEl = {
       getBoundingClientRect: () => ({
         top: 432,
         bottom: 844,
@@ -380,6 +418,27 @@ describe("panel TOC pointer helpers", () => {
         y: 432,
         toJSON: () => ({}),
       }),
+    } as unknown as HTMLElement;
+
+    expect(findPanelTocEntryAtPointerY(list, 838)).toBe(entry);
+    expect(findPanelTocEntryAtPointerY(list, 860)).toBeNull();
+    expect(panelTocEntryIndex(entry)).toBe(3);
+  });
+
+  it("prefers the last clipped row on bottom-edge taps", () => {
+    const scrollRect = {
+      top: 432,
+      bottom: 844,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 412,
+      x: 0,
+      y: 432,
+      toJSON: () => ({}),
+    };
+    const scrollEl = {
+      getBoundingClientRect: () => scrollRect,
     } as unknown as HTMLElement;
     const tagsEntry = {
       getAttribute: () => "info-panel-toc-entry-10",
@@ -411,7 +470,10 @@ describe("panel TOC pointer helpers", () => {
     } as unknown as HTMLElement;
     const list = {
       querySelectorAll: () => [tagsEntry, tryEntry],
+      scrollHeight: 926,
+      clientHeight: 412,
       closest: () => scrollEl,
+      getBoundingClientRect: () => scrollRect,
     } as unknown as HTMLElement;
 
     expect(findPanelTocEntryAtPointerY(list, 841, scrollEl)).toBe(tryEntry);
@@ -419,18 +481,19 @@ describe("panel TOC pointer helpers", () => {
   });
 
   it("falls back to the last visible row in scroll bottom padding", () => {
+    const scrollRect = {
+      top: 432,
+      bottom: 844,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 412,
+      x: 0,
+      y: 432,
+      toJSON: () => ({}),
+    };
     const scrollEl = {
-      getBoundingClientRect: () => ({
-        top: 432,
-        bottom: 844,
-        left: 0,
-        right: 400,
-        width: 400,
-        height: 412,
-        x: 0,
-        y: 432,
-        toJSON: () => ({}),
-      }),
+      getBoundingClientRect: () => scrollRect,
     } as unknown as HTMLElement;
     const tryEntry = {
       getAttribute: () => "info-panel-toc-entry-11",
@@ -448,7 +511,10 @@ describe("panel TOC pointer helpers", () => {
     } as unknown as HTMLElement;
     const list = {
       querySelectorAll: () => [tryEntry],
+      scrollHeight: 926,
+      clientHeight: 412,
       closest: () => scrollEl,
+      getBoundingClientRect: () => scrollRect,
     } as unknown as HTMLElement;
 
     expect(findPanelTocEntryAtPointerY(list, 843, scrollEl)).toBe(tryEntry);
@@ -456,8 +522,11 @@ describe("panel TOC pointer helpers", () => {
 
   it("scrolls a clipped entry into the panel viewport", () => {
     let scrollTop = 120;
-    const scrollEl = {
-      scrollTop: 0,
+    const list = {
+      scrollHeight: 500,
+      clientHeight: 300,
+      parentElement: null,
+      closest: () => null,
       getBoundingClientRect: () => ({
         top: 300,
         bottom: 600,
@@ -470,17 +539,12 @@ describe("panel TOC pointer helpers", () => {
         toJSON: () => ({}),
       }),
     } as unknown as HTMLElement;
-    Object.defineProperty(scrollEl, "scrollTop", {
+    Object.defineProperty(list, "scrollTop", {
       get: () => scrollTop,
       set: (value: number) => {
         scrollTop = value;
       },
     });
-
-    const list = {
-      parentElement: scrollEl,
-      closest: () => null,
-    } as unknown as HTMLElement;
     const entry = {
       closest: (selector: string) =>
         selector.includes("info-panel-toc-list") ? list : null,
@@ -499,5 +563,183 @@ describe("panel TOC pointer helpers", () => {
 
     scrollPanelTocEntryIntoView(entry);
     expect(scrollTop).toBe(174);
+  });
+});
+
+describe("scrollToTocDocPos — playground jump (AC43/AC46)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function buildScrollableEditorMock(options: {
+    headingTop: number;
+    followBlockBottom: number;
+    initialScrollTop?: number;
+  }) {
+    const json = {
+      type: "doc",
+      content: Array.from({ length: 12 }, (_, i) => ({
+        type: "heading",
+        attrs: { level: i === 10 ? 2 : 2 },
+        content: [
+          {
+            type: "text",
+            text:
+              i === 10 ? "标签与链接" : i === 11 ? "自由试炼" : `Section ${i}`,
+          },
+        ],
+      })),
+    };
+    const doc = docFromJson(json);
+    const state = EditorState.create({ schema, doc });
+    let scrollTop = options.initialScrollTop ?? 0;
+    const scrollEl = {
+      parentElement: null,
+      scrollHeight: 8000,
+      clientHeight: 506,
+      getBoundingClientRect: () => ({
+        top: 0,
+        bottom: 506,
+        left: 0,
+        right: 606,
+        width: 606,
+        height: 506,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }),
+      scrollTo: (opts: { top: number }) => {
+        scrollTop = opts.top;
+      },
+    };
+    const headingEl = {
+      tagName: "H2",
+      nextElementSibling: {
+        getBoundingClientRect: () => ({
+          bottom: options.followBlockBottom,
+          top: options.followBlockBottom - 28,
+          left: 24,
+          right: 582,
+          width: 558,
+          height: 28,
+          x: 24,
+          y: options.followBlockBottom - 28,
+          toJSON: () => ({}),
+        }),
+      },
+      getBoundingClientRect: () => ({
+        top: options.headingTop,
+        bottom: options.headingTop + 28,
+        left: 24,
+        right: 582,
+        width: 558,
+        height: 28,
+        x: 24,
+        y: options.headingTop,
+        toJSON: () => ({}),
+      }),
+      parentElement: null,
+    };
+    const infoPanel = {
+      getBoundingClientRect: () => ({
+        top: 338,
+        bottom: 844,
+        left: 0,
+        right: 606,
+        width: 606,
+        height: 506,
+        x: 0,
+        y: 338,
+        toJSON: () => ({}),
+      }),
+    };
+    const editor = {
+      state,
+      view: {
+        state,
+        dom: { parentElement: scrollEl },
+        domAtPos: () => ({
+          node: { nodeType: 3, parentElement: headingEl },
+        }),
+        coordsAtPos: () => ({
+          top: options.headingTop,
+          bottom: options.headingTop + 28,
+          left: 24,
+          right: 582,
+        }),
+      },
+      chain: () => {
+        const chain = {
+          focus: (_pos?: unknown, _opts?: { scrollIntoView?: boolean }) =>
+            chain,
+          setTextSelection: () => chain,
+          run: () => true,
+        };
+        return chain;
+      },
+    };
+
+    vi.stubGlobal(
+      "getComputedStyle",
+      vi.fn(() => ({ overflowY: "auto" }) as CSSStyleDeclaration),
+    );
+    vi.stubGlobal("document", {
+      querySelector: (sel: string) =>
+        sel.includes("info-panel") ? infoPanel : null,
+    });
+    Object.assign(scrollEl, {
+      ownerDocument: {
+        querySelector: (sel: string) =>
+          sel.includes("info-panel") ? infoPanel : null,
+      },
+    });
+    Object.defineProperty(scrollEl, "scrollTop", {
+      get: () => scrollTop,
+      set: (v: number) => {
+        scrollTop = v;
+      },
+    });
+
+    return { editor, scrollEl, getScrollTop: () => scrollTop };
+  }
+
+  it("scrolls editor on first activation of 标签与链接 (index 10) from scrollTop 0", () => {
+    const { editor, getScrollTop } = buildScrollableEditorMock({
+      headingTop: 4200,
+      followBlockBottom: 4240,
+      initialScrollTop: 0,
+    });
+
+    expect(scrollToTocIndex(editor as never, 10)).toBe(true);
+    expect(getScrollTop()).toBeGreaterThan(0);
+  });
+
+  it("scrolls editor on first click of 自由试炼 (index 11) while TOC list stays at scrollTop 0", () => {
+    const { editor, getScrollTop } = buildScrollableEditorMock({
+      headingTop: 4800,
+      followBlockBottom: 4840,
+      initialScrollTop: 0,
+    });
+
+    expect(handleInfoPanelTocTap(editor as never, 11)).toBe(true);
+    expect(getScrollTop()).toBeGreaterThan(0);
+  });
+
+  it("scrollToTocDocPos applies scroll with info panel viewport clamp", () => {
+    const { editor, getScrollTop } = buildScrollableEditorMock({
+      headingTop: 4200,
+      followBlockBottom: 4240,
+    });
+    let headingPos = 0;
+    editor.state.doc.descendants((node, pos) => {
+      if (node.type.name === "heading" && node.textContent === "标签与链接") {
+        headingPos = pos;
+        return false;
+      }
+    });
+
+    expect(scrollToTocDocPos(editor as never, headingPos)).toBe(true);
+    expect(getScrollTop()).toBeGreaterThan(0);
+    expect(4200 - getScrollTop()).toBeLessThanOrEqual(12 + 1);
   });
 });

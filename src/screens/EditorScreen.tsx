@@ -1681,6 +1681,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       )}
 
       <div
+        data-testid="editor-scroll-pane"
         style={{ flex: 1, overflow: "auto", minHeight: 0 }}
         onClick={() => showActions && dismissActionsOverlay()}
       >
