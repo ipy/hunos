@@ -17,6 +17,35 @@ function normalizePlainExcerpt(plain: string): string {
   return plain.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
 }
 
+/** Drop the first plain line when it repeats the note title (H1 echo). */
+function stripLeadingTitleLine(plain: string, title: string): string {
+  const trimmedTitle = title.trim();
+  if (!trimmedTitle) return plain;
+
+  const firstNewline = plain.indexOf("\n");
+  if (firstNewline < 0) {
+    return plain.trim() === trimmedTitle ? "" : plain;
+  }
+
+  const firstLine = plain.slice(0, firstNewline).trim();
+  if (firstLine === trimmedTitle) {
+    return plain.slice(firstNewline + 1);
+  }
+  return plain;
+}
+
+function regularNoteListExcerpt(
+  plain: string,
+  title: string,
+  limit: number,
+): string {
+  const normalized = normalizePlainExcerpt(stripLeadingTitleLine(plain, title));
+  if (normalized.length <= limit) {
+    return normalized;
+  }
+  return normalized.slice(0, limit);
+}
+
 /** Playground plain excerpt — skip try-section shortcut footer; prefer intro or post-shortcut edits. */
 function playgroundPlainListExcerpt(plain: string, limit: number): string {
   const normalized = normalizePlainExcerpt(plain);
@@ -60,12 +89,13 @@ export function deriveNoteListPreview(
       return getFormatPlaygroundIntroExcerpt(storedRow.seedLocale);
     }
     return playgroundPlainListExcerpt(
-      note.contentPlain ?? "",
+      stripLeadingTitleLine(note.contentPlain ?? "", note.title),
       PREVIEW_CHAR_LIMIT,
     );
   }
-  return (note.contentPlain ?? "")
-    .slice(0, PREVIEW_CHAR_LIMIT)
-    .replace(/\n/g, " ")
-    .trim();
+  return regularNoteListExcerpt(
+    note.contentPlain ?? "",
+    note.title,
+    PREVIEW_CHAR_LIMIT,
+  );
 }

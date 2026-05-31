@@ -9,6 +9,7 @@ import {
   shouldShowPlaygroundRestoreButton,
 } from "@/storage/formatPlaygroundNote";
 import { extractPlainTextFromTiptap } from "@/graph/linkExtractor";
+import { getWelcomeSeed } from "@/storage/welcomeNotes";
 import { deriveNoteListPreview } from "@/utils/noteListPreview";
 import { isFormatPlaygroundNote } from "@/storage/formatPlaygroundNote";
 
@@ -266,5 +267,55 @@ describe("deriveNoteListPreview", () => {
   it("detects playground notes by title", () => {
     expect(isFormatPlaygroundNote("Format Playground")).toBe(true);
     expect(isFormatPlaygroundNote("格式试炼场")).toBe(true);
+  });
+
+  it("uses seed intro for captured stored playground body (AC34-list-preview)", () => {
+    const raw = readFileSync(
+      join(process.cwd(), "src/storage/fixtures/playground-zh-stored.json"),
+      "utf-8",
+    );
+    const parsed = JSON.parse(raw);
+    const contentPlain = extractPlainTextFromTiptap(parsed);
+    const preview = deriveNoteListPreview(
+      {
+        title: "格式试炼场",
+        content: raw,
+        contentPlain,
+      },
+      "格式示例",
+      "zh",
+    );
+    expect(preview).toBe(getFormatPlaygroundIntroExcerpt("zh"));
+    expect(preview).toContain("在这一篇笔记里测试所有格式");
+    expect(preview).not.toMatch(/Enter|Backspace|Cmd\+/);
+  });
+
+  it("shows welcome intro once without duplicated title (AC35-welcome-preview)", () => {
+    const seed = getWelcomeSeed("zh");
+    const preview = deriveNoteListPreview(
+      {
+        title: seed.title,
+        content: JSON.stringify(seed.content),
+        contentPlain: seed.contentPlain,
+      },
+      "",
+      "zh",
+    );
+    expect(preview).toContain("Hunos 是一款美观的、支持知识图谱的笔记应用");
+    expect(preview).not.toMatch(/^欢迎使用 Hunos\s+欢迎使用 Hunos/);
+    expect(preview.split("欢迎使用 Hunos").length - 1).toBe(0);
+
+    const enSeed = getWelcomeSeed("en");
+    const enPreview = deriveNoteListPreview(
+      {
+        title: enSeed.title,
+        content: JSON.stringify(enSeed.content),
+        contentPlain: enSeed.contentPlain,
+      },
+      "",
+      "en",
+    );
+    expect(enPreview).toContain("Hunos is a beautiful, graph-aware note-taking app");
+    expect(enPreview.split("Welcome to Hunos").length - 1).toBe(0);
   });
 });
