@@ -54,6 +54,12 @@ export async function openCleanFormatPlayground(page: Page): Promise<void> {
   await restoreFormatPlayground(page);
 }
 
+/** Open canonical 格式试炼场 from fresh DB seed (no restore chip). */
+export async function openFormatPlaygroundToc(page: Page): Promise<void> {
+  await openFormatPlayground(page);
+  await expect(page.getByTestId("restore-playground-button")).toHaveCount(0);
+}
+
 export function editorLocator(page: Page) {
   return page.getByTestId("note-editor").locator(".ProseMirror");
 }

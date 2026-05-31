@@ -12,9 +12,8 @@ import { SettingToggle } from "@/components/settings/SettingToggle";
 import type { Note } from "@/types/note";
 import type { Editor } from "@tiptap/react";
 import {
-  findPanelTocEntryAtPointerY,
   handleInfoPanelTocTap,
-  panelTocEntryIndex,
+  panelTocEntryFromPointerY,
   resolvePanelTocScrollContainer,
   scrollPanelTocEntryIntoView,
 } from "@/utils/tocNavigation";
@@ -162,25 +161,35 @@ export function InfoPanel({
     if (entryEl) scrollPanelTocEntryIntoView(entryEl);
   };
 
-  const handleTocPointerDownCapture = (event: React.PointerEvent) => {
-    if (activeTab !== "toc" || event.button !== 0) return;
-    const list = event.currentTarget.querySelector(
-      '[data-testid="info-panel-toc-list"]',
-    );
-    if (!list) return;
-    const listEl = list as HTMLElement;
-    const entry = findPanelTocEntryAtPointerY(
+  const contentScrollRef = useRef<HTMLDivElement>(null);
+
+  const activateTocAtClientY = (clientY: number, listEl: HTMLElement) => {
+    const resolved = panelTocEntryFromPointerY(
       listEl,
-      event.clientY,
-      resolvePanelTocScrollContainer(
-        listEl,
-        event.currentTarget as HTMLElement,
-      ),
+      clientY,
+      resolvePanelTocScrollContainer(listEl, contentScrollRef.current),
     );
-    if (!entry) return;
-    const index = panelTocEntryIndex(entry);
-    if (index < 0 || index >= toc.length) return;
+    if (!resolved) return;
+    const { entry, index } = resolved;
+    if (index >= toc.length) return;
     activateTocEntry(index, toc[index]?.docPos, entry);
+  };
+
+  const handleTocListPointerDownCapture = (event: React.PointerEvent) => {
+    if (activeTab !== "toc" || event.button !== 0) return;
+    activateTocAtClientY(event.clientY, event.currentTarget as HTMLElement);
+  };
+
+  const handleTocListClickCapture = (event: React.MouseEvent) => {
+    if (activeTab !== "toc" || event.button !== 0) return;
+    activateTocAtClientY(event.clientY, event.currentTarget as HTMLElement);
+  };
+
+  const handleTocListTouchEndCapture = (event: React.TouchEvent) => {
+    if (activeTab !== "toc") return;
+    const touch = event.changedTouches[0];
+    if (!touch) return;
+    activateTocAtClientY(touch.clientY, event.currentTarget as HTMLElement);
   };
 
   const tabs: { id: InfoPanelTab; icon: string }[] = [
@@ -384,8 +393,8 @@ export function InfoPanel({
 
         {/* Content */}
         <div
+          ref={contentScrollRef}
           data-testid="info-panel-content-scroll"
-          onPointerDownCapture={handleTocPointerDownCapture}
           style={{
             flex: "1 1 0",
             minHeight: 0,
@@ -476,6 +485,9 @@ export function InfoPanel({
           {activeTab === "toc" && (
             <div
               data-testid="info-panel-toc-list"
+              onPointerDownCapture={handleTocListPointerDownCapture}
+              onClickCapture={handleTocListClickCapture}
+              onTouchEndCapture={handleTocListTouchEndCapture}
               style={{
                 flex: "1 1 0",
                 minHeight: 0,

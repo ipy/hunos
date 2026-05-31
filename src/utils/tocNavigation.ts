@@ -214,6 +214,19 @@ export function panelTocEntryIndex(entryEl: HTMLElement): number {
   return match ? Number.parseInt(match[1], 10) : -1;
 }
 
+/** Resolve a panel TOC row from viewport Y (pointer, touch, or mouse). */
+export function panelTocEntryFromPointerY(
+  listEl: HTMLElement,
+  clientY: number,
+  scrollEl?: HTMLElement | null,
+): { entry: HTMLElement; index: number } | null {
+  const entry = findPanelTocEntryAtPointerY(listEl, clientY, scrollEl);
+  if (!entry) return null;
+  const index = panelTocEntryIndex(entry);
+  if (index < 0) return null;
+  return { entry, index };
+}
+
 function isDomElement(el: unknown): el is HTMLElement {
   return (
     typeof el === "object" &&
@@ -293,12 +306,25 @@ function scrollHeadingIntoEditorPane(
     ? followEl.getBoundingClientRect().bottom
     : followBlockBottomAtPos(view, headingDocPos);
 
-  const delta = editorScrollDeltaForTocReveal({
+  const paddingTop = TOC_SCROLL_TOP_PADDING_PX;
+  const paddingBottom = TOC_SCROLL_BOTTOM_PADDING_PX;
+  const targetTop = scrollViewportTop + paddingTop;
+
+  let delta = editorScrollDeltaForTocReveal({
     scrollViewportTop,
     scrollViewportBottom,
     headingTop,
     followBlockBottom,
+    paddingTop,
+    paddingBottom,
   });
+
+  // Visibility guard: never leave the heading below the (info-panel-clamped) viewport.
+  const projectedHeadingTop = headingTop - delta;
+  const maxHeadingTop = scrollViewportBottom - paddingBottom - 1;
+  if (projectedHeadingTop > maxHeadingTop) {
+    delta = headingTop - targetTop;
+  }
 
   if (Math.abs(delta) < 1) return scrollEl.scrollTop;
 

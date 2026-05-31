@@ -725,6 +725,17 @@ describe("scrollToTocDocPos — playground jump (AC43/AC46)", () => {
     expect(getScrollTop()).toBeGreaterThan(0);
   });
 
+  it("visibility guard scrolls when heading remains below info-panel-clamped viewport", () => {
+    const { editor, getScrollTop } = buildScrollableEditorMock({
+      headingTop: 800,
+      followBlockBottom: 840,
+      initialScrollTop: 0,
+    });
+
+    expect(scrollToTocIndex(editor as never, 11)).toBe(true);
+    expect(getScrollTop()).toBeGreaterThan(0);
+  });
+
   it("scrollToTocDocPos applies scroll with info panel viewport clamp", () => {
     const { editor, getScrollTop } = buildScrollableEditorMock({
       headingTop: 4200,

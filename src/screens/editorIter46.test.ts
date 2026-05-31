@@ -31,13 +31,15 @@ describe("iteration 46 — TOC bottom padding", () => {
     expect(infoPanelSource).toMatch(/TOC_LIST_BOTTOM_PADDING_PX = 48/);
     expect(infoPanelSource).toContain("paddingBottom:");
     expect(infoPanelSource).toContain("safe-area-inset-bottom");
-    expect(infoPanelSource).toMatch(/flex:\s*1[\s\S]*minHeight:\s*0[\s\S]*overflowY:\s*"auto"/);
+    expect(infoPanelSource).toMatch(
+      /flex:\s*1[\s\S]*minHeight:\s*0[\s\S]*overflowY:\s*"auto"/,
+    );
   });
 });
 
 describe("iteration 46 — TOC click activation", () => {
   it("activates entries via pointerdown capture and synthetic click", () => {
-    expect(infoPanelSource).toContain("handleTocPointerDownCapture");
+    expect(infoPanelSource).toContain("handleTocListPointerDownCapture");
     expect(infoPanelSource).toContain("activateTocEntry");
 
     const tocEntryBlock = infoPanelSource.slice(

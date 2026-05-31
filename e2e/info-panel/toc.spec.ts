@@ -2,13 +2,13 @@ import { test, expect } from "../fixtures/app";
 import {
   appendEditorHeading,
   editorLocator,
-  openCleanFormatPlayground,
+  openFormatPlaygroundToc,
 } from "../helpers/playground";
 
 const GATE_VIEWPORT = { width: 606, height: 844 };
 
 async function openPlaygroundToc(page: import("@playwright/test").Page) {
-  await openCleanFormatPlayground(page);
+  await openFormatPlaygroundToc(page);
   await page.setViewportSize(GATE_VIEWPORT);
   await page.getByTestId("info-panel-toggle").click();
   await expect(page.getByTestId("info-panel")).toBeVisible();
@@ -94,7 +94,18 @@ test.describe("info panel TOC — iter 49 gate", () => {
     });
     expect(editorScrollBefore).toBe(0);
 
-    await page.getByTestId("info-panel-toc-entry-11").click({ force: true });
+    const entry = page.getByTestId("info-panel-toc-entry-11");
+    const box = await entry.boundingBox();
+    expect(box).not.toBeNull();
+    await page.mouse.click(box!.x + 16, box!.y + 4);
+
+    const tocScrollAfter = await page.evaluate(() => {
+      const tocList = document.querySelector(
+        '[data-testid="info-panel-toc-list"]',
+      );
+      return tocList instanceof HTMLElement ? tocList.scrollTop : 0;
+    });
+    expect(tocScrollAfter).toBe(0);
 
     await expect
       .poll(async () =>

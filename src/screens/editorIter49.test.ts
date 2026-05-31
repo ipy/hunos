@@ -158,7 +158,7 @@ describe("iteration 49 — AC44 toc first-click (behavioral)", () => {
   it("scrolls editor before panel list on activation", () => {
     const activateBlock = infoPanelSource.slice(
       infoPanelSource.indexOf("const activateTocEntry"),
-      infoPanelSource.indexOf("const handleTocPointerDownCapture"),
+      infoPanelSource.indexOf("const contentScrollRef"),
     );
     const editorIdx = activateBlock.indexOf("handleInfoPanelTocTap");
     const panelIdx = activateBlock.indexOf("scrollPanelTocEntryIntoView");
@@ -177,9 +177,9 @@ describe("iteration 49 — AC46/AC43 toc click activation (behavioral)", () => {
   });
 
   it("activates via onClick without blocking pointerdown default", () => {
-    expect(infoPanelSource).toContain("handleTocPointerDownCapture");
+    expect(infoPanelSource).toContain("handleTocListPointerDownCapture");
     const captureBlock = infoPanelSource.slice(
-      infoPanelSource.indexOf("handleTocPointerDownCapture"),
+      infoPanelSource.indexOf("handleTocListPointerDownCapture"),
       infoPanelSource.indexOf("const tabs:"),
     );
     expect(captureBlock).not.toContain("preventDefault");
