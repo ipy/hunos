@@ -132,6 +132,9 @@ export function withHeaderRowFix(
       command === pmDeleteColumn &&
       context?.insertGuard === "deleted-once"
     ) {
+      if (!dispatch) {
+        return false;
+      }
       context.insertGuard = null;
       return true;
     }

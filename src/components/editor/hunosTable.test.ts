@@ -359,6 +359,29 @@ describe("HunosTable column commands (TipTap tableHeader schema)", () => {
     expect(headerColumnCount(state)).toBe(3);
   });
 
+  it("can() deleteColumn does not clear insertGuard (bubble menu canExecute)", () => {
+    const context = createColumnCommandContext();
+    let state = buildPlaygroundTableState(
+      tiptapTableSchema,
+      "tableHeader",
+      "tableCell",
+      "tableRow",
+      "类型",
+    );
+
+    state = runColumnCommand(state, addColumnAfter, 1, context);
+    state = runColumnCommand(state, deleteColumn, null, context);
+    expect(context.insertGuard).toBe("deleted-once");
+
+    const canDelete = withHeaderRowFix(deleteColumn, null, context);
+    expect(canDelete(state)).toBe(false);
+    expect(context.insertGuard).toBe("deleted-once");
+
+    state = runColumnCommand(state, deleteColumn, null, context);
+    expect(headerTexts(state)).toEqual(["名称", "类型", "状态"]);
+    expect(headerColumnCount(state)).toBe(3);
+  });
+
   it("deleteColumn alone removes focused column without blanking sibling headers", () => {
     let state = buildPlaygroundTableState(
       tiptapTableSchema,
