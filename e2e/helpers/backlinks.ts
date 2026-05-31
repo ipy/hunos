@@ -4,7 +4,7 @@ import { openNoteFromList } from "./notes";
 
 /** Markdown delimiters that must not appear in formatted backlink snippets. */
 export const BACKLINK_SNIPPET_RAW_MARKDOWN_RE =
-  /\*\*|__|~~|==|\[\[|\]\]|!\[|\]\(|`[^`]+`/;
+  /\*\*|__|~~|==|\[\[|\]\]|!\[|\]\(|`[^`]+`|(?<!\*)\*(?!\*)|(?<!_)_(?!_)/;
 
 export function assertBacklinkSnippetPlainText(text: string): void {
   expect(text.length).toBeGreaterThan(0);
@@ -74,8 +74,8 @@ export async function collectIncomingBacklinkRowTestIds(
 }
 
 /**
- * Multi-hop backlink nav — re-collects row test ids after each return because
- * link ids can change when the graph reloads (AC59-backlinks-e2e-distinct-nav).
+ * Multi-hop backlink nav — re-collects row test ids after each return when needed;
+ * stable source+position keys keep ids identical across graph reloads (AC60).
  */
 export async function clickEachIncomingBacklinkByFreshTestId(
   page: Page,

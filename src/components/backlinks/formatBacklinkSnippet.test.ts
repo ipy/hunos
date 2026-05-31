@@ -51,4 +51,23 @@ describe("formatBacklinkSnippet", () => {
     expect(out).not.toContain("__");
     expect(backlinkSnippetHasRawMarkdown(out)).toBe(false);
   });
+
+  it("strips italic delimiters truncated by the context window (AC60-backlink-snippet-delimiters)", () => {
+    const truncated =
+      "... 与 项目文档 #42。 自由试炼 输入 **粗体**、*斜体, sibling...";
+    const out = formatBacklinkSnippet(truncated);
+    expect(out).toContain("#42");
+    expect(out).toContain("斜体");
+    expect(out).not.toContain("*");
+    expect(backlinkSnippetHasRawMarkdown(out)).toBe(false);
+  });
+
+  it("strips lone underscore italic truncated by the context window", () => {
+    const truncated =
+      "... 与 项目文档 #42。 自由试炼 输入 **粗体**、_斜体, sibling...";
+    const out = formatBacklinkSnippet(truncated);
+    expect(out).toContain("斜体");
+    expect(out).not.toMatch(/(?<!_)_(?!_)/);
+    expect(backlinkSnippetHasRawMarkdown(out)).toBe(false);
+  });
 });

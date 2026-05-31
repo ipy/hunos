@@ -10,6 +10,14 @@ import { replaceWikiLinkTitleInContent } from "@/utils/wikiLink";
 import type { BacklinkResult } from "@/types/graph";
 import type { Note } from "@/types/note";
 
+/** Stable row identity from source note + wiki-link position (survives link resync). */
+export function stableBacklinkLinkId(
+  sourceNoteId: string,
+  position: number,
+): string {
+  return `${sourceNoteId}-pos-${position}`;
+}
+
 /** Drop duplicate link rows defensively before UI render. */
 export function dedupeBacklinkResults(
   results: BacklinkResult[],
@@ -103,7 +111,7 @@ export const graphEngine = {
       const note = await noteStorage.get(link.sourceNoteId);
       if (note && note.status === "active") {
         results.push({
-          linkId: link.id,
+          linkId: stableBacklinkLinkId(link.sourceNoteId, link.position),
           noteId: note.id,
           noteTitle: note.title,
           context: link.context,
@@ -124,7 +132,7 @@ export const graphEngine = {
       const note = await noteStorage.get(link.targetNoteId);
       if (note && note.status === "active") {
         results.push({
-          linkId: link.id,
+          linkId: stableBacklinkLinkId(link.sourceNoteId, link.position),
           noteId: note.id,
           noteTitle: note.title,
           context: link.context,

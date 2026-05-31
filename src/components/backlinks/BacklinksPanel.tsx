@@ -12,7 +12,7 @@ export const BACKLINKS_PANEL_TOGGLE_TESTID = "backlinks-panel-toggle";
 export const BACKLINKS_OUTGOING_SECTION_TESTID = "backlinks-outgoing-section";
 export const BACKLINKS_INCOMING_SECTION_TESTID = "backlinks-incoming-section";
 
-/** Per-row test id — linkId is unique even when multiple rows share noteId. */
+/** Per-row test id — linkId is stable (source + position) even when rows share noteId. */
 export function backlinksItemTestId(linkId: string): string {
   return `backlinks-item-${linkId}`;
 }

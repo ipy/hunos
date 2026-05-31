@@ -19,7 +19,11 @@ vi.mock("@/storage/linkStorage", () => ({
   },
 }));
 
-import { dedupeBacklinkResults, graphEngine } from "./graphEngine";
+import {
+  dedupeBacklinkResults,
+  graphEngine,
+  stableBacklinkLinkId,
+} from "./graphEngine";
 
 function seedNote(id: string, title: string): Note {
   const note: Note = {
@@ -43,6 +47,7 @@ function seedWikiLink(
   sourceNoteId: string,
   targetNoteId: string,
   context: string,
+  position: number = 0,
 ): Link {
   const link: Link = {
     id,
@@ -50,7 +55,7 @@ function seedWikiLink(
     targetNoteId,
     type: "wiki_link",
     context,
-    position: 0,
+    position,
     createdAt: 1,
   };
   const incoming = linksByTarget.get(targetNoteId) ?? [];
@@ -62,10 +67,16 @@ function seedWikiLink(
   return link;
 }
 
+describe("stableBacklinkLinkId", () => {
+  it("derives identity from source note and wiki-link position", () => {
+    expect(stableBacklinkLinkId("pg-zh", 142)).toBe("pg-zh-pos-142");
+  });
+});
+
 describe("dedupeBacklinkResults", () => {
   it("drops rows that share the same link id", () => {
     const row = {
-      linkId: "dup-link",
+      linkId: stableBacklinkLinkId("source", 10),
       noteId: "source",
       noteTitle: "格式试炼场",
       context: "ctx",
@@ -82,24 +93,27 @@ describe("graphEngine backlink keys", () => {
     linksBySource.clear();
   });
 
-  it("returns unique linkId per wiki-link even when target note repeats", async () => {
+  it("returns unique stable linkId per wiki-link even when target note repeats", async () => {
     seedNote("target", "Welcome");
     seedNote("source", "格式试炼场");
-    seedWikiLink("link-1", "source", "target", "first [[Welcome]]");
-    seedWikiLink("link-2", "source", "target", "second [[Welcome]]");
+    seedWikiLink("link-1", "source", "target", "first [[Welcome]]", 10);
+    seedWikiLink("link-2", "source", "target", "second [[Welcome]]", 80);
 
     const incoming = await graphEngine.getBacklinks("target");
     expect(incoming).toHaveLength(2);
-    expect(incoming.map((row) => row.linkId)).toEqual(["link-1", "link-2"]);
+    expect(incoming.map((row) => row.linkId)).toEqual([
+      stableBacklinkLinkId("source", 10),
+      stableBacklinkLinkId("source", 80),
+    ]);
     expect(new Set(incoming.map((row) => row.linkId)).size).toBe(2);
     expect(incoming.every((row) => row.noteId === "source")).toBe(true);
   });
 
-  it("returns unique linkId per outgoing wiki-link to the same target", async () => {
+  it("returns unique stable linkId per outgoing wiki-link to the same target", async () => {
     seedNote("target", "Welcome");
     seedNote("source", "格式试炼场");
-    seedWikiLink("out-1", "source", "target", "[[Welcome]] one");
-    seedWikiLink("out-2", "source", "target", "[[Welcome]] two");
+    seedWikiLink("out-1", "source", "target", "[[Welcome]] one", 5);
+    seedWikiLink("out-2", "source", "target", "[[Welcome]] two", 55);
 
     const outgoing = await graphEngine.getOutgoingLinks("source");
     expect(outgoing).toHaveLength(2);
@@ -107,14 +121,43 @@ describe("graphEngine backlink keys", () => {
     expect(outgoing.every((row) => row.noteId === "target")).toBe(true);
   });
 
-  it("dedupes duplicate link ids defensively in incoming results", async () => {
+  it("keeps stable linkId when db ids change after resync", async () => {
+    seedNote("target", "项目文档");
+    seedNote("source", "格式试炼场");
+    seedWikiLink("session-a-1", "source", "target", "first [[项目文档]]", 100);
+    seedWikiLink("session-a-2", "source", "target", "second [[项目文档]]", 200);
+
+    const beforeResync = await graphEngine.getBacklinks("target");
+    expect(beforeResync.map((row) => row.linkId)).toEqual([
+      stableBacklinkLinkId("source", 100),
+      stableBacklinkLinkId("source", 200),
+    ]);
+
+    linksByTarget.clear();
+    linksBySource.clear();
+    seedWikiLink("session-b-1", "source", "target", "first [[项目文档]]", 100);
+    seedWikiLink("session-b-2", "source", "target", "second [[项目文档]]", 200);
+
+    const afterResync = await graphEngine.getBacklinks("target");
+    expect(afterResync.map((row) => row.linkId)).toEqual(
+      beforeResync.map((row) => row.linkId),
+    );
+  });
+
+  it("dedupes duplicate stable link ids defensively in incoming results", async () => {
     seedNote("target", "Welcome");
     seedNote("source", "格式试炼场");
-    const link = seedWikiLink("dup-link", "source", "target", "[[Welcome]]");
+    const link = seedWikiLink(
+      "dup-link",
+      "source",
+      "target",
+      "[[Welcome]]",
+      42,
+    );
     linksByTarget.set("target", [link, link]);
 
     const incoming = await graphEngine.getBacklinks("target");
     expect(incoming).toHaveLength(1);
-    expect(incoming[0]?.linkId).toBe("dup-link");
+    expect(incoming[0]?.linkId).toBe(stableBacklinkLinkId("source", 42));
   });
 });
