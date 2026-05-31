@@ -8,8 +8,40 @@ import type { Locale } from "@/types/settings";
 
 const PREVIEW_CHAR_LIMIT = 120;
 
+const PLAYGROUND_SHORTCUT_MARKERS = [
+  "桌面快捷键：",
+  "Desktop shortcuts:",
+] as const;
+
 function normalizePlainExcerpt(plain: string): string {
   return plain.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
+}
+
+/** Playground plain excerpt — skip try-section shortcut footer; prefer intro or post-shortcut edits. */
+function playgroundPlainListExcerpt(plain: string, limit: number): string {
+  const normalized = normalizePlainExcerpt(plain);
+  for (const marker of PLAYGROUND_SHORTCUT_MARKERS) {
+    const idx = normalized.indexOf(marker);
+    if (idx < 0) continue;
+
+    const before = normalized.slice(0, idx).trim();
+    const afterMarker = normalized.slice(idx);
+    const suffixMatch = afterMarker.match(
+      /(?:搜索全部笔记\.|search all notes\.)\s*(.+)$/i,
+    );
+    const suffix = suffixMatch?.[1]?.trim();
+    const meaningful = suffix ? `${before} ${suffix}`.trim() : before;
+
+    if (meaningful.length <= limit) {
+      return meaningful;
+    }
+    return suffix ? meaningful.slice(-limit) : meaningful.slice(0, limit);
+  }
+
+  if (normalized.length <= limit) {
+    return normalized;
+  }
+  return normalized.slice(-limit);
 }
 
 /** List excerpt — canonical playground shows seed intro; edited body shows plain text. */
@@ -27,10 +59,10 @@ export function deriveNoteListPreview(
     if (playgroundRowShowsSeedListPreview(note.title, note.content, locale)) {
       return getFormatPlaygroundIntroExcerpt(storedRow.seedLocale);
     }
-    const plain = normalizePlainExcerpt(note.contentPlain ?? "");
-    return plain.length > PREVIEW_CHAR_LIMIT
-      ? plain.slice(-PREVIEW_CHAR_LIMIT)
-      : plain;
+    return playgroundPlainListExcerpt(
+      note.contentPlain ?? "",
+      PREVIEW_CHAR_LIMIT,
+    );
   }
   return (note.contentPlain ?? "")
     .slice(0, PREVIEW_CHAR_LIMIT)

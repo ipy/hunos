@@ -799,8 +799,7 @@ function findPlaygroundTrySectionStartIndex(
   const sectionTry = STRINGS[seedLocale].sectionTry;
   return nodes.findIndex(
     (node) =>
-      node.type === "heading" &&
-      collectPlaygroundNodeText(node) === sectionTry,
+      node.type === "heading" && collectPlaygroundNodeText(node) === sectionTry,
   );
 }
 
@@ -1867,10 +1866,22 @@ export function playgroundRowShowsSeedListPreview(
   ) {
     return true;
   }
-  return !formatPlaygroundNeedsRestore(
+
+  const needsRestore = formatPlaygroundNeedsRestore(
     storedRow.canonicalTitle,
     storedRow.rowContent,
     storedRow.seedLocale,
+  );
+  if (!needsRestore) {
+    return true;
+  }
+
+  // Align with restore chip: sandbox/QA drift still shows seed intro in the list.
+  return playgroundFormatQaDraftHidesRestoreChip(
+    storedRow.rowContent,
+    title,
+    storedRow.rowContent,
+    fallbackLocale,
   );
 }
 

@@ -31,26 +31,33 @@ describe("deriveNoteListPreview", () => {
 
   it("shows plain-text excerpt after playground body edits", () => {
     const seed = buildPlaygroundContent("zh");
-    const seedPlain = extractPlainTextFromTiptap(seed);
     const marker = "T2-BODY-iter3-marker";
     const parsed = JSON.parse(JSON.stringify(seed)) as {
       content: Array<{ type: string; content?: Array<{ text?: string }> }>;
     };
-    parsed.content.push({
+    const blocksIdx = parsed.content.findIndex(
+      (node) =>
+        node.type === "heading" && node.content?.[0]?.text === "块级元素",
+    );
+    parsed.content.splice(blocksIdx + 1, 0, {
       type: "paragraph",
       content: [{ type: "text", text: marker }],
     });
+    const contentPlain = extractPlainTextFromTiptap(parsed);
     const preview = deriveNoteListPreview(
       {
         title: "格式试炼场",
         content: JSON.stringify(parsed),
-        contentPlain: `${seedPlain}\n${marker}`,
+        contentPlain,
       },
       "格式示例",
       "zh",
     );
-    expect(preview).toContain(marker);
+    expect(contentPlain).toContain(marker);
     expect(preview).not.toBe(getFormatPlaygroundIntroExcerpt("zh"));
+    expect(preview).not.toContain("桌面快捷键");
+    expect(preview).not.toContain("Cmd+B");
+    expect(preview).toContain("块级元素");
   });
 
   it("uses English seed intro when app locale is zh", () => {
@@ -161,7 +168,10 @@ describe("deriveNoteListPreview", () => {
 
   it("uses seed intro for TipTap editor echo persisted body (AC34-list-preview)", () => {
     const raw = readFileSync(
-      join(process.cwd(), "src/storage/fixtures/playground-zh-tiptap-echo.json"),
+      join(
+        process.cwd(),
+        "src/storage/fixtures/playground-zh-tiptap-echo.json",
+      ),
       "utf-8",
     );
     const parsed = JSON.parse(raw);
@@ -198,6 +208,59 @@ describe("deriveNoteListPreview", () => {
     expect(preview).toContain("在这一篇笔记里测试所有格式");
     expect(preview).not.toContain("桌面快捷键");
     expect(preview).not.toContain("Cmd+B");
+  });
+
+  it("shows seed intro when drift is confined to 自由试炼 sandbox (AC34-list-preview)", () => {
+    const seed = buildPlaygroundContent("zh");
+    const parsed = JSON.parse(JSON.stringify(seed)) as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    const tryIdx = parsed.content.findIndex(
+      (node) =>
+        node.type === "heading" && node.content?.[0]?.text === "自由试炼",
+    );
+    parsed.content.splice(tryIdx + 1, 0, {
+      type: "paragraph",
+      content: [{ type: "text", text: "sandbox-only marker" }],
+    });
+    const contentPlain = extractPlainTextFromTiptap(parsed);
+    const preview = deriveNoteListPreview(
+      {
+        title: "格式试炼场",
+        content: JSON.stringify(parsed),
+        contentPlain,
+      },
+      "格式示例",
+      "zh",
+    );
+    expect(preview).toBe(getFormatPlaygroundIntroExcerpt("zh"));
+    expect(preview).toContain("在这一篇笔记里测试所有格式");
+    expect(preview).not.toContain("桌面快捷键");
+    expect(preview).not.toContain("Cmd+B");
+  });
+
+  it("edited playground fallback omits keyboard-shortcut footer (AC34-list-preview)", () => {
+    const seed = buildPlaygroundContent("zh");
+    const seedPlain = extractPlainTextFromTiptap(seed);
+    const parsed = JSON.parse(JSON.stringify(seed)) as {
+      content: Array<{ type: string; content?: Array<{ text?: string }> }>;
+    };
+    parsed.content.splice(1, 1);
+    const contentPlain = extractPlainTextFromTiptap(parsed);
+    const preview = deriveNoteListPreview(
+      {
+        title: "格式试炼场",
+        content: JSON.stringify(parsed),
+        contentPlain,
+      },
+      "格式示例",
+      "zh",
+    );
+    expect(preview).not.toContain("桌面快捷键");
+    expect(preview).not.toContain("Cmd+B");
+    expect(preview).not.toContain("Cmd+Shift+F");
+    expect(preview.length).toBeGreaterThan(0);
+    expect(preview).not.toBe("格式示例");
   });
 
   it("detects playground notes by title", () => {
