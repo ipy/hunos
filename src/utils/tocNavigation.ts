@@ -5,6 +5,27 @@ import { findEditorScrollContainer } from "@/components/editor/wikiLinkPointerUt
 const TOC_SCROLL_TOP_PADDING_PX = 12;
 const TOC_SCROLL_BOTTOM_PADDING_PX = 8;
 
+/** Visible editor viewport; shrinks when the info panel overlays the bottom. */
+export function resolveTocScrollViewportBounds(scrollEl: HTMLElement): {
+  top: number;
+  bottom: number;
+} {
+  const scrollRect = scrollEl.getBoundingClientRect();
+  let bottom = scrollRect.bottom;
+  const infoPanel = scrollEl.ownerDocument?.querySelector(
+    '[data-testid="info-panel"]',
+  );
+  if (infoPanel && typeof infoPanel === "object" && "getBoundingClientRect" in infoPanel) {
+    const panelRect = (
+      infoPanel as { getBoundingClientRect: () => DOMRect }
+    ).getBoundingClientRect();
+    if (panelRect.top < bottom) {
+      bottom = Math.max(scrollRect.top + 1, panelRect.top);
+    }
+  }
+  return { top: scrollRect.top, bottom };
+}
+
 /** Viewport delta so a heading sits below the scroll pane top with follow block visible. */
 export function editorScrollDeltaForTocReveal(options: {
   scrollViewportTop: number;
@@ -103,7 +124,8 @@ function scrollHeadingIntoEditorPane(
   const scrollEl = findEditorScrollContainer(view.dom);
   if (!scrollEl) return null;
 
-  const scrollRect = scrollEl.getBoundingClientRect();
+  const { top: scrollViewportTop, bottom: scrollViewportBottom } =
+    resolveTocScrollViewportBounds(scrollEl);
   const headingEl = resolveHeadingElement(view, contentDocPos);
   const headingTop = headingEl
     ? headingEl.getBoundingClientRect().top
@@ -115,8 +137,8 @@ function scrollHeadingIntoEditorPane(
     : followBlockBottomAtPos(view, headingDocPos);
 
   const delta = editorScrollDeltaForTocReveal({
-    scrollViewportTop: scrollRect.top,
-    scrollViewportBottom: scrollRect.bottom,
+    scrollViewportTop,
+    scrollViewportBottom,
     headingTop,
     followBlockBottom,
   });
@@ -130,11 +152,6 @@ function scrollHeadingIntoEditorPane(
 /** Scroll editor to a heading at the given document position. */
 export function scrollToTocDocPos(editor: Editor, headingDocPos: number): boolean {
   const contentPos = headingDocPos + 1;
-  const targetScrollTop = scrollHeadingIntoEditorPane(
-    editor,
-    headingDocPos,
-    contentPos,
-  );
 
   const scrolled = editor
     .chain()
@@ -142,11 +159,23 @@ export function scrollToTocDocPos(editor: Editor, headingDocPos: number): boolea
     .setTextSelection(contentPos)
     .run();
 
+  const applyScroll = (): number | null =>
+    scrollHeadingIntoEditorPane(editor, headingDocPos, contentPos);
+
   const scrollEl = editor.view
     ? findEditorScrollContainer(editor.view.dom)
     : null;
+
+  const targetScrollTop = applyScroll();
   if (scrollEl != null && targetScrollTop != null) {
     scrollEl.scrollTop = targetScrollTop;
+    const stabilize = () => {
+      const retry = applyScroll();
+      if (retry != null) scrollEl.scrollTop = retry;
+    };
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(stabilize);
+    }
   }
 
   return scrolled;

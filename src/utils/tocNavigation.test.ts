@@ -57,6 +57,17 @@ describe("editorScrollDeltaForTocReveal", () => {
     });
     expect(95 - delta).toBeGreaterThanOrEqual(100);
   });
+
+  it("keeps follow block above info panel overlay", () => {
+    const delta = editorScrollDeltaForTocReveal({
+      scrollViewportTop: 100,
+      scrollViewportBottom: 280,
+      headingTop: 400,
+      followBlockBottom: 440,
+    });
+    expect(400 - delta).toBeGreaterThanOrEqual(100);
+    expect(440 - delta).toBeLessThanOrEqual(272);
+  });
 });
 
 describe("scrollToTocIndex", () => {

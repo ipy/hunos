@@ -31,22 +31,26 @@ describe("iteration 44 — TOC scroll alignment", () => {
 
   it("scrolls via editor scroll container with top padding", () => {
     expect(tocSource).toContain("findEditorScrollContainer");
+    expect(tocSource).toContain("resolveTocScrollViewportBounds");
     expect(tocSource).toContain("editorScrollDeltaForTocReveal");
     expect(tocSource).toContain("scrollToTocDocPos");
     expect(tocSource).toContain("headingDocPos");
     expect(tocSource).toContain("scrollIntoView: false");
+    expect(tocSource).toContain("requestAnimationFrame");
     expect(tocSource).not.toContain('block: "start"');
     expect(tocSource).not.toContain('behavior: "smooth"');
   });
 });
 
 describe("iteration 44 — TOC first-click reliability", () => {
-  it("handles TOC tap on pointerdown capture without waiting for click", () => {
-    expect(infoPanelSource).toContain("onPointerDownCapture");
-    expect(infoPanelSource).toContain("handleInfoPanelTocTap(editor, index, toc[index]?.docPos)");
+  it("handles TOC tap on pointerdown and click with toolbar-safe stacking", () => {
+    expect(infoPanelSource).toContain("onPointerDown");
+    expect(infoPanelSource).toContain("onClick");
+    expect(infoPanelSource).toContain("activateTocEntry");
     expect(infoPanelSource).toContain('touchAction: "manipulation"');
     expect(infoPanelSource).toContain("safe-area-inset-bottom");
-    expect(infoPanelSource).toContain("paddingBottom: 48");
+    expect(infoPanelSource).toContain("TOC_LIST_BOTTOM_PADDING_PX");
+    expect(infoPanelSource).toContain("zIndex: 68");
   });
 });
 

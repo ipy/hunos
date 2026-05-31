@@ -24,15 +24,8 @@ interface InfoPanelProps {
 }
 
 const DRAG_CLOSE_THRESHOLD = 80;
-
-function tocEntryIndexFromTarget(target: EventTarget | null): number | null {
-  if (!(target instanceof HTMLElement)) return null;
-  const btn = target.closest('[data-testid^="info-panel-toc-entry-"]');
-  if (!(btn instanceof HTMLElement)) return null;
-  const match = btn.dataset.testid?.match(/^info-panel-toc-entry-(\d+)$/);
-  if (!match) return null;
-  return Number(match[1]);
-}
+/** Keep last TOC rows above editor-toolbar-layer (z-index 65). */
+const TOC_LIST_BOTTOM_PADDING_PX = 96;
 
 function formatDateTime(ts: number): string {
   const d = new Date(ts);
@@ -63,6 +56,9 @@ export function InfoPanel({
   const dragStartY = useRef<number | null>(null);
   const dragOffsetRef = useRef(0);
   const panelRef = useRef<HTMLDivElement>(null);
+  const lastTocActivateRef = useRef<{ index: number; time: number } | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!editor) {
@@ -109,6 +105,15 @@ export function InfoPanel({
     () => deriveToc(note, editor),
     [note, editor, statsRevision],
   );
+
+  const activateTocEntry = (index: number, docPos?: number) => {
+    if (!editor) return;
+    const now = Date.now();
+    const last = lastTocActivateRef.current;
+    if (last?.index === index && now - last.time < 300) return;
+    lastTocActivateRef.current = { index, time: now };
+    handleInfoPanelTocTap(editor, index, docPos);
+  };
 
   const tabs: { id: Tab; icon: string }[] = [
     { id: "stats", icon: "stats" },
@@ -169,7 +174,7 @@ export function InfoPanel({
           bottom: 0,
           left: 0,
           right: 0,
-          zIndex: 60,
+          zIndex: 68,
           backgroundColor: theme.isDark
             ? "rgba(28,28,30,0.96)"
             : "rgba(255,255,255,0.96)",
@@ -392,18 +397,9 @@ export function InfoPanel({
           {activeTab === "toc" && (
             <div
               data-testid="info-panel-toc-list"
-              onPointerDownCapture={(event) => {
-                if (!editor || event.button !== 0) return;
-                const index = tocEntryIndexFromTarget(event.target);
-                if (index == null) return;
-                event.preventDefault();
-                const btn = (event.target as HTMLElement).closest(
-                  '[data-testid^="info-panel-toc-entry-"]',
-                ) as HTMLElement | null;
-                btn?.scrollIntoView({ block: "nearest" });
-                handleInfoPanelTocTap(editor, index, toc[index]?.docPos);
+              style={{
+                paddingBottom: `max(${TOC_LIST_BOTTOM_PADDING_PX}px, env(safe-area-inset-bottom))`,
               }}
-              style={{ paddingBottom: 48 }}
             >
               {toc.length === 0 ? (
                 <p
@@ -422,11 +418,21 @@ export function InfoPanel({
                     key={i}
                     type="button"
                     data-testid={`info-panel-toc-entry-${i}`}
+                    onPointerDown={(event) => {
+                      if (!editor || event.button !== 0) return;
+                      event.preventDefault();
+                      activateTocEntry(i, item.docPos);
+                    }}
+                    onClick={(event) => {
+                      if (!editor) return;
+                      event.preventDefault();
+                      activateTocEntry(i, item.docPos);
+                    }}
                     onKeyDown={(event) => {
                       if (!editor) return;
                       if (event.key !== "Enter" && event.key !== " ") return;
                       event.preventDefault();
-                      handleInfoPanelTocTap(editor, i, item.docPos);
+                      activateTocEntry(i, item.docPos);
                     }}
                     style={{
                       display: "block",
