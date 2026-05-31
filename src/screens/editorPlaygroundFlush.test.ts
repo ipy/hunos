@@ -8,13 +8,15 @@ const editorSource = readFileSync(
 );
 
 describe("EditorScreen playground lifecycle flush", () => {
-  it("persists playground body on lifecycle flush instead of memory-only stash", () => {
+  it("persists editor body on lifecycle flush and stashes when persist fails", () => {
     const flushStart = editorSource.indexOf("const flushPendingAutosave =");
     const flushEnd = editorSource.indexOf("useEffect(() => {", flushStart);
     const flushBlock = editorSource.slice(flushStart, flushEnd);
-    expect(flushBlock).toContain("if (isPlayground) {");
     expect(flushBlock).toContain(
       "await persistEditorContent(activeNoteId, json)",
+    );
+    expect(flushBlock).toContain(
+      "stashEditorAutosaveSnapshot(activeNoteId, json)",
     );
     expect(flushBlock).toContain("persisted: titleOk && contentOk");
     expect(flushBlock).not.toContain("persisted: false");

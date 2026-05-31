@@ -50,9 +50,10 @@ import {
 } from "@/storage/formatPlaygroundNote";
 import {
   clearStashedEditorAutosave,
-  peekStashedEditorAutosave,
+  peekStashedEditorAutosaveForNote,
   registerEditorAutosaveFlush,
-  takeStashedEditorAutosave,
+  stashEditorAutosaveSnapshot,
+  takeStashedEditorAutosaveForNote,
   unregisterEditorAutosaveFlush,
 } from "@/store/editorAutosaveRegistry";
 import { bindEditorLifecycleAutosaveFlush } from "@/store/editorLifecycleAutosave";
@@ -159,6 +160,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const pendingTitleRef = useRef<string | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const skipTitleSyncOnceRef = useRef(false);
+  const prevActiveNoteIdRef = useRef<string | null>(null);
 
   const captureSelectionForOverlay = useCallback(() => {
     if (editorInstanceRef.current) {
@@ -230,6 +232,9 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   }, [editorInstance]);
 
   useEffect(() => {
+    const leavingNoteId = prevActiveNoteIdRef.current;
+    const nextNoteId = note?.id ?? null;
+
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = undefined;
@@ -238,6 +243,12 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       clearPendingTitleTimer(titleTimeoutRef);
       pendingTitleRef.current = null;
     }
+    if (leavingNoteId && leavingNoteId !== nextNoteId) {
+      const orphan = pendingContentRef.current;
+      if (orphan) {
+        stashEditorAutosaveSnapshot(leavingNoteId, orphan);
+      }
+    }
     setRestoreChipSuppressed(false);
     pendingContentRef.current = null;
     clearEditorOverlaySelection();
@@ -245,6 +256,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     if (note?.id) {
       contentWriteEpochRef.current = getPlaygroundWriteEpoch(note.id);
     }
+    prevActiveNoteIdRef.current = nextNoteId;
   }, [note?.id]);
 
   useEffect(() => {
@@ -350,6 +362,15 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
             playgroundLocale,
           )
         ) {
+          if (
+            formatPlaygroundMatchesCanonicalSeed(
+              note.title,
+              noteContentForEditor,
+              playgroundLocale,
+            )
+          ) {
+            setRestoreChipSuppressed(true);
+          }
           pendingContentRef.current = json;
           setRestoreEditorSyncTick((tick) => tick + 1);
           const writeEpoch = contentWriteEpochRef.current;
@@ -511,7 +532,13 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const flushPendingAutosave =
     useCallback(async (): Promise<EditorAutosaveFlushResult> => {
       if (playgroundRestoreSessionRef.current.isActive()) {
-        return { content: null, persisted: true };
+        const titleOk = await flushPendingTitle();
+        const json = collectPendingAutosave();
+        if (json && activeNoteId) {
+          stashEditorAutosaveSnapshot(activeNoteId, json);
+          pendingContentRef.current = null;
+        }
+        return { content: json, persisted: titleOk };
       }
 
       const titleOk = await flushPendingTitle();
@@ -521,26 +548,18 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
         return { content: null, persisted: titleOk };
       }
 
-      const activeNote = notes.find(
-        (candidate) => candidate.id === activeNoteId,
-      );
-      const isPlayground =
-        activeNote != null &&
-        isFormatPlaygroundNote(activeNote.title, activeNote.content);
-
-      if (isPlayground) {
-        const contentOk = await persistEditorContent(activeNoteId, json);
-        pendingContentRef.current = null;
-        return { content: json, persisted: titleOk && contentOk };
-      }
-
       const contentOk = await persistEditorContent(activeNoteId, json);
+      if (contentOk) {
+        pendingContentRef.current = null;
+      } else {
+        stashEditorAutosaveSnapshot(activeNoteId, json);
+        pendingContentRef.current = null;
+      }
       return { content: json, persisted: titleOk && contentOk };
     }, [
       activeNoteId,
       collectPendingAutosave,
       flushPendingTitle,
-      notes,
       persistEditorContent,
     ]);
 
@@ -602,14 +621,13 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       return;
     }
 
-    const snapshot = peekStashedEditorAutosave();
-    if (snapshot?.noteId !== note.id) {
-      if (snapshot) clearStashedEditorAutosave();
+    const snapshot = peekStashedEditorAutosaveForNote(note.id);
+    if (!snapshot) {
       setEditorSeedContent(null);
       return;
     }
 
-    const taken = takeStashedEditorAutosave();
+    const taken = takeStashedEditorAutosaveForNote(note.id);
     if (!taken) return;
 
     const isPlayground = isFormatPlaygroundNote(note.title, note.content);
@@ -843,6 +861,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     if (!note) return;
     const restoreSession = playgroundRestoreSessionRef.current;
     contentWriteEpochRef.current = bumpPlaygroundWriteEpoch(note.id);
+    setRestoreChipSuppressed(true);
     restoreSession.begin(note.id);
     pendingRestoreToastRef.current = true;
     if (saveTimeoutRef.current) {
@@ -875,7 +894,6 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       const restoredTitle =
         restoredNote?.title ?? getFormatPlaygroundTitle(seedLocale);
       skipTitleSyncOnceRef.current = true;
-      setRestoreChipSuppressed(true);
       setTitleValue(restoredTitle);
       titleInputRef.current?.blur();
       setRestoreEditorSyncTick((tick) => tick + 1);

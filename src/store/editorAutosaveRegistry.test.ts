@@ -13,6 +13,7 @@ import {
   registerEditorAutosaveFlush,
   stashEditorAutosaveSnapshot,
   takeStashedEditorAutosave,
+  takeStashedEditorAutosaveForNote,
   unregisterEditorAutosaveFlush,
 } from "./editorAutosaveRegistry";
 
@@ -72,5 +73,19 @@ describe("editorAutosaveRegistry", () => {
     clearStashedEditorAutosave();
     expect(peekStashedEditorAutosave()).toBeNull();
     expect(takeStashedEditorAutosave()).toBeNull();
+  });
+
+  it("keeps per-note stashes until each note is taken", async () => {
+    stashEditorAutosaveSnapshot("note-a", '{"a":true}');
+    stashEditorAutosaveSnapshot("note-b", '{"b":true}');
+    expect(takeStashedEditorAutosaveForNote("note-a")).toEqual({
+      noteId: "note-a",
+      content: '{"a":true}',
+    });
+    expect(takeStashedEditorAutosaveForNote("note-b")).toEqual({
+      noteId: "note-b",
+      content: '{"b":true}',
+    });
+    clearStashedEditorAutosave();
   });
 });
