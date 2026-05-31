@@ -43,6 +43,8 @@ export async function restoreFormatPlayground(page: Page): Promise<void> {
   const restore = page.getByTestId("restore-playground-button");
   await expect(restore).toBeVisible();
   await restore.click();
+  await expect(page.getByTestId("restore-playground-confirm")).toBeVisible();
+  await page.getByTestId("restore-playground-confirm-confirm").click();
   await page.waitForTimeout(AUTOSAVE_WAIT_MS);
 }
 
