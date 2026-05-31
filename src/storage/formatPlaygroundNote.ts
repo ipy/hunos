@@ -807,6 +807,70 @@ function findPlaygroundSeedTable(
   return tableNode?.type === "table" ? tableNode : null;
 }
 
+function stripTipTapTableCellAttrs(node: PlaygroundDocNode): PlaygroundDocNode {
+  if (
+    (node.type === "tableCell" || node.type === "tableHeader") &&
+    node.attrs
+  ) {
+    const { attrs: _attrs, ...rest } = node;
+    const next: PlaygroundDocNode = { ...rest };
+    if (node.content?.length) {
+      next.content = node.content.map(stripTipTapTableCellAttrs);
+    }
+    return next;
+  }
+  if (!node.content?.length) {
+    return node;
+  }
+  return {
+    ...node,
+    content: node.content.map(stripTipTapTableCellAttrs),
+  };
+}
+
+/** TipTap leaves a trailing empty paragraph after in-cell typing — ignore for QA row match. */
+function stripTrailingEmptyParagraphsInTableCells(
+  row: PlaygroundDocNode,
+): PlaygroundDocNode {
+  if (row.type !== "tableRow" || !row.content?.length) {
+    return row;
+  }
+  return {
+    ...row,
+    content: row.content.map((cell) => {
+      if (
+        (cell.type !== "tableCell" && cell.type !== "tableHeader") ||
+        !cell.content?.length
+      ) {
+        return cell;
+      }
+      let paragraphs = [...cell.content];
+      while (paragraphs.length > 1) {
+        const last = paragraphs[paragraphs.length - 1];
+        if (last.type !== "paragraph") {
+          break;
+        }
+        const text = (last.content ?? [])
+          .map((child) => child.text ?? "")
+          .join("");
+        if (text.length > 0) {
+          break;
+        }
+        paragraphs = paragraphs.slice(0, -1);
+      }
+      return { ...cell, content: paragraphs };
+    }),
+  };
+}
+
+function normalizePlaygroundTableRowForQaFingerprint(
+  row: PlaygroundDocNode,
+): PlaygroundDocNode {
+  return stripTipTapTableCellAttrs(
+    stripTrailingEmptyParagraphsInTableCells(row),
+  );
+}
+
 function tableRowStructureFingerprint(
   row: PlaygroundDocNode,
   seedLocale: PlaygroundLocale,
@@ -818,7 +882,7 @@ function tableRowStructureFingerprint(
         playgroundContentVersion: PLAYGROUND_CONTENT_VERSION,
         playgroundContentLocale: seedLocale,
       },
-      content: [row],
+      content: [normalizePlaygroundTableRowForQaFingerprint(row)],
     }),
     seedLocale,
   );
@@ -1246,7 +1310,9 @@ export function playgroundWriteRegressesCanonicalStored(
     return false;
   }
 
-  if (playgroundContentMatchesQaTableRowAppend(candidateRow, stored.seedLocale)) {
+  if (
+    playgroundContentMatchesQaTableRowAppend(candidateRow, stored.seedLocale)
+  ) {
     return false;
   }
 

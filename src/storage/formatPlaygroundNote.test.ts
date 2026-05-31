@@ -3127,4 +3127,71 @@ describe("iter 27 playground table QA drift", () => {
       }),
     ).toBe(false);
   });
+
+  it("hides restore chip when TipTap table cell attrs differ from seed (AC5-no-false-restore)", () => {
+    const parsed = JSON.parse(seed) as {
+      content: Array<{
+        type: string;
+        attrs?: Record<string, unknown>;
+        content?: Array<{
+          type: string;
+          attrs?: Record<string, unknown>;
+          content?: Array<{
+            type: string;
+            attrs?: Record<string, unknown>;
+            content?: unknown[];
+          }>;
+        }>;
+      }>;
+    };
+    const tableIndex = tableSectionIndex(parsed) + 1;
+    const table = parsed.content[tableIndex];
+    if (!table?.content) throw new Error("seed table missing");
+
+    for (const row of table.content) {
+      for (const cell of row.content ?? []) {
+        cell.attrs = { colspan: 1, rowspan: 1, colwidth: null };
+      }
+    }
+
+    const templateRow = table.content[1];
+    if (!templateRow) throw new Error("seed table missing template row");
+    const extraRow = JSON.parse(
+      JSON.stringify(templateRow),
+    ) as typeof templateRow;
+    const markerCell = extraRow.content?.[0];
+    if (markerCell) {
+      markerCell.content = [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "AC27-ROW-persist" }],
+        },
+        { type: "paragraph" },
+      ];
+    }
+    table.content.push(extraRow);
+
+    const edited = JSON.stringify(parsed);
+    const stored = playgroundPersistedContentForRow(edited);
+
+    expect(playgroundContentMatchesQaTableRowAppend(stored, "zh")).toBe(true);
+    expect(
+      classifyPlaygroundDrift({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: stored,
+        liveContent: edited,
+        fallbackLocale: "zh",
+      }),
+    ).toBe("qaTableAppend");
+    expect(
+      shouldShowPlaygroundRestoreButton({
+        displayTitle: "格式试炼场",
+        storedTitle: "格式试炼场",
+        storedContent: stored,
+        pendingDraftContent: edited,
+        fallbackLocale: "zh",
+      }),
+    ).toBe(false);
+  });
 });
