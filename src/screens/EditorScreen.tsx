@@ -47,8 +47,6 @@ import {
   playgroundPersistedContentForRow,
   playgroundWriteRegressesCanonicalStored,
   resolvePlaygroundSeedLocale,
-  shouldShowPlaygroundRestoreButton,
-  shouldShowPlaygroundRestoreInDriftBanner,
   migratePlaygroundContentIfStale,
   playgroundContentMatchesLocale,
 } from "@/storage/formatPlaygroundNote";
@@ -102,8 +100,15 @@ import {
 } from "@/utils/backlinkSectionScroll";
 import { sectionHeadingFromBacklinkPrefix } from "@/graph/linkExtractor";
 import type { PersistNoteOptions } from "@/screens/editorNotePersistence";
+import {
+  computePlaygroundRestoreMenuVisible,
+  computeShowRestorePlaygroundDriftBanner,
+  playgroundRestoreVisibilityContext,
+} from "@/screens/editorPlaygroundRestoreVisibility";
 
 declare const __HUNOS_E2E__: boolean | undefined;
+
+export { shouldShowPlaygroundRestoreButton } from "@/storage/formatPlaygroundNote";
 
 interface EditorScreenProps {
   layout?: LayoutMode;
@@ -1081,34 +1086,20 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   };
 
   const showRestorePlayground = useMemo(() => {
-    if (!note) return false;
-    let pendingDraftContent = pendingContentRef.current;
-    if (
-      pendingDraftContent == null &&
-      editorInstance &&
-      !playgroundRestoreSessionRef.current.isActive()
-    ) {
-      try {
-        pendingDraftContent = JSON.stringify(editorInstance.getJSON());
-      } catch {
-        pendingDraftContent = null;
-      }
-    }
-    const displayTitle = titleValue.trim() || note.title;
-    const playgroundLocale = resolvePlaygroundSeedLocale(
+    const visibilityInput = {
+      note,
       noteContentForEditor,
-      settings.locale,
-    );
-    const showRestore = shouldShowPlaygroundRestoreButton({
-      displayTitle,
-      storedTitle: note.title,
-      storedContent: noteContentForEditor,
-      pendingDraftContent,
-      pendingTitleDraft: pendingTitleRef.current,
+      titleValue,
       fallbackLocale: settings.locale,
+      editorInstance,
+      pendingContentJson: pendingContentRef.current,
+      pendingTitleDraft: pendingTitleRef.current,
       isRestoringPlayground: playgroundRestoreSessionRef.current.isActive(),
-    });
+    };
+    const showRestore = computePlaygroundRestoreMenuVisible(visibilityInput);
     if (!showRestore) return false;
+    const { pendingDraftContent, playgroundLocale } =
+      playgroundRestoreVisibilityContext(visibilityInput);
     if (
       restoreChipSuppressed &&
       pendingDraftContent &&
@@ -1134,27 +1125,14 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   ]);
 
   const showRestorePlaygroundDriftBanner = useMemo(() => {
-    if (!note) return false;
-    let pendingDraftContent = pendingContentRef.current;
-    if (
-      pendingDraftContent == null &&
-      editorInstance &&
-      !playgroundRestoreSessionRef.current.isActive()
-    ) {
-      try {
-        pendingDraftContent = JSON.stringify(editorInstance.getJSON());
-      } catch {
-        pendingDraftContent = null;
-      }
-    }
-    const displayTitle = titleValue.trim() || note.title;
-    return shouldShowPlaygroundRestoreInDriftBanner({
-      displayTitle,
-      storedTitle: note.title,
-      storedContent: noteContentForEditor,
-      pendingDraftContent,
-      pendingTitleDraft: pendingTitleRef.current,
+    return computeShowRestorePlaygroundDriftBanner({
+      note,
+      noteContentForEditor,
+      titleValue,
       fallbackLocale: settings.locale,
+      editorInstance,
+      pendingContentJson: pendingContentRef.current,
+      pendingTitleDraft: pendingTitleRef.current,
       isRestoringPlayground: playgroundRestoreSessionRef.current.isActive(),
     });
   }, [
