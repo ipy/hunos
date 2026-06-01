@@ -35,9 +35,7 @@ describe("iteration 51 — unified off-screen TOC activation", () => {
       infoPanelSource.indexOf("handleTocListTouchEndCapture"),
     );
     expect(clickBlock).toMatch(/if \(directEntry\)[\s\S]*return;/);
-    expect(clickBlock).not.toMatch(
-      /if \(directEntry\)[\s\S]*activateTocEntry/,
-    );
+    expect(clickBlock).not.toMatch(/if \(directEntry\)[\s\S]*activateTocEntry/);
     const entryBlock = infoPanelSource.slice(
       infoPanelSource.indexOf("data-testid={`info-panel-toc-entry-${i}`}"),
       infoPanelSource.indexOf('touchAction: "manipulation"'),

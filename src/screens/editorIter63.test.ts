@@ -117,9 +117,9 @@ function backlinkSnippetLabel(text: string): string {
 
 describe("iteration 63 — prefix uniqueness (AC63-backlink-prefix-unique)", () => {
   it("groups section + hint as one prefix for already-disambiguated rows", () => {
-    expect(
-      backlinkPrefixFromContext("自由试炼 · #1 · ... first ..."),
-    ).toBe("自由试炼 · #1");
+    expect(backlinkPrefixFromContext("自由试炼 · #1 · ... first ...")).toBe(
+      "自由试炼 · #1",
+    );
   });
 
   it("adds source-title hints when section prefixes collide across sources", () => {

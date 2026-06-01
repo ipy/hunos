@@ -63,9 +63,7 @@ describe("iteration 55 — wiki-link duplicate DOM (AC54)", () => {
       content: [
         {
           type: "paragraph",
-          content: [
-            { type: "text", text: "[[项目文档]] 和 [[项目文档]]。" },
-          ],
+          content: [{ type: "text", text: "[[项目文档]] 和 [[项目文档]]。" }],
         },
       ],
     });
@@ -99,7 +97,9 @@ describe("iteration 55 — wiki-link deco fresh (AC55-deco-fresh)", () => {
     });
     let state = EditorState.create({ schema, doc });
     const unresolved = wikiLinkContentAttrs(state);
-    expect(unresolved[0]?.["data-testid"]).toBe(wikiLinkTargetTestId({ start: 1 }));
+    expect(unresolved[0]?.["data-testid"]).toBe(
+      wikiLinkTargetTestId({ start: 1 }),
+    );
     expect(unresolved[0]?.["data-note-id"]).toBeUndefined();
 
     const notes = [{ id: "project-docs", title: "项目文档", status: "active" }];
@@ -123,7 +123,9 @@ describe("iteration 55 — wiki-link deco fresh (AC55-deco-fresh)", () => {
 describe("iteration 55 — info panel done (AC55-info-panel-done)", () => {
   it("exposes visible 完成 control on mobile with info-panel-done testid", () => {
     expect(infoPanelSource).toContain("useAdaptiveLayout");
-    expect(infoPanelSource).toContain('data-testid={isMobilePanel ? "info-panel-done"');
+    expect(infoPanelSource).toContain(
+      'data-testid={isMobilePanel ? "info-panel-done"',
+    );
     expect(infoPanelSource).toContain('t("common.actions.done")');
   });
 });

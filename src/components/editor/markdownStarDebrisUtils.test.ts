@@ -52,7 +52,10 @@ describe("UNCLOSED_SINGLE_STAR_INPUT_RE", () => {
 });
 
 describe("unclosed star markdown debris (AC33-unclosed-star-plain)", () => {
-  function editorFixture(markdown: string, marks: import("@tiptap/pm/model").Mark[] = []) {
+  function editorFixture(
+    markdown: string,
+    marks: import("@tiptap/pm/model").Mark[] = [],
+  ) {
     const state = stateWithText(markdown, marks);
     let dispatched: import("@tiptap/pm/state").Transaction | null = null;
     return {

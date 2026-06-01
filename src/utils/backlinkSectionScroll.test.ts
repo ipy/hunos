@@ -5,17 +5,18 @@ import {
   scrollToBacklinkSection,
 } from "./backlinkSectionScroll";
 
-const scrollToTocDocPos = vi.fn((_editor: unknown, _pos: number) => true);
+const findEditorScrollContainer = vi.fn(() => null as HTMLElement | null);
 
-vi.mock("@/utils/tocNavigation", () => ({
-  scrollToTocDocPos: (editor: unknown, pos: number, options?: unknown) =>
-    scrollToTocDocPos(editor, pos, options),
+vi.mock("@/components/editor/wikiLinkPointerUtils", () => ({
+  findEditorScrollContainer: () => findEditorScrollContainer(),
 }));
 
 function mockEditor(headings: Array<{ title: string; pos: number }>) {
   return {
     state: {
       doc: {
+        nodeAt: () => null,
+        nodesBetween: () => {},
         descendants(
           fn: (
             node: { type: { name: string }; textContent: string },
@@ -35,6 +36,12 @@ function mockEditor(headings: Array<{ title: string; pos: number }>) {
         },
       },
     },
+    view: null,
+    chain: () => ({
+      focus: () => ({
+        setTextSelection: () => ({ run: () => true }),
+      }),
+    }),
   };
 }
 
@@ -58,13 +65,10 @@ describe("headingDocPosForBacklinkSection", () => {
 });
 
 describe("scrollToBacklinkSection", () => {
-  it("delegates to scrollToTocDocPos when the heading exists", () => {
-    scrollToTocDocPos.mockClear();
+  it("returns false when the scroll container is not ready", () => {
+    findEditorScrollContainer.mockReturnValue(null);
     const editor = mockEditor([{ title: "标签与链接", pos: 10 }]);
-    expect(scrollToBacklinkSection(editor as never, "标签与链接")).toBe(true);
-    expect(scrollToTocDocPos).toHaveBeenCalledWith(editor, 10, {
-      anchorHeadingOnly: true,
-    });
+    expect(scrollToBacklinkSection(editor as never, "标签与链接")).toBe(false);
   });
 });
 
@@ -100,18 +104,27 @@ describe("scheduleBacklinkSectionScroll", () => {
   it("stops after max attempts without calling onSuccess", () => {
     const tryScroll = vi.fn(() => false);
     const onSuccess = vi.fn();
+    const onGiveUp = vi.fn();
     const frames: FrameRequestCallback[] = [];
     const frame = (cb: FrameRequestCallback) => {
       frames.push(cb);
       return frames.length;
     };
 
-    scheduleBacklinkSectionScroll(tryScroll, onSuccess, frame, vi.fn(), 2);
+    scheduleBacklinkSectionScroll(
+      tryScroll,
+      onSuccess,
+      frame,
+      vi.fn(),
+      2,
+      onGiveUp,
+    );
 
     frames[0]!(0);
     frames[1]!(0);
     expect(tryScroll).toHaveBeenCalledTimes(3);
     expect(onSuccess).not.toHaveBeenCalled();
+    expect(onGiveUp).toHaveBeenCalledOnce();
   });
 
   it("cancels pending frames on cleanup", () => {

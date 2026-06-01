@@ -33,7 +33,9 @@ export function matchesProjectDocsSeedContent(
   const seed = getProjectDocsSeed(locale);
   if (content === JSON.stringify(seed.content)) return true;
   try {
-    return extractPlainTextFromTiptap(JSON.parse(content)) === seed.contentPlain;
+    return (
+      extractPlainTextFromTiptap(JSON.parse(content)) === seed.contentPlain
+    );
   } catch {
     return false;
   }
@@ -100,10 +102,9 @@ export function pickProjectDocsNote<T extends ProjectDocsPickCandidate>(
 }
 
 /** Hide duplicate canonical-title project-docs cards; renamed copies stay visible. */
-export function filterNotesForProjectDocsList<T extends ProjectDocsPickCandidate>(
-  notes: T[],
-  locale: Locale,
-): T[] {
+export function filterNotesForProjectDocsList<
+  T extends ProjectDocsPickCandidate,
+>(notes: T[], locale: Locale): T[] {
   const canonicalCandidates = notes.filter(
     (note) =>
       PROJECT_DOCS_NOTE_TITLES.includes(
@@ -114,9 +115,11 @@ export function filterNotesForProjectDocsList<T extends ProjectDocsPickCandidate
   if (!canonical) return notes;
 
   return notes.filter((note) => {
-    if (!PROJECT_DOCS_NOTE_TITLES.includes(
-      note.title as (typeof PROJECT_DOCS_NOTE_TITLES)[number],
-    )) {
+    if (
+      !PROJECT_DOCS_NOTE_TITLES.includes(
+        note.title as (typeof PROJECT_DOCS_NOTE_TITLES)[number],
+      )
+    ) {
       return true;
     }
     if (!isProjectDocsNote(note.title, note.content, note.contentPlain)) {

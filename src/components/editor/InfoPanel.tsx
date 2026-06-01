@@ -497,7 +497,9 @@ export function InfoPanel({
             </span>
             <button
               type="button"
-              data-testid={isMobilePanel ? "info-panel-done" : "stats-panel-close"}
+              data-testid={
+                isMobilePanel ? "info-panel-done" : "stats-panel-close"
+              }
               onPointerDown={(e) => e.stopPropagation()}
               onClick={handleClose}
               aria-label={t("common.actions.done")}
@@ -520,7 +522,11 @@ export function InfoPanel({
               {isMobilePanel ? (
                 t("common.actions.done")
               ) : (
-                <Icon name="close" size={16} color={theme.colors.textTertiary} />
+                <Icon
+                  name="close"
+                  size={16}
+                  color={theme.colors.textTertiary}
+                />
               )}
             </button>
           </div>

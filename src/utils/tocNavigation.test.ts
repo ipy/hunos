@@ -3,6 +3,9 @@ import { EditorState } from "@tiptap/pm/state";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { extractTocFromDoc } from "./noteToc";
 import {
+  backlinkScrollAnchorTop,
+  backlinkScrollAnchorTopWithPrevious,
+  resolveBacklinkScrollAnchorTop,
   editorScrollDeltaForTocReveal,
   scrollToTocIndex,
   scrollToTocDocPos,
@@ -31,6 +34,74 @@ const schema = new Schema({
 function docFromJson(json: unknown) {
   return schema.nodeFromJSON(json);
 }
+
+describe("backlinkScrollAnchorTop", () => {
+  it("top-anchors when no following section heading is nearby", () => {
+    expect(
+      backlinkScrollAnchorTop({
+        bandTop: 12,
+        bandBottom: 396,
+        headingTop: 4200,
+        nextHeadingTop: null,
+      }),
+    ).toBe(12);
+  });
+
+  it("lowers the anchor when the next section would co-occupy the band", () => {
+    expect(
+      backlinkScrollAnchorTop({
+        bandTop: 12,
+        bandBottom: 186,
+        headingTop: 4200,
+        nextHeadingTop: 4280,
+      }),
+    ).toBe(110);
+  });
+  it("lowers the anchor when the previous section would co-occupy the band", () => {
+    expect(
+      backlinkScrollAnchorTopWithPrevious({
+        bandTop: 12,
+        bandBottom: 396,
+        headingTop: 4200,
+        previousHeadingTop: 4120,
+      }),
+    ).toBe(63);
+  });
+});
+
+describe("resolveBacklinkScrollAnchorTop", () => {
+  it("uses previous isolation when scrolling to a middle section", () => {
+    const bandTop = 12;
+    const bandBottom = 186;
+    const headingTop = 4200;
+    const previousHeadingTop = 4120;
+    const nextHeadingTop = 4280;
+
+    const nextOnly = backlinkScrollAnchorTop({
+      bandTop,
+      bandBottom,
+      headingTop,
+      nextHeadingTop,
+    });
+    const previousOnly = backlinkScrollAnchorTopWithPrevious({
+      bandTop,
+      bandBottom,
+      headingTop,
+      previousHeadingTop,
+    });
+    const merged = resolveBacklinkScrollAnchorTop({
+      bandTop,
+      bandBottom,
+      headingTop,
+      nextHeadingTop,
+      previousHeadingTop,
+    });
+
+    expect(nextOnly).toBe(110);
+    expect(merged).toBe(Math.max(nextOnly, previousOnly));
+    expect(merged).toBeGreaterThanOrEqual(nextOnly);
+  });
+});
 
 describe("editorScrollDeltaForTocReveal", () => {
   it("aligns heading below scroll pane top without overshooting", () => {
@@ -1023,5 +1094,47 @@ describe("scrollToTocDocPos — playground jump (AC43/AC46)", () => {
     expect(scrollToTocDocPos(editor as never, headingPos)).toBe(true);
     expect(getScrollTop()).toBeGreaterThan(0);
     expect(4200 - getScrollTop()).toBeLessThanOrEqual(12 + 1);
+  });
+
+  it("returns false when the editor scroll container is not ready", () => {
+    const json = {
+      type: "doc",
+      content: [
+        {
+          type: "heading",
+          attrs: { level: 2 },
+          content: [{ type: "text", text: "标签与链接" }],
+        },
+      ],
+    };
+    const doc = docFromJson(json);
+    const state = EditorState.create({ schema, doc });
+    const editor = {
+      state,
+      view: {
+        state,
+        dom: { parentElement: null },
+        domAtPos: () => ({
+          node: { nodeType: 3, parentElement: { tagName: "H2" } },
+        }),
+        coordsAtPos: () => ({
+          top: 4200,
+          bottom: 4228,
+          left: 24,
+          right: 582,
+        }),
+      },
+      chain: () => {
+        const chain = {
+          focus: (_pos?: unknown, _opts?: { scrollIntoView?: boolean }) =>
+            chain,
+          setTextSelection: () => chain,
+          run: () => true,
+        };
+        return chain;
+      },
+    };
+
+    expect(scrollToTocDocPos(editor as never, 0)).toBe(false);
   });
 });

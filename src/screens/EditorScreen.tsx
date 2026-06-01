@@ -157,6 +157,8 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     noteId: string;
     section: string;
   } | null>(null);
+  /** Skip mobile focus-at-end while a backlink section scroll is pending (AC67). */
+  const suppressMobileEndFocusRef = useRef(false);
   const pendingRestoreToastRef = useRef(false);
 
   const note = notes.find((n) => n.id === activeNoteId);
@@ -245,13 +247,26 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     }
   }, []);
 
+  const releaseMobileEndFocusAfterBacklinkScroll = useCallback(() => {
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(() => {
+        suppressMobileEndFocusRef.current = false;
+      });
+    } else {
+      suppressMobileEndFocusRef.current = false;
+    }
+  }, []);
+
   const handleBacklinkNavigate = useCallback(
     (targetNoteId: string, sectionHeading: string | null) => {
       if (sectionHeading) {
+        const section =
+          sectionHeading.split(" · ")[0]?.trim() ?? sectionHeading;
         pendingBacklinkSectionRef.current = {
           noteId: targetNoteId,
-          section: sectionHeading,
+          section,
         };
+        suppressMobileEndFocusRef.current = true;
       } else {
         pendingBacklinkSectionRef.current = null;
       }
@@ -264,18 +279,31 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     const pending = pendingBacklinkSectionRef.current;
     if (!pending || !editorInstance || note?.id !== pending.noteId) return;
 
+    const scrollPane = document.querySelector(
+      '[data-testid="editor-scroll-pane"]',
+    );
+    if (scrollPane instanceof HTMLElement) {
+      scrollPane.scrollTop = 0;
+    }
+
     const section = pending.section;
     return scheduleBacklinkSectionScroll(
       () => scrollToBacklinkSection(editorInstance, section),
       () => {
         pendingBacklinkSectionRef.current = null;
+        releaseMobileEndFocusAfterBacklinkScroll();
       },
+      undefined,
+      undefined,
+      undefined,
+      releaseMobileEndFocusAfterBacklinkScroll,
     );
   }, [
     editorInstance,
     note?.id,
     noteContentForEditor,
     restoreEditorSyncTick,
+    releaseMobileEndFocusAfterBacklinkScroll,
   ]);
 
   useEffect(() => {
@@ -888,6 +916,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   useEffect(() => {
     if (layout !== "mobile" || !note?.id || !editorInstance) return;
     if (focusNewNoteTitleSignal > 0) return;
+    if (suppressMobileEndFocusRef.current) return;
 
     const raf = requestAnimationFrame(() => {
       editorInstance.commands.focus("end", { scrollIntoView: false });

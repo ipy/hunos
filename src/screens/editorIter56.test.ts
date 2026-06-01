@@ -56,8 +56,6 @@ describe("iteration 56 — wiki-link spec coverage", () => {
       /test\("(e2e-wiki-link-restore-setup|AC42|AC54|AC55|seed wiki-link)/g,
     );
     expect(acMatches?.length).toBe(6);
-    expect(wikiLinkE2eSource).toContain(
-      "AC42-wiki-link-offscreen-welcome",
-    );
+    expect(wikiLinkE2eSource).toContain("AC42-wiki-link-offscreen-welcome");
   });
 });

@@ -106,9 +106,7 @@ describe("buildWikiLinkDecorations", () => {
 
   it("disambiguates duplicate titles via data-link-key", () => {
     const document = doc.create({}, [
-      paragraph.create({}, [
-        schema.text("[[项目文档]] 和 [[项目文档]]。"),
-      ]),
+      paragraph.create({}, [schema.text("[[项目文档]] 和 [[项目文档]]。")]),
     ]);
     const state = EditorState.create({ schema, doc: document });
     const decos = buildWikiLinkDecorations(state, () => [

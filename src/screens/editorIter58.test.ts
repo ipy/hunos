@@ -10,4 +10,3 @@ describe("iteration 58 — backlink snippet preview (AC58-backlink-snippet-previ
     expect(preview).toContain("项目文档");
   });
 });
-

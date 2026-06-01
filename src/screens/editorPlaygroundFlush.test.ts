@@ -15,7 +15,9 @@ describe("EditorScreen playground lifecycle flush", () => {
     expect(flushBlock).toContain("persistEditorContent(");
     expect(flushBlock).toContain("activeNoteId, json");
     expect(flushBlock).toContain("notifyOnError: false");
-    expect(flushBlock).toContain("stashEditorAutosaveSnapshot(activeNoteId, json)");
+    expect(flushBlock).toContain(
+      "stashEditorAutosaveSnapshot(activeNoteId, json)",
+    );
     expect(flushBlock).toContain("clearStashedEditorAutosave(activeNoteId)");
     expect(flushBlock).toContain("persisted: titleOk && contentOk");
     expect(flushBlock).not.toContain("persisted: false");

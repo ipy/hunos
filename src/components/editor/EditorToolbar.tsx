@@ -1,10 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/theme/ThemeContext";
-import {
-  useAdaptiveLayout,
-  type LayoutMode,
-} from "@/hooks/useAdaptiveLayout";
+import { useAdaptiveLayout, type LayoutMode } from "@/hooks/useAdaptiveLayout";
 import { Icon } from "@/components/common/Icon";
 import { SketchPad } from "./SketchPad";
 import {

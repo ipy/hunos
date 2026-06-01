@@ -71,10 +71,7 @@ export function syncEditorOverlaySelectionBeforeToolbarCommand(
     return;
   }
 
-  if (
-    !hasSavedEditorOverlaySelection() &&
-    editorFormatOverlayPanelOpen
-  ) {
+  if (!hasSavedEditorOverlaySelection() && editorFormatOverlayPanelOpen) {
     captureEditorOverlaySelection(editor);
   }
 }

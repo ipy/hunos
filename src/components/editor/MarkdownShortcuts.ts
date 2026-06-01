@@ -217,7 +217,6 @@ export const MarkdownItalic = Italic.extend({
       }),
     ];
   },
-
 });
 
 /** Inline code via backticks — high priority so block rules do not swallow closing `. */

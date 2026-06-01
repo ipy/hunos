@@ -5,8 +5,7 @@ import type { EditorState, Transaction } from "@tiptap/pm/state";
 export const UNCLOSED_SINGLE_STAR_INPUT_RE = /(\*(?!\*)([^*\s]+))$/;
 
 /** Same pattern when Space is the trigger character for input rules. */
-export const UNCLOSED_SINGLE_STAR_SPACE_INPUT_RE =
-  /(\*(?!\*)([^*\s]+)) $/;
+export const UNCLOSED_SINGLE_STAR_SPACE_INPUT_RE = /(\*(?!\*)([^*\s]+)) $/;
 
 const INLINE_MARK_NAMES = [
   "bold",

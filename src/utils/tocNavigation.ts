@@ -399,12 +399,149 @@ function followBlockBottomAtPos(
   }
 }
 
+function nextHeadingDocPosAfter(
+  doc: Editor["state"]["doc"],
+  headingDocPos: number,
+): number | null {
+  const headingNode = doc.nodeAt(headingDocPos);
+  if (!headingNode || headingNode.type.name !== "heading") return null;
+
+  let found: number | null = null;
+  doc.nodesBetween(
+    headingDocPos + headingNode.nodeSize,
+    doc.content.size,
+    (node, pos) => {
+      if (node.type.name !== "heading") return;
+      found = pos;
+      return false;
+    },
+  );
+  return found;
+}
+
+function previousHeadingDocPosBefore(
+  doc: Editor["state"]["doc"],
+  headingDocPos: number,
+): number | null {
+  let found: number | null = null;
+  doc.descendants((node, pos) => {
+    if (node.type.name !== "heading") return;
+    if (pos >= headingDocPos) return false;
+    found = pos;
+  });
+  return found;
+}
+
+/** Lower-band anchor when the previous section heading would co-occupy the band. */
+export function backlinkScrollAnchorTopWithPrevious(options: {
+  bandTop: number;
+  bandBottom: number;
+  headingTop: number;
+  previousHeadingTop: number | null;
+  headingHeight?: number;
+}): number {
+  const headingHeight = options.headingHeight ?? 28;
+  const defaultTop = options.bandTop;
+  if (options.previousHeadingTop == null) return defaultTop;
+
+  const gapAbove = options.headingTop - options.previousHeadingTop;
+  if (gapAbove <= 0 || gapAbove >= options.bandBottom - options.bandTop) {
+    return defaultTop;
+  }
+
+  const maxAnchor = options.bandTop + gapAbove - headingHeight - 1;
+  return Math.min(
+    options.bandBottom - headingHeight,
+    Math.max(options.bandTop, maxAnchor),
+  );
+}
+
+/** Viewport Y for a heading top — matches AC67 backlink scroll band checks. */
+export function backlinkScrollBandBounds(
+  scrollViewportTop: number,
+  scrollViewportBottom: number,
+): { bandTop: number; bandBottom: number } {
+  const bandTop = scrollViewportTop + TOC_SCROLL_TOP_PADDING_PX;
+  const bandBottom =
+    scrollViewportTop + (scrollViewportBottom - scrollViewportTop) * 0.55;
+  return { bandTop, bandBottom };
+}
+
+/** Merge next- and previous-section isolation when both neighbors exist (AC67). */
+export function resolveBacklinkScrollAnchorTop(options: {
+  bandTop: number;
+  bandBottom: number;
+  headingTop: number;
+  nextHeadingTop: number | null;
+  previousHeadingTop: number | null;
+  headingHeight?: number;
+}): number {
+  const anchors: number[] = [options.bandTop];
+  if (options.nextHeadingTop != null) {
+    anchors.push(
+      backlinkScrollAnchorTop({
+        bandTop: options.bandTop,
+        bandBottom: options.bandBottom,
+        headingTop: options.headingTop,
+        nextHeadingTop: options.nextHeadingTop,
+      }),
+    );
+  }
+  if (options.previousHeadingTop != null) {
+    anchors.push(
+      backlinkScrollAnchorTopWithPrevious({
+        bandTop: options.bandTop,
+        bandBottom: options.bandBottom,
+        headingTop: options.headingTop,
+        previousHeadingTop: options.previousHeadingTop,
+        headingHeight: options.headingHeight,
+      }),
+    );
+  }
+  return Math.max(...anchors);
+}
+
+/**
+ * When a following section heading would co-anchor in the viewport band, place the
+ * target lower in the band so the neighbor sits below bandBottom (AC67).
+ */
+export function backlinkScrollAnchorTop(options: {
+  bandTop: number;
+  bandBottom: number;
+  headingTop: number;
+  nextHeadingTop: number | null;
+}): number {
+  const defaultTop = options.bandTop;
+  if (options.nextHeadingTop == null) return defaultTop;
+
+  const gap = options.nextHeadingTop - options.headingTop;
+  if (gap <= 0 || gap >= options.bandBottom - options.bandTop) {
+    return defaultTop;
+  }
+
+  return Math.max(options.bandTop, options.bandBottom - gap + 4);
+}
+
+function headingTopAtDocPos(
+  view: EditorView,
+  contentDocPos: number,
+): number | null {
+  try {
+    const headingEl = resolveHeadingElement(view, contentDocPos);
+    return headingEl
+      ? headingEl.getBoundingClientRect().top
+      : view.coordsAtPos(contentDocPos).top;
+  } catch {
+    return null;
+  }
+}
+
 /** Scroll the editor pane so a heading (and its follow block) are visible. Returns applied scrollTop. */
 function scrollHeadingIntoEditorPane(
   editor: Editor,
   headingDocPos: number,
   contentDocPos: number,
-  options?: { anchorHeadingOnly?: boolean },
+  options?: { anchorHeadingOnly?: boolean; isolateAdjacentSectionHeading?: boolean },
 ): number | null {
   const view = editor.view;
   if (!view) return null;
@@ -439,6 +576,36 @@ function scrollHeadingIntoEditorPane(
     paddingBottom,
   });
 
+  if (options?.anchorHeadingOnly && options?.isolateAdjacentSectionHeading) {
+    const nextHeadingPos = nextHeadingDocPosAfter(view.state.doc, headingDocPos);
+    const nextHeadingTop =
+      nextHeadingPos != null
+        ? headingTopAtDocPos(view, nextHeadingPos + 1)
+        : null;
+    const previousHeadingPos = previousHeadingDocPosBefore(
+      view.state.doc,
+      headingDocPos,
+    );
+    const previousHeadingTop =
+      previousHeadingPos != null
+        ? headingTopAtDocPos(view, previousHeadingPos + 1)
+        : null;
+    const headingHeight = headingEl?.getBoundingClientRect().height ?? 28;
+    const { bandTop, bandBottom } = backlinkScrollBandBounds(
+      scrollViewportTop,
+      scrollViewportBottom,
+    );
+    const anchorTop = resolveBacklinkScrollAnchorTop({
+      bandTop,
+      bandBottom,
+      headingTop,
+      nextHeadingTop,
+      previousHeadingTop,
+      headingHeight,
+    });
+    delta = headingTop - anchorTop;
+  }
+
   // Visibility guard: never leave the heading below the (info-panel-clamped) viewport.
   const projectedHeadingTop = headingTop - delta;
   const maxHeadingTop = scrollViewportBottom - paddingBottom - 1;
@@ -456,6 +623,8 @@ function scrollHeadingIntoEditorPane(
 export interface TocScrollOptions {
   /** Anchor heading at pane top only — skip follow-block reveal (backlink hops). */
   anchorHeadingOnly?: boolean;
+  /** Keep the next section heading below the AC67 viewport band when anchoring. */
+  isolateAdjacentSectionHeading?: boolean;
 }
 
 /** Scroll editor to a heading at the given document position. */
@@ -490,14 +659,16 @@ export function scrollToTocDocPos(
       }
       schedulePinPanelTocListScrollTop();
     };
-    if (typeof requestAnimationFrame === "function") {
+    if (options?.anchorHeadingOnly) {
+      stabilize();
+    } else if (typeof requestAnimationFrame === "function") {
       requestAnimationFrame(stabilize);
     }
   } else {
     schedulePinPanelTocListScrollTop();
   }
 
-  return scrolled;
+  return scrolled && targetScrollTop != null;
 }
 
 /** Scroll editor to the Nth heading (among headings with non-empty text), matching TOC order. */

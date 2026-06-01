@@ -186,9 +186,7 @@ export const noteStorage = {
     const active = await db.notes
       .filter((note) => note.status === "active")
       .toArray();
-    const matches = active.filter(
-      (note) => note.title.toLowerCase() === lower,
-    );
+    const matches = active.filter((note) => note.title.toLowerCase() === lower);
     if (matches.length === 0) return undefined;
     if (matches.length === 1) {
       return hydrateNoteFromDb(matches[0]!);

@@ -37,7 +37,7 @@ describe("EditorScreen note-switch autosave cleanup", () => {
 
   it("remounts BacklinksPanel on note switch to drop stale link rows", () => {
     expect(editorSource).toContain(
-      '<BacklinksPanel key={note.id} noteId={note.id} />',
+      "<BacklinksPanel key={note.id} noteId={note.id} />",
     );
   });
 

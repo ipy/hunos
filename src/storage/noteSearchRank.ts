@@ -60,9 +60,7 @@ export interface ActivePinnedNotesDuringSearchOptions {
  * Pinned strip while search is active: only the active pinned note, never merged
  * into title-first search hits (AC37 vs AC39-search-restore-ghost).
  */
-export function activePinnedNotesDuringSearch<
-  T extends NoteSearchMatchFields,
->(
+export function activePinnedNotesDuringSearch<T extends NoteSearchMatchFields>(
   allNotes: T[],
   options: ActivePinnedNotesDuringSearchOptions = {},
 ): T[] {

@@ -146,56 +146,69 @@ export async function expectEditorSectionHeadingPrimaryScrollTarget(
   options?: { notCoPrimary?: string[] },
 ): Promise<void> {
   const notCoPrimary = options?.notCoPrimary ?? [];
-  const result = await page.evaluate(
-    ({ primaryHeading, notCoPrimary }) => {
-      const scrollPane = document.querySelector(
-        '[data-testid="editor-scroll-pane"]',
-      );
-      if (!(scrollPane instanceof HTMLElement)) {
-        return { error: "missing editor scroll pane" as const };
-      }
+  await expect
+    .poll(
+      async () => {
+        const result = await page.evaluate(
+          ({ primaryHeading, notCoPrimary }) => {
+            const scrollPane = document.querySelector(
+              '[data-testid="editor-scroll-pane"]',
+            );
+            if (!(scrollPane instanceof HTMLElement)) {
+              return { error: "missing editor scroll pane" as const };
+            }
 
-      const scrollRect = scrollPane.getBoundingClientRect();
-      let viewportBottom = scrollRect.bottom;
-      const infoPanel = document.querySelector('[data-testid="info-panel"]');
-      if (infoPanel instanceof HTMLElement) {
-        const panelRect = infoPanel.getBoundingClientRect();
-        if (panelRect.top < viewportBottom) {
-          viewportBottom = Math.max(scrollRect.top + 1, panelRect.top);
+            const scrollRect = scrollPane.getBoundingClientRect();
+            let viewportBottom = scrollRect.bottom;
+            const infoPanel = document.querySelector('[data-testid="info-panel"]');
+            if (infoPanel instanceof HTMLElement) {
+              const panelRect = infoPanel.getBoundingClientRect();
+              if (panelRect.top < viewportBottom) {
+                viewportBottom = Math.max(scrollRect.top + 1, panelRect.top);
+              }
+            }
+
+            const bandTop = scrollRect.top + 12;
+            const bandBottom =
+              scrollRect.top + (viewportBottom - scrollRect.top) * 0.55;
+
+            const headingBandScore = (name: string): number | null => {
+              const headings = scrollPane.querySelectorAll("h1,h2,h3,h4,h5,h6");
+              for (const heading of headings) {
+                if (heading.textContent?.trim() !== name) continue;
+                const rect = heading.getBoundingClientRect();
+                const center = (rect.top + rect.bottom) / 2;
+                if (center >= bandTop && center <= bandBottom) return center;
+                if (rect.top >= bandTop && rect.top <= bandBottom) {
+                  return rect.top;
+                }
+              }
+              return null;
+            };
+
+            return {
+              primaryScore: headingBandScore(primaryHeading),
+              coPrimary: notCoPrimary.map((heading) => ({
+                heading,
+                score: headingBandScore(heading),
+              })),
+            };
+          },
+          { primaryHeading, notCoPrimary },
+        );
+
+        if ("error" in result) return result.error;
+        if (result.primaryScore == null) return "missing-primary";
+        for (const entry of result.coPrimary ?? []) {
+          if (entry.score != null) {
+            return `co-primary:${entry.heading}:${entry.score}`;
+          }
         }
-      }
-
-      const bandTop = scrollRect.top + 12;
-      const bandBottom =
-        scrollRect.top + (viewportBottom - scrollRect.top) * 0.55;
-
-      const headingBandScore = (name: string): number | null => {
-        const headings = scrollPane.querySelectorAll("h1,h2,h3,h4,h5,h6");
-        for (const heading of headings) {
-          if (heading.textContent?.trim() !== name) continue;
-          const rect = heading.getBoundingClientRect();
-          const center = (rect.top + rect.bottom) / 2;
-          if (center >= bandTop && center <= bandBottom) return center;
-          if (rect.top >= bandTop && rect.top <= bandBottom) return rect.top;
-        }
-        return null;
-      };
-
-      return {
-        primaryScore: headingBandScore(primaryHeading),
-        coPrimary: notCoPrimary.map((heading) => ({
-          heading,
-          score: headingBandScore(heading),
-        })),
-      };
-    },
-    { primaryHeading, notCoPrimary },
-  );
-
-  expect(result.primaryScore).not.toBeNull();
-  for (const entry of result.coPrimary ?? []) {
-    expect(entry.score).toBeNull();
-  }
+        return "ok";
+      },
+      { timeout: 15_000 },
+    )
+    .toBe("ok");
 }
 
 /** Snippet bodies stay within their section prefix (AC67). */

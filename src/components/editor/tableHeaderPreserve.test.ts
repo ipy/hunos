@@ -13,7 +13,11 @@ const schema = new Schema({
     text: { group: "inline" },
     table: { content: "tableRow+", group: "block", tableRole: "table" },
     tableRow: { content: "(tableCell | tableHeader)+", tableRole: "row" },
-    tableHeader: { content: "block+", tableRole: "header_cell", isolating: true },
+    tableHeader: {
+      content: "block+",
+      tableRole: "header_cell",
+      isolating: true,
+    },
     tableCell: { content: "block+", tableRole: "cell", isolating: true },
   },
 });
@@ -89,7 +93,12 @@ describe("tableHeaderPreserve", () => {
     const dataRow = next.doc.firstChild?.child(1);
     const dataTypes: string[] = [];
     dataRow?.forEach((cell) => dataTypes.push(cell.type.name));
-    expect(dataTypes).toEqual(["tableCell", "tableCell", "tableCell", "tableCell"]);
+    expect(dataTypes).toEqual([
+      "tableCell",
+      "tableCell",
+      "tableCell",
+      "tableCell",
+    ]);
   });
 
   it("no-ops when the first row has no header cells", () => {

@@ -41,7 +41,9 @@ export function wikiLinkTargetTestId(
 }
 
 /** Stable per-occurrence key (unique even when two links resolve to the same note id). */
-export function wikiLinkDataLinkKey(match: Pick<WikiLinkMatch, "start">): string {
+export function wikiLinkDataLinkKey(
+  match: Pick<WikiLinkMatch, "start">,
+): string {
   return `pos-${match.start}`;
 }
 

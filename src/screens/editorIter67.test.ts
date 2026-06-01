@@ -29,7 +29,8 @@ describe("iteration 67 — AC67 scroll single target (AC67-backlink-scroll-singl
   });
 
   it("anchors backlink hops with heading-only scroll", () => {
-    expect(backlinkScrollSource).toContain("anchorHeadingOnly: true");
+    expect(backlinkScrollSource).toContain("resolveBacklinkScrollAnchorTop");
+    expect(backlinkScrollSource).toContain("headingInScrollBand");
   });
 });
 

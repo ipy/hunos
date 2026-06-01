@@ -75,9 +75,12 @@ describe("noteSearchRank", () => {
 
   it("does not return unpinned active note in pin strip", () => {
     const unpinnedWelcome = { ...welcome, isPinned: false };
-    const pinned = activePinnedNotesDuringSearch([playground, unpinnedWelcome], {
-      activeNoteId: welcome.id,
-    });
+    const pinned = activePinnedNotesDuringSearch(
+      [playground, unpinnedWelcome],
+      {
+        activeNoteId: welcome.id,
+      },
+    );
     expect(pinned).toEqual([]);
   });
 
