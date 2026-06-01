@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  backlinkRowAccessibleLabel,
   backlinkSnippetHasRawMarkdown,
   formatBacklinkSnippet,
   splitBacklinkSnippetParts,
@@ -88,5 +89,18 @@ describe("formatBacklinkSnippet", () => {
     );
     expect(parts.prefix).toBe("自由试炼");
     expect(parts.body).toMatch(/项目文档 #42/);
+  });
+
+  it("joins source title and section with › for row aria-labels (AC66-backlink-row-a11y)", () => {
+    expect(
+      backlinkRowAccessibleLabel(
+        "格式试炼场",
+        "标签与链接 · ... 详见 项目文档 ...",
+        "Untitled",
+      ),
+    ).toBe("格式试炼场 › 标签与链接");
+    expect(
+      backlinkRowAccessibleLabel("格式试炼场", undefined, "Untitled"),
+    ).toBe("格式试炼场");
   });
 });

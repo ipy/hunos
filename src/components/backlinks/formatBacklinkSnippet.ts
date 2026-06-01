@@ -93,3 +93,19 @@ export const BACKLINK_SNIPPET_RAW_MARKDOWN_RE =
 export function backlinkSnippetHasRawMarkdown(text: string): boolean {
   return BACKLINK_SNIPPET_RAW_MARKDOWN_RE.test(text);
 }
+
+/** Assistive label separator between source note title and section (visual rows use · in snippets). */
+export const BACKLINK_ROW_ACCESSIBLE_SEP = " › ";
+
+/** Screen-reader label: source note title, then section when context carries a prefix. */
+export function backlinkRowAccessibleLabel(
+  noteTitle: string,
+  context: string | undefined,
+  untitledLabel: string,
+): string {
+  const title = noteTitle.trim() || untitledLabel;
+  if (!context) return title;
+  const { prefix } = splitBacklinkSnippetParts(context);
+  if (!prefix) return title;
+  return `${title}${BACKLINK_ROW_ACCESSIBLE_SEP}${prefix}`;
+}

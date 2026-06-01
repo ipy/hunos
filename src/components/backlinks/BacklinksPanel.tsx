@@ -6,6 +6,7 @@ import { useNoteStore } from "@/store/noteStore";
 import { Icon } from "@/components/common/Icon";
 import type { BacklinkResult } from "@/types/graph";
 import {
+  backlinkRowAccessibleLabel,
   formatBacklinkSnippet,
   splitBacklinkSnippetParts,
 } from "./formatBacklinkSnippet";
@@ -136,15 +137,28 @@ export function BacklinksPanel({
     const snippetParts = bl.context
       ? splitBacklinkSnippetParts(bl.context)
       : null;
+    const rowAriaLabel = backlinkRowAccessibleLabel(
+      bl.noteTitle,
+      bl.context,
+      t("notes.untitled", { defaultValue: "Untitled" }),
+    );
 
     return (
       <div
         key={backlinksRowKey(section, bl, index)}
+        role="button"
+        tabIndex={0}
+        aria-label={rowAriaLabel}
         data-testid={backlinksItemTestId(bl.linkId)}
         data-link-key={bl.linkId}
         data-note-id={bl.noteId}
         data-note-title={bl.noteTitle}
         onClick={() => navigateToNote(bl.noteId, snippetParts?.prefix ?? null)}
+        onKeyDown={(e) => {
+          if (e.key !== "Enter" && e.key !== " ") return;
+          e.preventDefault();
+          navigateToNote(bl.noteId, snippetParts?.prefix ?? null);
+        }}
         style={{
           padding: "10px 12px",
           borderRadius: theme.radius.md,

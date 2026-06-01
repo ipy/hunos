@@ -7,15 +7,17 @@ import {
 import {
   assertBacklinkSnippetPlainText,
   clickEachIncomingBacklinkByFreshTestId,
+  clickEachIncomingBacklinkWithSectionScroll,
   collectIncomingBacklinkPrefixTexts,
   collectIncomingBacklinkRowTestIds,
   expandBacklinksPanelIfCollapsed,
   expectBacklinkNavigationHash,
   incomingBacklinkTargetNoteId,
   openProjectDocsWithBacklinksPanel,
+  resolveFormatPlaygroundNoteId,
   waitForIncomingBacklinkRowCount,
 } from "../helpers/backlinks";
-import { noteIdFromListItem, openNoteFromList } from "../helpers/notes";
+import { openNoteFromList } from "../helpers/notes";
 
 const DESKTOP_VIEWPORT = { width: 1280, height: 720 } as const;
 
@@ -274,17 +276,11 @@ test.describe("backlinks footer — iter 61", () => {
   });
 
   test.describe("iter 65 — AC64 runtime gates", () => {
-    let formatPlaygroundNoteId: string;
-
     for (const { label, viewport } of BACKLINKS_VIEWPORTS) {
       test.describe(label, () => {
         test.use({ viewport });
 
         test.beforeEach(async ({ page }) => {
-          formatPlaygroundNoteId = await noteIdFromListItem(
-            page,
-            FORMAT_PLAYGROUND_TITLE,
-          );
           await openProjectDocsWithBacklinksPanel(page);
           await expandBacklinksPanelIfCollapsed(page);
         });
@@ -292,6 +288,8 @@ test.describe("backlinks footer — iter 61", () => {
         test("AC64-backlinks-canonical-count-runtime: two incoming rows from playground source id", async ({
           page,
         }) => {
+          const formatPlaygroundNoteId =
+            await resolveFormatPlaygroundNoteId(page);
           const toggle = page.getByTestId("backlinks-panel-toggle");
           await expect(toggle).toContainText("(2)");
           await waitForIncomingBacklinkRowCount(page, 2);
@@ -336,6 +334,20 @@ test.describe("backlinks footer — iter 61", () => {
             expect(snippet.startsWith(prefix)).toBe(true);
             expect(snippet.slice(prefix.length).trimStart()).toMatch(/^·/);
           }
+        });
+      });
+    }
+  });
+
+  test.describe("iter 66 — section scroll e2e", () => {
+    for (const { label, viewport } of BACKLINKS_VIEWPORTS) {
+      test.describe(label, () => {
+        test.use({ viewport });
+
+        test("AC65-backlink-section-scroll-e2e: each incoming row scrolls to its section heading", async ({
+          page,
+        }) => {
+          await clickEachIncomingBacklinkWithSectionScroll(page);
         });
       });
     }

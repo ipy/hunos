@@ -1,8 +1,12 @@
 import { expect, type Page } from "@playwright/test";
 import { backlinkSnippetHasRawMarkdown } from "../../src/components/backlinks/formatBacklinkSnippet";
 import { noteHashForId } from "../../src/utils/noteRoute";
-import { PROJECT_DOCS_NOTE_TITLE } from "./playground";
-import { openNoteFromList } from "./notes";
+import {
+  editorLocator,
+  FORMAT_PLAYGROUND_TITLE,
+  PROJECT_DOCS_NOTE_TITLE,
+} from "./playground";
+import { noteIdFromListItem, openNoteFromList } from "./notes";
 
 export function assertBacklinkSnippetPlainText(text: string): void {
   expect(text.length).toBeGreaterThan(0);
@@ -118,6 +122,68 @@ export async function collectIncomingBacklinkPrefixTexts(
  * Multi-hop backlink nav — re-collects row test ids after each return when needed;
  * stable source+position keys keep ids identical across graph reloads (AC60).
  */
+/** Resolve 格式试炼场 id locally per test — avoids describe-scoped mutable state (AC66). */
+export async function resolveFormatPlaygroundNoteId(
+  page: Page,
+): Promise<string> {
+  return noteIdFromListItem(page, FORMAT_PLAYGROUND_TITLE);
+}
+
+/** Assert a section heading is visible in the editor without manual scroll (AC65). */
+export async function expectEditorSectionHeadingVisible(
+  page: Page,
+  heading: string,
+): Promise<void> {
+  await expect(
+    editorLocator(page).getByRole("heading", { name: heading, exact: true }),
+  ).toBeVisible({ timeout: 15_000 });
+}
+
+/** Click the incoming row whose prefix matches `sectionPrefix`. */
+export async function clickIncomingBacklinkBySectionPrefix(
+  page: Page,
+  sectionPrefix: string,
+): Promise<void> {
+  const rowTestIds = await collectIncomingBacklinkRowTestIds(page);
+  for (const rowTestId of rowTestIds) {
+    const linkId = incomingBacklinkLinkId(rowTestId);
+    const prefix = await page
+      .getByTestId(`backlinks-prefix-${linkId}`)
+      .innerText();
+    if (prefix === sectionPrefix || prefix.startsWith(`${sectionPrefix} ·`)) {
+      await page.getByTestId(rowTestId).click();
+      return;
+    }
+  }
+  throw new Error(
+    `incoming backlink with section prefix "${sectionPrefix}" not found`,
+  );
+}
+
+const BACKLINK_SECTION_SCROLL_HOPS = [
+  { prefix: "标签与链接", heading: "标签与链接" },
+  { prefix: "自由试炼", heading: "自由试炼" },
+] as const;
+
+/** Multi-hop nav with per-hop section scroll proof (AC65-backlink-section-scroll-e2e). */
+export async function clickEachIncomingBacklinkWithSectionScroll(
+  page: Page,
+  expectedNoteTitle: string = FORMAT_PLAYGROUND_TITLE,
+): Promise<void> {
+  for (const hop of BACKLINK_SECTION_SCROLL_HOPS) {
+    await openProjectDocsWithBacklinksPanel(page);
+    await expandBacklinksPanelIfCollapsed(page);
+    await clickIncomingBacklinkBySectionPrefix(page, hop.prefix);
+    await expect(page.getByTestId("note-title")).toHaveValue(
+      expectedNoteTitle,
+      {
+        timeout: 15_000,
+      },
+    );
+    await expectEditorSectionHeadingVisible(page, hop.heading);
+  }
+}
+
 export async function clickEachIncomingBacklinkByFreshTestId(
   page: Page,
   expectedNoteTitle: string,
