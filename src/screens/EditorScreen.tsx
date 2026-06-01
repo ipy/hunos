@@ -100,6 +100,7 @@ import {
   scheduleBacklinkSectionScroll,
   scrollToBacklinkSection,
 } from "@/utils/backlinkSectionScroll";
+import { sectionHeadingFromBacklinkPrefix } from "@/graph/linkExtractor";
 import type { PersistNoteOptions } from "@/screens/editorNotePersistence";
 
 declare const __HUNOS_E2E__: boolean | undefined;
@@ -260,8 +261,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const handleBacklinkNavigate = useCallback(
     (targetNoteId: string, sectionHeading: string | null) => {
       if (sectionHeading) {
-        const section =
-          sectionHeading.split(" · ")[0]?.trim() ?? sectionHeading;
+        const section = sectionHeadingFromBacklinkPrefix(sectionHeading);
         pendingBacklinkSectionRef.current = {
           noteId: targetNoteId,
           section,

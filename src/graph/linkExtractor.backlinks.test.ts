@@ -8,6 +8,7 @@ import {
   disambiguateBacklinkContexts,
   extractBacklinkContext,
   backlinkContextWithSection,
+  sectionHeadingFromBacklinkPrefix,
 } from "./linkExtractor";
 import { buildPlaygroundContent } from "@/storage/formatPlaygroundNote";
 import { splitBacklinkSnippetParts } from "@/components/backlinks/formatBacklinkSnippet";
@@ -96,6 +97,14 @@ describe("extractBacklinkContext", () => {
 
     expect(tagsBody).not.toContain("自由试炼");
     expect(tryBody).not.toContain("标签与链接");
+  });
+});
+
+describe("sectionHeadingFromBacklinkPrefix", () => {
+  it("returns the first segment before the section separator", () => {
+    expect(sectionHeadingFromBacklinkPrefix("标签与链接")).toBe("标签与链接");
+    expect(sectionHeadingFromBacklinkPrefix("自由试炼 · #1")).toBe("自由试炼");
+    expect(sectionHeadingFromBacklinkPrefix("  自由试炼 · #2  ")).toBe("自由试炼");
   });
 });
 

@@ -1,9 +1,12 @@
 import type { Editor } from "@tiptap/react";
 import { findEditorScrollContainer } from "@/components/editor/wikiLinkPointerUtils";
+import { sectionHeadingFromBacklinkPrefix } from "@/graph/linkExtractor";
 import {
   backlinkScrollBandBounds,
-  resolveBacklinkScrollAnchorTop,
+  nextHeadingDocPosAfter,
+  previousHeadingDocPosBefore,
   resolveTocScrollViewportBounds,
+  scrollToTocDocPos,
 } from "@/utils/tocNavigation";
 
 /** Resolve a heading document position by exact title, then first segment before " · ". */
@@ -13,7 +16,7 @@ export function headingDocPosForBacklinkSection(
 ): number | null {
   const candidates = [
     sectionLabel.trim(),
-    sectionLabel.split(" · ")[0]?.trim() ?? "",
+    sectionHeadingFromBacklinkPrefix(sectionLabel),
   ].filter(
     (value, index, list) => value.length > 0 && list.indexOf(value) === index,
   );
@@ -49,7 +52,9 @@ function resolveHeadingElement(
   ) {
     el = (el as { parentElement?: unknown }).parentElement ?? null;
   }
-  if (!(typeof el === "object" && el !== null && "getBoundingClientRect" in el)) {
+  if (
+    !(typeof el === "object" && el !== null && "getBoundingClientRect" in el)
+  ) {
     return null;
   }
 
@@ -60,50 +65,6 @@ function resolveHeadingElement(
     current = current.parentElement as HTMLElement;
   }
   return el as HTMLElement;
-}
-
-function nextHeadingDocPosAfter(
-  doc: Editor["state"]["doc"],
-  headingDocPos: number,
-): number | null {
-  const headingNode = doc.nodeAt(headingDocPos);
-  if (!headingNode || headingNode.type.name !== "heading") return null;
-
-  let found: number | null = null;
-  doc.nodesBetween(
-    headingDocPos + headingNode.nodeSize,
-    doc.content.size,
-    (node, pos) => {
-      if (node.type.name !== "heading") return;
-      found = pos;
-      return false;
-    },
-  );
-  return found;
-}
-
-function previousHeadingDocPosBefore(
-  doc: Editor["state"]["doc"],
-  headingDocPos: number,
-): number | null {
-  let found: number | null = null;
-  doc.descendants((node, pos) => {
-    if (node.type.name !== "heading") return;
-    if (pos >= headingDocPos) return false;
-    found = pos;
-  });
-  return found;
-}
-
-function headingTopAtDocPos(editor: Editor, contentDocPos: number): number | null {
-  try {
-    const headingEl = resolveHeadingElement(editor, contentDocPos);
-    if (headingEl) return headingEl.getBoundingClientRect().top;
-    const view = editor.view;
-    return view ? view.coordsAtPos(contentDocPos).top : null;
-  } catch {
-    return null;
-  }
 }
 
 function headingInScrollBand(
@@ -134,60 +95,18 @@ export function scrollToBacklinkSection(
   const headingEl = resolveHeadingElement(editor, contentDocPos);
   if (!scrollEl || !headingEl) return false;
 
-  const { top: scrollViewportTop, bottom: scrollViewportBottom } =
-    resolveTocScrollViewportBounds(scrollEl);
-  const { bandTop, bandBottom } = backlinkScrollBandBounds(
-    scrollViewportTop,
-    scrollViewportBottom,
-  );
-
-  const headingTop = headingEl.getBoundingClientRect().top;
-  const headingHeight = headingEl.getBoundingClientRect().height || 28;
-  const nextHeadingPos = nextHeadingDocPosAfter(view.state.doc, headingPos);
-  const nextHeadingTop =
-    nextHeadingPos != null
-      ? headingTopAtDocPos(editor, nextHeadingPos + 1)
-      : null;
-  const previousHeadingPos = previousHeadingDocPosBefore(
-    view.state.doc,
-    headingPos,
-  );
-  const previousHeadingTop =
-    previousHeadingPos != null
-      ? headingTopAtDocPos(editor, previousHeadingPos + 1)
-      : null;
-
-  const anchorTop = resolveBacklinkScrollAnchorTop({
-    bandTop,
-    bandBottom,
-    headingTop,
-    nextHeadingTop,
-    previousHeadingTop,
-    headingHeight,
+  const scrolled = scrollToTocDocPos(editor, headingPos, {
+    anchorHeadingOnly: true,
+    isolateAdjacentSectionHeading: true,
   });
-
-  const applyScroll = () => {
-    const currentTop = headingEl.getBoundingClientRect().top;
-    const delta = currentTop - anchorTop;
-    if (Math.abs(delta) >= 1) {
-      scrollEl.scrollTop += delta;
-    }
-  };
-
-  applyScroll();
-
-  editor
-    .chain()
-    .focus(undefined, { scrollIntoView: false })
-    .setTextSelection(contentDocPos)
-    .run();
-
-  applyScroll();
-  applyScroll();
+  if (!scrolled) return false;
 
   if (!headingInScrollBand(scrollEl, headingEl)) return false;
 
-  for (const neighborPos of [previousHeadingPos, nextHeadingPos]) {
+  for (const neighborPos of [
+    previousHeadingDocPosBefore(view.state.doc, headingPos),
+    nextHeadingDocPosAfter(view.state.doc, headingPos),
+  ]) {
     if (neighborPos == null) continue;
     const neighborEl = resolveHeadingElement(editor, neighborPos + 1);
     if (neighborEl && headingInScrollBand(scrollEl, neighborEl)) return false;

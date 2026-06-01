@@ -82,6 +82,12 @@ export function sectionForWikiLinkAtOffset(
   );
 }
 
+/** Section document heading from a backlink row prefix (first segment before ·). */
+export function sectionHeadingFromBacklinkPrefix(prefix: string): string {
+  const sep = prefix.indexOf(BACKLINK_SECTION_SEP);
+  return (sep === -1 ? prefix : prefix.slice(0, sep)).trim();
+}
+
 /** Prefix link context with its source section when not already disambiguated. */
 export function backlinkContextWithSection(
   context: string,

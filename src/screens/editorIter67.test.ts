@@ -28,8 +28,9 @@ describe("iteration 67 — AC67 scroll single target (AC67-backlink-scroll-singl
     expect(backlinksE2eSource).toContain("AC67-backlink-scroll-single-target");
   });
 
-  it("anchors backlink hops with heading-only scroll", () => {
-    expect(backlinkScrollSource).toContain("resolveBacklinkScrollAnchorTop");
+  it("anchors backlink hops with heading-only scroll and adjacent isolation", () => {
+    expect(backlinkScrollSource).toContain("scrollToTocDocPos");
+    expect(backlinkScrollSource).toContain("isolateAdjacentSectionHeading");
     expect(backlinkScrollSource).toContain("headingInScrollBand");
   });
 });

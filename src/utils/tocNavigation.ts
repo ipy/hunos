@@ -399,7 +399,7 @@ function followBlockBottomAtPos(
   }
 }
 
-function nextHeadingDocPosAfter(
+export function nextHeadingDocPosAfter(
   doc: Editor["state"]["doc"],
   headingDocPos: number,
 ): number | null {
@@ -419,7 +419,7 @@ function nextHeadingDocPosAfter(
   return found;
 }
 
-function previousHeadingDocPosBefore(
+export function previousHeadingDocPosBefore(
   doc: Editor["state"]["doc"],
   headingDocPos: number,
 ): number | null {
@@ -541,7 +541,10 @@ function scrollHeadingIntoEditorPane(
   editor: Editor,
   headingDocPos: number,
   contentDocPos: number,
-  options?: { anchorHeadingOnly?: boolean; isolateAdjacentSectionHeading?: boolean },
+  options?: {
+    anchorHeadingOnly?: boolean;
+    isolateAdjacentSectionHeading?: boolean;
+  },
 ): number | null {
   const view = editor.view;
   if (!view) return null;
@@ -577,7 +580,10 @@ function scrollHeadingIntoEditorPane(
   });
 
   if (options?.anchorHeadingOnly && options?.isolateAdjacentSectionHeading) {
-    const nextHeadingPos = nextHeadingDocPosAfter(view.state.doc, headingDocPos);
+    const nextHeadingPos = nextHeadingDocPosAfter(
+      view.state.doc,
+      headingDocPos,
+    );
     const nextHeadingTop =
       nextHeadingPos != null
         ? headingTopAtDocPos(view, nextHeadingPos + 1)
