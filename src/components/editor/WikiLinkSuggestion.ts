@@ -7,7 +7,10 @@ import {
   WikiLinkSuggestionMenu,
   type WikiLinkSuggestionItem,
 } from "./WikiLinkSuggestionMenu";
-import { markSuggestionMenuClosedByEscape } from "@/utils/editorSuggestionMenu";
+import {
+  getSuggestionAnchorRectAtPos,
+  markSuggestionMenuClosedByEscape,
+} from "@/utils/editorSuggestionMenu";
 import {
   filterWikiLinkCandidates,
   findWikiLinkSuggestionMatch,
@@ -67,6 +70,7 @@ export const WikiLinkSuggestion = Extension.create<WikiLinkSuggestionOptions>({
     const editor = this.editor;
 
     let renderer: ReactRenderer | null = null;
+    let lastNoteId = getNoteId();
     let selectedIndex = 0;
     let currentItems: WikiLinkSuggestionItem[] = [];
     let activeRange: { from: number; to: number } | null = null;
@@ -92,13 +96,7 @@ export const WikiLinkSuggestion = Extension.create<WikiLinkSuggestionOptions>({
     const getClientRect =
       (view: import("@tiptap/pm/view").EditorView) => () => {
         if (!activeRange) return null;
-        const coords = view.coordsAtPos(activeRange.to);
-        return new DOMRect(
-          coords.left,
-          coords.top,
-          0,
-          coords.bottom - coords.top,
-        );
+        return getSuggestionAnchorRectAtPos(view, activeRange.to);
       };
 
     const syncRenderer = (view: import("@tiptap/pm/view").EditorView) => {
@@ -115,6 +113,12 @@ export const WikiLinkSuggestion = Extension.create<WikiLinkSuggestionOptions>({
     };
 
     const updateMenu = (view: import("@tiptap/pm/view").EditorView) => {
+      const noteId = getNoteId();
+      if (noteId !== lastNoteId) {
+        lastNoteId = noteId;
+        destroyMenu();
+      }
+
       if (view.composing) {
         destroyMenu();
         return;
@@ -143,10 +147,16 @@ export const WikiLinkSuggestion = Extension.create<WikiLinkSuggestionOptions>({
       currentItems = items;
       activeRange = match.range;
 
+      const clientRect = getClientRect(view);
+      if (!clientRect()) {
+        destroyMenu();
+        return;
+      }
+
       const props = {
         items,
         selectedIndex,
-        clientRect: getClientRect(view),
+        clientRect,
         onSelect: selectItem,
         onHighlight: (index: number) => {
           selectedIndex = index;

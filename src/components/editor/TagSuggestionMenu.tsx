@@ -1,6 +1,11 @@
 import React, { useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { useAdaptiveLayout } from "@/hooks/useAdaptiveLayout";
 import { useTheme } from "@/theme/ThemeContext";
+import {
+  computeSuggestionMenuPosition,
+  getEditorSuggestionTopInset,
+} from "@/utils/editorSuggestionMenu";
 import type { Tag } from "@/types/graph";
 
 export type TagSuggestionItem =
@@ -27,6 +32,7 @@ export function TagSuggestionMenu({
 }: TagSuggestionMenuProps) {
   const { t } = useTranslation();
   const theme = useTheme();
+  const layout = useAdaptiveLayout();
   const menuRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
@@ -36,30 +42,14 @@ export function TagSuggestionMenu({
     const rect = clientRect();
     if (!rect) return;
 
-    const margin = 8;
-    let top = rect.bottom + margin;
-    let left = rect.left;
-
     const menuRect = menu.getBoundingClientRect();
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-
-    if (left + menuRect.width > vw - margin) {
-      left = Math.max(margin, vw - menuRect.width - margin);
-    }
-    if (left < margin) left = margin;
-
-    if (top + menuRect.height > vh - margin) {
-      const above = rect.top - menuRect.height - margin;
-      top =
-        above >= margin
-          ? above
-          : Math.max(margin, vh - menuRect.height - margin);
-    }
+    const { top, left } = computeSuggestionMenuPosition(rect, menuRect, {
+      topInset: getEditorSuggestionTopInset(layout),
+    });
 
     menu.style.top = `${top}px`;
     menu.style.left = `${left}px`;
-  }, [clientRect, items.length, selectedIndex]);
+  }, [clientRect, items.length, selectedIndex, layout]);
 
   if (items.length === 0) return null;
 

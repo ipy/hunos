@@ -4,7 +4,11 @@ import { ReactRenderer } from "@tiptap/react";
 import type { Editor } from "@tiptap/react";
 import type { Tag } from "@/types/graph";
 import { TagSuggestionMenu, type TagSuggestionItem } from "./TagSuggestionMenu";
-import { markSuggestionMenuClosedByEscape } from "@/utils/editorSuggestionMenu";
+import {
+  getSuggestionAnchorRectAtPos,
+  isUserTextEditKeyDown,
+  markSuggestionMenuClosedByEscape,
+} from "@/utils/editorSuggestionMenu";
 import { isValidTagName } from "@/utils/tagPattern";
 import {
   filterTagCandidates,
@@ -13,6 +17,7 @@ import {
 
 export interface TagSuggestionOptions {
   getTags: () => Tag[];
+  getNoteId: () => string;
 }
 
 const tagSuggestionKey = new PluginKey("tagSuggestion");
@@ -50,14 +55,18 @@ export const TagSuggestion = Extension.create<TagSuggestionOptions>({
   addOptions() {
     return {
       getTags: () => [],
+      getNoteId: () => "",
     };
   },
 
   addProseMirrorPlugins() {
-    const { getTags } = this.options;
+    const { getTags, getNoteId } = this.options;
     const editor = this.editor;
 
     let renderer: ReactRenderer | null = null;
+    let lastNoteId = getNoteId();
+    /** Block passive focus-at-end matches until the user edits text. */
+    let suppressPassiveSuggestion = true;
     let selectedIndex = 0;
     let currentItems: TagSuggestionItem[] = [];
     let activeRange: { from: number; to: number } | null = null;
@@ -83,13 +92,7 @@ export const TagSuggestion = Extension.create<TagSuggestionOptions>({
     const getClientRect =
       (view: import("@tiptap/pm/view").EditorView) => () => {
         if (!activeRange) return null;
-        const coords = view.coordsAtPos(activeRange.to);
-        return new DOMRect(
-          coords.left,
-          coords.top,
-          0,
-          coords.bottom - coords.top,
-        );
+        return getSuggestionAnchorRectAtPos(view, activeRange.to);
       };
 
     const syncRenderer = (view: import("@tiptap/pm/view").EditorView) => {
@@ -106,6 +109,18 @@ export const TagSuggestion = Extension.create<TagSuggestionOptions>({
     };
 
     const updateMenu = (view: import("@tiptap/pm/view").EditorView) => {
+      const noteId = getNoteId();
+      if (noteId !== lastNoteId) {
+        lastNoteId = noteId;
+        suppressPassiveSuggestion = true;
+        destroyMenu();
+      }
+
+      if (suppressPassiveSuggestion) {
+        destroyMenu();
+        return;
+      }
+
       if (view.composing) {
         destroyMenu();
         return;
@@ -134,10 +149,16 @@ export const TagSuggestion = Extension.create<TagSuggestionOptions>({
       currentItems = items;
       activeRange = match.range;
 
+      const clientRect = getClientRect(view);
+      if (!clientRect()) {
+        destroyMenu();
+        return;
+      }
+
       const props = {
         items,
         selectedIndex,
-        clientRect: getClientRect(view),
+        clientRect,
         onSelect: selectItem,
         onHighlight: (index: number) => {
           selectedIndex = index;
@@ -171,7 +192,16 @@ export const TagSuggestion = Extension.create<TagSuggestionOptions>({
           };
         },
         props: {
+          handleDOMEvents: {
+            beforeinput() {
+              suppressPassiveSuggestion = false;
+              return false;
+            },
+          },
           handleKeyDown(view, event) {
+            if (isUserTextEditKeyDown(event)) {
+              suppressPassiveSuggestion = false;
+            }
             if (!renderer || currentItems.length === 0) return false;
 
             if (event.key === "ArrowDown") {

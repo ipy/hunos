@@ -296,6 +296,7 @@ export function TiptapEditor({
       }),
       TagSuggestion.configure({
         getTags: () => tagsRef.current,
+        getNoteId: () => noteIdRef.current,
       }),
       TagDecoration.configure({ onTagClick: handleTagClick }),
       SketchResize,

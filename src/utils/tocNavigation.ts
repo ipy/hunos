@@ -456,18 +456,31 @@ export function backlinkScrollAnchorTopWithPrevious(options: {
   );
 }
 
+/** Reference viewport height for AC67/AC69 backlink scroll band sizing (1280×720). */
+export const BACKLINK_SCROLL_BAND_REF_VIEWPORT_PX = 720;
+export const BACKLINK_SCROLL_BAND_HEIGHT_RATIO = 0.55;
+
+/** Band height capped at the reference viewport so taller orchestrator panes do not widen co-primary range. */
+export function backlinkScrollBandHeight(viewportHeight: number): number {
+  return Math.min(
+    viewportHeight * BACKLINK_SCROLL_BAND_HEIGHT_RATIO,
+    BACKLINK_SCROLL_BAND_REF_VIEWPORT_PX * BACKLINK_SCROLL_BAND_HEIGHT_RATIO,
+  );
+}
+
 /** Viewport Y for a heading top — matches AC67 backlink scroll band checks. */
 export function backlinkScrollBandBounds(
   scrollViewportTop: number,
   scrollViewportBottom: number,
 ): { bandTop: number; bandBottom: number } {
   const bandTop = scrollViewportTop + TOC_SCROLL_TOP_PADDING_PX;
+  const viewportHeight = scrollViewportBottom - scrollViewportTop;
   const bandBottom =
-    scrollViewportTop + (scrollViewportBottom - scrollViewportTop) * 0.55;
+    scrollViewportTop + backlinkScrollBandHeight(viewportHeight);
   return { bandTop, bandBottom };
 }
 
-/** Merge next- and previous-section isolation when both neighbors exist (AC67). */
+/** Merge next- and previous-section isolation when both neighbors exist (AC67/AC69). */
 export function resolveBacklinkScrollAnchorTop(options: {
   bandTop: number;
   bandBottom: number;
@@ -475,30 +488,43 @@ export function resolveBacklinkScrollAnchorTop(options: {
   nextHeadingTop: number | null;
   previousHeadingTop: number | null;
   headingHeight?: number;
+  /** Demote the previous neighbor on downward hops when constraints conflict (AC69). */
+  preferPreviousIsolation?: boolean;
 }): number {
-  const anchors: number[] = [options.bandTop];
+  const headingHeight = options.headingHeight ?? 28;
+  const bandSpan = options.bandBottom - options.bandTop;
+  let minAnchor = options.bandTop;
+  let maxAnchor = options.bandBottom - headingHeight;
+
   if (options.nextHeadingTop != null) {
-    anchors.push(
-      backlinkScrollAnchorTop({
-        bandTop: options.bandTop,
-        bandBottom: options.bandBottom,
-        headingTop: options.headingTop,
-        nextHeadingTop: options.nextHeadingTop,
-      }),
-    );
+    const gapBelow = options.nextHeadingTop - options.headingTop;
+    if (gapBelow > 0 && gapBelow < bandSpan) {
+      minAnchor = Math.max(minAnchor, options.bandBottom - gapBelow + 4);
+    }
   }
+
   if (options.previousHeadingTop != null) {
-    anchors.push(
-      backlinkScrollAnchorTopWithPrevious({
-        bandTop: options.bandTop,
-        bandBottom: options.bandBottom,
-        headingTop: options.headingTop,
-        previousHeadingTop: options.previousHeadingTop,
-        headingHeight: options.headingHeight,
-      }),
-    );
+    const gapAbove = options.headingTop - options.previousHeadingTop;
+    if (gapAbove > 0 && gapAbove < bandSpan) {
+      maxAnchor = Math.min(
+        maxAnchor,
+        options.bandTop + gapAbove - headingHeight - 1,
+      );
+    }
   }
-  return Math.max(...anchors);
+
+  const preferPrevious =
+    options.preferPreviousIsolation ??
+    (options.previousHeadingTop != null &&
+      (options.nextHeadingTop == null ||
+        options.headingTop - options.previousHeadingTop <=
+          options.nextHeadingTop - options.headingTop));
+
+  if (minAnchor > maxAnchor) {
+    return preferPrevious ? maxAnchor : minAnchor;
+  }
+
+  return preferPrevious ? maxAnchor : minAnchor;
 }
 
 /**
@@ -608,6 +634,7 @@ function scrollHeadingIntoEditorPane(
       nextHeadingTop,
       previousHeadingTop,
       headingHeight,
+      preferPreviousIsolation: previousHeadingTop != null,
     });
     delta = headingTop - anchorTop;
   }
