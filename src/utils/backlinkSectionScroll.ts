@@ -34,7 +34,7 @@ export function scrollToBacklinkSection(
 ): boolean {
   const headingPos = headingDocPosForBacklinkSection(editor, sectionLabel);
   if (headingPos == null) return false;
-  return scrollToTocDocPos(editor, headingPos);
+  return scrollToTocDocPos(editor, headingPos, { anchorHeadingOnly: true });
 }
 
 export const BACKLINK_SECTION_SCROLL_MAX_ATTEMPTS = 30;

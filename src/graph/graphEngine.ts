@@ -6,6 +6,7 @@ import {
   extractPlainTextForGraphSync,
   backlinkContextWithSection,
   disambiguateBacklinkContexts,
+  extractBacklinkContext,
   graphHeadingOffsetsFromJson,
   sectionForWikiLinkAtOffset,
 } from "./linkExtractor";
@@ -44,7 +45,8 @@ function wikiLinkContextWithSection(
     const plainText = extractPlainTextForGraphSync(parsed);
     const headings = graphHeadingOffsetsFromJson(parsed);
     const section = sectionForWikiLinkAtOffset(plainText, position, headings);
-    return backlinkContextWithSection(context, section);
+    const scopedContext = extractBacklinkContext(plainText, position, headings);
+    return backlinkContextWithSection(scopedContext, section);
   } catch {
     return context;
   }
@@ -89,11 +91,16 @@ export const graphEngine = {
       );
 
       if (target) {
+        const scopedContext = extractBacklinkContext(
+          plainText,
+          wikiLink.position,
+          headingRanges,
+        );
         await linkStorage.create(
           noteId,
           target.id,
           "wiki_link",
-          backlinkContextWithSection(wikiLink.context, section),
+          backlinkContextWithSection(scopedContext, section),
           wikiLink.position,
         );
       }

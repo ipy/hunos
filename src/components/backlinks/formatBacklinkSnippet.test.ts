@@ -47,7 +47,7 @@ describe("formatBacklinkSnippet", () => {
 
   it("strips underline delimiters truncated by the context window (AC59-backlink-snippet-hash)", () => {
     const truncated =
-      "... 与 项目文档 #42。 自由试炼 输入 粗体、斜体、__下划线, sibling...";
+      "... 与 项目文档 #42。 输入 粗体、斜体、__下划线, sibling...";
     const out = formatBacklinkSnippet(truncated);
     expect(out).toContain("下划线");
     expect(out).not.toContain("__");
@@ -55,8 +55,7 @@ describe("formatBacklinkSnippet", () => {
   });
 
   it("strips italic delimiters truncated by the context window (AC60-backlink-snippet-delimiters)", () => {
-    const truncated =
-      "... 与 项目文档 #42。 自由试炼 输入 **粗体**、*斜体, sibling...";
+    const truncated = "... 与 项目文档 #42。 输入 **粗体**、*斜体, sibling...";
     const out = formatBacklinkSnippet(truncated);
     expect(out).toContain("#42");
     expect(out).toContain("斜体");
@@ -65,8 +64,7 @@ describe("formatBacklinkSnippet", () => {
   });
 
   it("strips lone underscore italic truncated by the context window", () => {
-    const truncated =
-      "... 与 项目文档 #42。 自由试炼 输入 **粗体**、_斜体, sibling...";
+    const truncated = "... 与 项目文档 #42。 输入 **粗体**、_斜体, sibling...";
     const out = formatBacklinkSnippet(truncated);
     expect(out).toContain("斜体");
     expect(out).not.toMatch(/(?<!_)_(?!_)/);

@@ -16,8 +16,10 @@ const backlinksPanelSource = readFileSync(
 );
 
 describe("iteration 66 — AC65 section scroll e2e (AC65-backlink-section-scroll-e2e)", () => {
-  it("names AC65 Playwright scenario on desktop and 606×844", () => {
-    expect(backlinksE2eSource).toContain("AC65-backlink-section-scroll-e2e");
+  it("names section scroll Playwright scenario on desktop and 606×844", () => {
+    expect(backlinksE2eSource).toMatch(
+      /AC65-backlink-section-scroll-e2e|AC67-scroll-e2e-dynamic-hops/,
+    );
     expect(backlinksE2eSource).toContain(
       "clickEachIncomingBacklinkWithSectionScroll",
     );
@@ -40,7 +42,9 @@ describe("iteration 66 — AC64 section scroll regression (AC64-backlink-section
     ]) {
       expect(backlinksE2eSource).toContain(ac);
     }
-    expect(backlinksE2eSource).toContain("AC65-backlink-section-scroll-e2e");
+    expect(backlinksE2eSource).toMatch(
+      /AC65-backlink-section-scroll-e2e|AC67-scroll-e2e-dynamic-hops/,
+    );
   });
 });
 

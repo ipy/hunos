@@ -8,8 +8,8 @@ import {
 const scrollToTocDocPos = vi.fn((_editor: unknown, _pos: number) => true);
 
 vi.mock("@/utils/tocNavigation", () => ({
-  scrollToTocDocPos: (editor: unknown, pos: number) =>
-    scrollToTocDocPos(editor, pos),
+  scrollToTocDocPos: (editor: unknown, pos: number, options?: unknown) =>
+    scrollToTocDocPos(editor, pos, options),
 }));
 
 function mockEditor(headings: Array<{ title: string; pos: number }>) {
@@ -62,7 +62,9 @@ describe("scrollToBacklinkSection", () => {
     scrollToTocDocPos.mockClear();
     const editor = mockEditor([{ title: "标签与链接", pos: 10 }]);
     expect(scrollToBacklinkSection(editor as never, "标签与链接")).toBe(true);
-    expect(scrollToTocDocPos).toHaveBeenCalledWith(editor, 10);
+    expect(scrollToTocDocPos).toHaveBeenCalledWith(editor, 10, {
+      anchorHeadingOnly: true,
+    });
   });
 });
 

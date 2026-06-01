@@ -139,6 +139,94 @@ export async function expectEditorSectionHeadingVisible(
   ).toBeVisible({ timeout: 15_000 });
 }
 
+/** Primary scroll target intersects the top/center viewport band (AC67). */
+export async function expectEditorSectionHeadingPrimaryScrollTarget(
+  page: Page,
+  primaryHeading: string,
+  options?: { notCoPrimary?: string[] },
+): Promise<void> {
+  const notCoPrimary = options?.notCoPrimary ?? [];
+  const result = await page.evaluate(
+    ({ primaryHeading, notCoPrimary }) => {
+      const scrollPane = document.querySelector(
+        '[data-testid="editor-scroll-pane"]',
+      );
+      if (!(scrollPane instanceof HTMLElement)) {
+        return { error: "missing editor scroll pane" as const };
+      }
+
+      const scrollRect = scrollPane.getBoundingClientRect();
+      let viewportBottom = scrollRect.bottom;
+      const infoPanel = document.querySelector('[data-testid="info-panel"]');
+      if (infoPanel instanceof HTMLElement) {
+        const panelRect = infoPanel.getBoundingClientRect();
+        if (panelRect.top < viewportBottom) {
+          viewportBottom = Math.max(scrollRect.top + 1, panelRect.top);
+        }
+      }
+
+      const bandTop = scrollRect.top + 12;
+      const bandBottom =
+        scrollRect.top + (viewportBottom - scrollRect.top) * 0.55;
+
+      const headingBandScore = (name: string): number | null => {
+        const headings = scrollPane.querySelectorAll("h1,h2,h3,h4,h5,h6");
+        for (const heading of headings) {
+          if (heading.textContent?.trim() !== name) continue;
+          const rect = heading.getBoundingClientRect();
+          const center = (rect.top + rect.bottom) / 2;
+          if (center >= bandTop && center <= bandBottom) return center;
+          if (rect.top >= bandTop && rect.top <= bandBottom) return rect.top;
+        }
+        return null;
+      };
+
+      return {
+        primaryScore: headingBandScore(primaryHeading),
+        coPrimary: notCoPrimary.map((heading) => ({
+          heading,
+          score: headingBandScore(heading),
+        })),
+      };
+    },
+    { primaryHeading, notCoPrimary },
+  );
+
+  expect(result.primaryScore).not.toBeNull();
+  for (const entry of result.coPrimary ?? []) {
+    expect(entry.score).toBeNull();
+  }
+}
+
+/** Snippet bodies stay within their section prefix (AC67). */
+export async function expectBacklinkSnippetSectionBoundaries(
+  page: Page,
+): Promise<void> {
+  const prefixes = await collectIncomingBacklinkPrefixTexts(page);
+  const sectionHeadings = prefixes.map(
+    (prefix) => prefix.split(" · ")[0]?.trim() ?? prefix,
+  );
+
+  for (const rowTestId of await collectIncomingBacklinkRowTestIds(page)) {
+    const linkId = incomingBacklinkLinkId(rowTestId);
+    const prefix = await page
+      .getByTestId(`backlinks-prefix-${linkId}`)
+      .innerText();
+    const snippet = await page
+      .getByTestId(`backlinks-snippet-${linkId}`)
+      .innerText();
+    const sectionHeading = prefix.split(" · ")[0]?.trim() ?? prefix;
+    const separatorIdx = snippet.indexOf("·");
+    const body =
+      separatorIdx >= 0 ? snippet.slice(separatorIdx + 1).trim() : snippet;
+
+    for (const other of sectionHeadings) {
+      if (other === sectionHeading) continue;
+      expect(body).not.toContain(other);
+    }
+  }
+}
+
 /** Click the incoming row whose prefix matches `sectionPrefix`. */
 export async function clickIncomingBacklinkBySectionPrefix(
   page: Page,
@@ -165,22 +253,61 @@ const BACKLINK_SECTION_SCROLL_HOPS = [
   { prefix: "自由试炼", heading: "自由试炼" },
 ] as const;
 
-/** Multi-hop nav with per-hop section scroll proof (AC65-backlink-section-scroll-e2e). */
+/**
+ * Multi-hop nav with per-hop section scroll proof — row test ids and prefixes
+ * are collected dynamically each hop (AC65, AC67-scroll-e2e-dynamic-hops).
+ */
 export async function clickEachIncomingBacklinkWithSectionScroll(
   page: Page,
   expectedNoteTitle: string = FORMAT_PLAYGROUND_TITLE,
 ): Promise<void> {
-  for (const hop of BACKLINK_SECTION_SCROLL_HOPS) {
+  const visitedSections = new Set<string>();
+
+  while (visitedSections.size < BACKLINK_SECTION_SCROLL_HOPS.length) {
     await openProjectDocsWithBacklinksPanel(page);
     await expandBacklinksPanelIfCollapsed(page);
-    await clickIncomingBacklinkBySectionPrefix(page, hop.prefix);
-    await expect(page.getByTestId("note-title")).toHaveValue(
-      expectedNoteTitle,
-      {
-        timeout: 15_000,
-      },
+
+    const rowTestIds = await collectIncomingBacklinkRowTestIds(page);
+    const allSections = await Promise.all(
+      rowTestIds.map(async (rowTestId) => {
+        const linkId = incomingBacklinkLinkId(rowTestId);
+        const prefix = await page
+          .getByTestId(`backlinks-prefix-${linkId}`)
+          .innerText();
+        return prefix.split(" · ")[0]?.trim() ?? prefix;
+      }),
     );
-    await expectEditorSectionHeadingVisible(page, hop.heading);
+
+    let clicked = false;
+    for (const rowTestId of rowTestIds) {
+      const linkId = incomingBacklinkLinkId(rowTestId);
+      const prefix = await page
+        .getByTestId(`backlinks-prefix-${linkId}`)
+        .innerText();
+      const sectionHeading = prefix.split(" · ")[0]?.trim() ?? prefix;
+      if (visitedSections.has(sectionHeading)) continue;
+
+      visitedSections.add(sectionHeading);
+      await page.getByTestId(rowTestId).click();
+      await expect(page.getByTestId("note-title")).toHaveValue(
+        expectedNoteTitle,
+        { timeout: 15_000 },
+      );
+      await expectEditorSectionHeadingVisible(page, sectionHeading);
+      await expectEditorSectionHeadingPrimaryScrollTarget(
+        page,
+        sectionHeading,
+        {
+          notCoPrimary: allSections.filter(
+            (section) => section !== sectionHeading,
+          ),
+        },
+      );
+      clicked = true;
+      break;
+    }
+
+    expect(clicked).toBe(true);
   }
 }
 

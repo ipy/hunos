@@ -404,6 +404,7 @@ function scrollHeadingIntoEditorPane(
   editor: Editor,
   headingDocPos: number,
   contentDocPos: number,
+  options?: { anchorHeadingOnly?: boolean },
 ): number | null {
   const view = editor.view;
   if (!view) return null;
@@ -419,9 +420,11 @@ function scrollHeadingIntoEditorPane(
     : view.coordsAtPos(contentDocPos).top;
 
   const followEl = headingEl?.nextElementSibling as HTMLElement | null;
-  const followBlockBottom = followEl
-    ? followEl.getBoundingClientRect().bottom
-    : followBlockBottomAtPos(view, headingDocPos);
+  const followBlockBottom = options?.anchorHeadingOnly
+    ? null
+    : followEl
+      ? followEl.getBoundingClientRect().bottom
+      : followBlockBottomAtPos(view, headingDocPos);
 
   const paddingTop = TOC_SCROLL_TOP_PADDING_PX;
   const paddingBottom = TOC_SCROLL_BOTTOM_PADDING_PX;
@@ -450,10 +453,16 @@ function scrollHeadingIntoEditorPane(
   return targetScrollTop;
 }
 
+export interface TocScrollOptions {
+  /** Anchor heading at pane top only — skip follow-block reveal (backlink hops). */
+  anchorHeadingOnly?: boolean;
+}
+
 /** Scroll editor to a heading at the given document position. */
 export function scrollToTocDocPos(
   editor: Editor,
   headingDocPos: number,
+  options?: TocScrollOptions,
 ): boolean {
   const contentPos = headingDocPos + 1;
 
@@ -464,7 +473,7 @@ export function scrollToTocDocPos(
     .run();
 
   const applyScroll = (): number | null =>
-    scrollHeadingIntoEditorPane(editor, headingDocPos, contentPos);
+    scrollHeadingIntoEditorPane(editor, headingDocPos, contentPos, options);
 
   const scrollEl = editor.view
     ? findEditorScrollContainer(editor.view.dom)

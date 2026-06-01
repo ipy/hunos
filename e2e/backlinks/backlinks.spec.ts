@@ -12,6 +12,7 @@ import {
   collectIncomingBacklinkRowTestIds,
   expandBacklinksPanelIfCollapsed,
   expectBacklinkNavigationHash,
+  expectBacklinkSnippetSectionBoundaries,
   incomingBacklinkTargetNoteId,
   openProjectDocsWithBacklinksPanel,
   resolveFormatPlaygroundNoteId,
@@ -339,12 +340,34 @@ test.describe("backlinks footer — iter 61", () => {
     }
   });
 
+  test.describe("iter 67 — section scroll and snippet bounds", () => {
+    for (const { label, viewport } of BACKLINKS_VIEWPORTS) {
+      test.describe(label, () => {
+        test.use({ viewport });
+
+        test("AC67-backlink-scroll-single-target: each hop anchors one section heading in the viewport band", async ({
+          page,
+        }) => {
+          await clickEachIncomingBacklinkWithSectionScroll(page);
+        });
+
+        test("AC67-backlink-snippet-section-bound: snippet bodies exclude neighboring section text", async ({
+          page,
+        }) => {
+          await openProjectDocsWithBacklinksPanel(page);
+          await expandBacklinksPanelIfCollapsed(page);
+          await expectBacklinkSnippetSectionBoundaries(page);
+        });
+      });
+    }
+  });
+
   test.describe("iter 66 — section scroll e2e", () => {
     for (const { label, viewport } of BACKLINKS_VIEWPORTS) {
       test.describe(label, () => {
         test.use({ viewport });
 
-        test("AC65-backlink-section-scroll-e2e: each incoming row scrolls to its section heading", async ({
+        test("AC67-scroll-e2e-dynamic-hops: scroll proof iterates collectIncomingBacklinkRowTestIds per hop", async ({
           page,
         }) => {
           await clickEachIncomingBacklinkWithSectionScroll(page);

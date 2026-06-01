@@ -6,8 +6,11 @@ import {
   sectionHeadingAtOffset,
   trailingSectionAfterWikiLink,
   disambiguateBacklinkContexts,
+  extractBacklinkContext,
+  backlinkContextWithSection,
 } from "./linkExtractor";
 import { buildPlaygroundContent } from "@/storage/formatPlaygroundNote";
+import { splitBacklinkSnippetParts } from "@/components/backlinks/formatBacklinkSnippet";
 
 describe("graphPlainText heading offsets", () => {
   it("aligns stored heading offsets with plain text positions", () => {
@@ -29,7 +32,13 @@ describe("trailingSectionAfterWikiLink", () => {
       { offset: 0, title: "标签与链接" },
       { offset: 40, title: "自由试炼" },
     ];
-    expect(trailingSectionAfterWikiLink(plain, plain.indexOf("[[项目文档]]"), headings)).toBeNull();
+    expect(
+      trailingSectionAfterWikiLink(
+        plain,
+        plain.indexOf("[[项目文档]]"),
+        headings,
+      ),
+    ).toBeNull();
   });
 
   it("returns the next-line section when the link tail is not followed by another link", () => {
@@ -62,6 +71,31 @@ describe("sectionForWikiLinkAtOffset", () => {
     expect(sectionForWikiLinkAtOffset(plain, second, headings)).toBe(
       "自由试炼",
     );
+  });
+});
+
+describe("extractBacklinkContext", () => {
+  it("keeps snippet bodies within attributed section bounds for playground links", () => {
+    const content = buildPlaygroundContent("zh");
+    const plain = extractPlainTextForGraphSync(content);
+    const headings = graphHeadingOffsetsFromJson(content);
+    const first = plain.indexOf("[[项目文档]]");
+    const second = plain.lastIndexOf("[[项目文档]]");
+
+    const tagsCtx = backlinkContextWithSection(
+      extractBacklinkContext(plain, first, headings),
+      sectionForWikiLinkAtOffset(plain, first, headings),
+    );
+    const tryCtx = backlinkContextWithSection(
+      extractBacklinkContext(plain, second, headings),
+      sectionForWikiLinkAtOffset(plain, second, headings),
+    );
+
+    const tagsBody = splitBacklinkSnippetParts(tagsCtx).body;
+    const tryBody = splitBacklinkSnippetParts(tryCtx).body;
+
+    expect(tagsBody).not.toContain("自由试炼");
+    expect(tryBody).not.toContain("标签与链接");
   });
 });
 

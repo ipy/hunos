@@ -160,13 +160,60 @@ function extractContext(
   text: string,
   position: number,
   radius: number = 50,
+  bounds?: { start: number; end: number },
 ): string {
-  const start = Math.max(0, position - radius);
-  const end = Math.min(text.length, position + radius);
+  let start = Math.max(0, position - radius);
+  let end = Math.min(text.length, position + radius);
+  if (bounds) {
+    start = Math.max(start, bounds.start);
+    end = Math.min(end, bounds.end);
+  }
   let ctx = text.slice(start, end).trim();
   if (start > 0) ctx = "..." + ctx;
   if (end < text.length) ctx = ctx + "...";
   return ctx;
+}
+
+/** Plain-text slice for one section heading (exclusive of the next heading). */
+export function sectionTextBounds(
+  headings: GraphHeadingAtOffset[],
+  sectionTitle: string | null,
+  plainTextLength: number,
+): { start: number; end: number } | null {
+  if (!sectionTitle) return null;
+  const idx = headings.findIndex((h) => h.title === sectionTitle);
+  if (idx === -1) return null;
+  return {
+    start: headings[idx]!.offset,
+    end: headings[idx + 1]?.offset ?? plainTextLength,
+  };
+}
+
+/**
+ * Backlink snippet context clamped to the attributed section — trailing-section
+ * links sample from their target heading onward; others stay within section bounds.
+ */
+export function extractBacklinkContext(
+  text: string,
+  position: number,
+  headings: GraphHeadingAtOffset[],
+  radius: number = 50,
+): string {
+  const section = sectionForWikiLinkAtOffset(text, position, headings);
+  const trailing = trailingSectionAfterWikiLink(text, position, headings);
+
+  if (trailing && section === trailing) {
+    const bounds = sectionTextBounds(headings, section, text.length);
+    if (bounds) {
+      const sliceEnd = Math.min(bounds.start + radius * 2, bounds.end);
+      let ctx = text.slice(bounds.start, sliceEnd).trim();
+      if (sliceEnd < bounds.end) ctx = `${ctx}...`;
+      return ctx;
+    }
+  }
+
+  const bounds = sectionTextBounds(headings, section, text.length);
+  return extractContext(text, position, radius, bounds ?? undefined);
 }
 
 export function extractFromPlainText(text: string): ExtractionResult {
