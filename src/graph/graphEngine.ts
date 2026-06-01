@@ -5,6 +5,7 @@ import {
   extractFromPlainText,
   extractPlainTextForGraphSync,
   backlinkContextWithSection,
+  disambiguateBacklinkContexts,
   graphHeadingOffsetsFromJson,
   sectionForWikiLinkAtOffset,
 } from "./linkExtractor";
@@ -152,7 +153,18 @@ export const graphEngine = {
       }
     }
 
-    return dedupeBacklinkResults(results);
+    const disambiguated = disambiguateBacklinkContexts(
+      results.map((row) => ({
+        context: row.context,
+        noteTitle: row.noteTitle,
+      })),
+    );
+    return dedupeBacklinkResults(
+      results.map((row, index) => ({
+        ...row,
+        context: disambiguated[index] ?? row.context,
+      })),
+    );
   },
 
   async getOutgoingLinks(noteId: string): Promise<BacklinkResult[]> {

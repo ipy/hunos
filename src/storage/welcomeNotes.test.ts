@@ -3,15 +3,32 @@ import type { Locale } from "@/types/settings";
 
 const noteStorageCreate = vi.fn();
 const noteStorageUpdate = vi.fn();
+const noteStorageList = vi.fn();
+const noteStorageDelete = vi.fn();
 const notesToArray = vi.fn();
 const notesWhereEquals = vi.fn();
 const graphSync = vi.fn();
 const createFormatPlaygroundNote = vi.fn();
+const repointIncomingTarget = vi.fn();
+const deleteBySource = vi.fn();
+const dedupeIncomingWikiLinks = vi.fn();
 
 vi.mock("./noteStorage", () => ({
   noteStorage: {
     create: (...args: unknown[]) => noteStorageCreate(...args),
     update: (...args: unknown[]) => noteStorageUpdate(...args),
+    list: (...args: unknown[]) => noteStorageList(...args),
+    delete: (...args: unknown[]) => noteStorageDelete(...args),
+  },
+}));
+
+vi.mock("./linkStorage", () => ({
+  linkStorage: {
+    repointIncomingTarget: (...args: unknown[]) =>
+      repointIncomingTarget(...args),
+    deleteBySource: (...args: unknown[]) => deleteBySource(...args),
+    dedupeIncomingWikiLinks: (...args: unknown[]) =>
+      dedupeIncomingWikiLinks(...args),
   },
 }));
 
@@ -92,12 +109,22 @@ describe("createWelcomeNotesIfNeeded", () => {
   beforeEach(() => {
     noteStorageCreate.mockReset();
     noteStorageUpdate.mockReset();
+    noteStorageList.mockReset();
+    noteStorageDelete.mockReset();
     notesToArray.mockReset();
     notesWhereEquals.mockReset();
     graphSync.mockReset();
     createFormatPlaygroundNote.mockReset();
+    repointIncomingTarget.mockReset();
+    deleteBySource.mockReset();
+    dedupeIncomingWikiLinks.mockReset();
     notesToArray.mockResolvedValue([]);
     notesWhereEquals.mockResolvedValue(undefined);
+    noteStorageList.mockResolvedValue([]);
+    repointIncomingTarget.mockResolvedValue(undefined);
+    deleteBySource.mockResolvedValue(undefined);
+    dedupeIncomingWikiLinks.mockResolvedValue(undefined);
+    noteStorageDelete.mockResolvedValue(undefined);
     noteStorageCreate.mockImplementation(
       async (payload: { title: string }) => ({
         id: "note-1",
@@ -227,7 +254,8 @@ describe("createWelcomeNotesIfNeeded", () => {
   });
 
   it("skips welcome creation when a welcome title already exists", async () => {
-    const { getWelcomeSeed, getProjectDocsSeed } = await import("./welcomeNotes");
+    const { getWelcomeSeed, getProjectDocsSeed } =
+      await import("./welcomeNotes");
     const seed = getWelcomeSeed("en");
     const projectDocs = getProjectDocsSeed("en");
     notesWhereEquals.mockImplementation(async (title: string) => {

@@ -93,6 +93,62 @@ export function backlinkContextWithSection(
   return `${prefix}${context}`;
 }
 
+/** Leading section label before the first context separator, if any. */
+export function backlinkPrefixFromContext(context: string): string {
+  const sep = context.indexOf(BACKLINK_SECTION_SEP);
+  if (sep === -1) return context;
+  return context.slice(0, sep);
+}
+
+/**
+ * When multiple rows share the same section prefix, append source title or an
+ * occurrence hint so snippet prefixes stay pairwise distinct.
+ */
+export function disambiguateBacklinkContexts(
+  rows: Array<{ context: string; noteTitle: string }>,
+): string[] {
+  const prefixes = rows.map((row) => backlinkPrefixFromContext(row.context));
+  const prefixGroups = new Map<string, number[]>();
+  prefixes.forEach((prefix, index) => {
+    const group = prefixGroups.get(prefix) ?? [];
+    group.push(index);
+    prefixGroups.set(prefix, group);
+  });
+
+  const collidingPrefixes = new Set(
+    [...prefixGroups.entries()]
+      .filter(([, indexes]) => indexes.length > 1)
+      .map(([prefix]) => prefix),
+  );
+  if (collidingPrefixes.size === 0) {
+    return rows.map((row) => row.context);
+  }
+
+  return rows.map((row, index) => {
+    const prefix = prefixes[index]!;
+    if (!collidingPrefixes.has(prefix)) return row.context;
+
+    const groupIndexes = prefixGroups.get(prefix)!;
+    const idxInGroup = groupIndexes.indexOf(index);
+    const sourceTitles = new Set(
+      groupIndexes.map((groupIndex) => rows[groupIndex]!.noteTitle.trim()),
+    );
+    const hint =
+      sourceTitles.size > 1
+        ? row.noteTitle.trim() || `link ${idxInGroup + 1}`
+        : `#${idxInGroup + 1}`;
+    const disambiguatedPrefix = `${prefix}${BACKLINK_SECTION_SEP}${hint}`;
+
+    if (row.context.startsWith(`${prefix}${BACKLINK_SECTION_SEP}`)) {
+      const rest = row.context.slice(
+        prefix.length + BACKLINK_SECTION_SEP.length,
+      );
+      return `${disambiguatedPrefix}${BACKLINK_SECTION_SEP}${rest}`;
+    }
+    return `${disambiguatedPrefix}${BACKLINK_SECTION_SEP}${row.context}`;
+  });
+}
+
 function extractContext(
   text: string,
   position: number,

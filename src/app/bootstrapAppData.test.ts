@@ -4,6 +4,7 @@ const createWelcomeNotesIfNeeded = vi.fn().mockResolvedValue(undefined);
 const flushEditorAutosave = vi.fn().mockResolvedValue(null);
 const clearStashedEditorAutosave = vi.fn();
 const syncFormatPlaygroundOnLocaleChange = vi.fn().mockResolvedValue(undefined);
+const reconcileBootstrapGraph = vi.fn().mockResolvedValue(undefined);
 const reconcileBootstrapTags = vi.fn().mockResolvedValue(undefined);
 const loadNotes = vi.fn().mockResolvedValue(undefined);
 const loadTags = vi.fn();
@@ -29,6 +30,11 @@ vi.mock("@/store/editorAutosaveRegistry", () => ({
 vi.mock("@/storage/formatPlaygroundNote", () => ({
   syncFormatPlaygroundOnLocaleChange: (...args: unknown[]) =>
     syncFormatPlaygroundOnLocaleChange(...args),
+}));
+
+vi.mock("@/storage/bootstrapGraphHygiene", () => ({
+  reconcileBootstrapGraph: (...args: unknown[]) =>
+    reconcileBootstrapGraph(...args),
 }));
 
 vi.mock("@/storage/bootstrapTagReconcile", () => ({
@@ -61,6 +67,7 @@ describe("bootstrapAppData", () => {
     clearStashedEditorAutosave.mockClear();
     recoverPendingUnloadBackup.mockClear();
     syncFormatPlaygroundOnLocaleChange.mockClear();
+    reconcileBootstrapGraph.mockClear();
     reconcileBootstrapTags.mockClear();
     loadNotes.mockClear();
     loadTags.mockClear();
@@ -73,6 +80,9 @@ describe("bootstrapAppData", () => {
 
     createWelcomeNotesIfNeeded.mockImplementation(async () => {
       order.push("seed");
+    });
+    reconcileBootstrapGraph.mockImplementation(async () => {
+      order.push("reconcileGraph");
     });
     loadNotes.mockImplementation(async () => {
       order.push("loadNotes");
@@ -111,10 +121,12 @@ describe("bootstrapAppData", () => {
       },
     );
     expect(clearStashedEditorAutosave).toHaveBeenCalled();
+    expect(reconcileBootstrapGraph).toHaveBeenCalledWith("zh");
     expect(reconcileBootstrapTags).toHaveBeenCalledWith("zh");
     expect(loadTags).toHaveBeenCalled();
     expect(order).toEqual([
       "seed",
+      "reconcileGraph",
       "loadNotes",
       "recoverBackup",
       "flush",

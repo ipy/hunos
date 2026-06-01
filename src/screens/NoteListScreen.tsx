@@ -6,6 +6,7 @@ import { useSettingsStore } from "@/store/settingsStore";
 import { useUIStore } from "@/store/uiStore";
 import { useTagStore } from "@/store/tagStore";
 import { filterNotesForPlaygroundList } from "@/storage/formatPlaygroundNote";
+import { filterNotesForProjectDocsList } from "@/storage/welcomeNotes";
 import { activePinnedNotesDuringSearch } from "@/storage/noteSearchRank";
 import {
   deriveNoteListPreview,
@@ -327,13 +328,22 @@ export function NoteListScreen({ layout = "mobile" }: NoteListScreenProps) {
   const title = activeTag
     ? `#${activeTag.displayName}`
     : t("tags.sections.allNotes");
-  const allListNotes = filterNotesForPlaygroundList(notes, locale);
+  const allListNotes = filterNotesForProjectDocsList(
+    filterNotesForPlaygroundList(notes, locale),
+    locale,
+  );
   const searchHitNotes = searchQuery
-    ? filterNotesForPlaygroundList(searchResults, locale)
+    ? filterNotesForProjectDocsList(
+        filterNotesForPlaygroundList(searchResults, locale),
+        locale,
+      )
     : [];
   const pinnedNotes = searchQuery
-    ? filterNotesForPlaygroundList(
-        activePinnedNotesDuringSearch(notes, { activeNoteId }),
+    ? filterNotesForProjectDocsList(
+        filterNotesForPlaygroundList(
+          activePinnedNotesDuringSearch(notes, { activeNoteId }),
+          locale,
+        ),
         locale,
       )
     : allListNotes.filter((n) => n.isPinned);

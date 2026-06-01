@@ -186,8 +186,26 @@ export const noteStorage = {
     const active = await db.notes
       .filter((note) => note.status === "active")
       .toArray();
-    const match = active.find((note) => note.title.toLowerCase() === lower);
-    return match ? hydrateNoteFromDb(match) : undefined;
+    const matches = active.filter(
+      (note) => note.title.toLowerCase() === lower,
+    );
+    if (matches.length === 0) return undefined;
+    if (matches.length === 1) {
+      return hydrateNoteFromDb(matches[0]!);
+    }
+
+    if (
+      (await import("./welcomeNotes")).PROJECT_DOCS_NOTE_TITLES.some(
+        (seedTitle) => seedTitle.toLowerCase() === lower,
+      )
+    ) {
+      const { pickProjectDocsNote } = await import("./welcomeNotes");
+      const locale = trimmed === "项目文档" ? "zh" : "en";
+      const picked = pickProjectDocsNote(matches, locale);
+      return hydrateNoteFromDb(picked ?? matches[0]!);
+    }
+
+    return hydrateNoteFromDb(matches[0]!);
   },
 
   async search(query: string): Promise<Note[]> {

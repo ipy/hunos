@@ -1,5 +1,6 @@
 import type { Locale } from "@/types/settings";
 import { reconcileBootstrapTags } from "@/storage/bootstrapTagReconcile";
+import { reconcileBootstrapGraph } from "@/storage/bootstrapGraphHygiene";
 import { createWelcomeNotesIfNeeded } from "@/storage/welcomeNotes";
 import { syncFormatPlaygroundOnLocaleChange } from "@/storage/formatPlaygroundNote";
 import {
@@ -17,6 +18,7 @@ const TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 /** Seed notes, hydrate stores, reconcile playground locale, then load tags before first paint. */
 export async function bootstrapAppData(locale: Locale): Promise<void> {
   await createWelcomeNotesIfNeeded(locale);
+  await reconcileBootstrapGraph(locale);
   await useNoteStore.getState().loadNotes({ status: "active" });
   await hydrateActiveNoteFromLocationHash();
   await recoverPendingUnloadBackup();

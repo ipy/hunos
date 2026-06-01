@@ -5,6 +5,7 @@ import {
   sectionForWikiLinkAtOffset,
   sectionHeadingAtOffset,
   trailingSectionAfterWikiLink,
+  disambiguateBacklinkContexts,
 } from "./linkExtractor";
 import { buildPlaygroundContent } from "@/storage/formatPlaygroundNote";
 
@@ -61,5 +62,38 @@ describe("sectionForWikiLinkAtOffset", () => {
     expect(sectionForWikiLinkAtOffset(plain, second, headings)).toBe(
       "自由试炼",
     );
+  });
+});
+
+describe("disambiguateBacklinkContexts", () => {
+  it("leaves distinct section prefixes unchanged", () => {
+    const rows = [
+      {
+        context: "标签与链接 · ... ctx ...",
+        noteTitle: "格式试炼场",
+      },
+      {
+        context: "自由试炼 · ... ctx ...",
+        noteTitle: "格式试炼场",
+      },
+    ];
+    expect(disambiguateBacklinkContexts(rows)).toEqual(
+      rows.map((row) => row.context),
+    );
+  });
+
+  it("adds source title hints for colliding section prefixes", () => {
+    const [first, second] = disambiguateBacklinkContexts([
+      {
+        context: "自由试炼 · ... a ...",
+        noteTitle: "格式试炼场",
+      },
+      {
+        context: "自由试炼 · ... b ...",
+        noteTitle: "Other",
+      },
+    ]);
+    expect(first).toMatch(/^自由试炼 · 格式试炼场 ·/);
+    expect(second).toMatch(/^自由试炼 · Other ·/);
   });
 });

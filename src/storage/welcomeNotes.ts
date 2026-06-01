@@ -2,6 +2,8 @@ import type { Locale } from "@/types/settings";
 import { noteStorage } from "./noteStorage";
 import { db } from "./database";
 import { graphEngine } from "@/graph/graphEngine";
+import { linkStorage } from "./linkStorage";
+import { extractPlainTextFromTiptap } from "@/graph/linkExtractor";
 import {
   createFormatPlaygroundNote,
   getFormatPlaygroundTitle,
@@ -14,6 +16,150 @@ export const WELCOME_NOTE_TITLES = [
 ] as const;
 
 export const PROJECT_DOCS_NOTE_TITLES = ["project docs", "项目文档"] as const;
+
+export type ProjectDocsPickCandidate = {
+  id: string;
+  title: string;
+  content: string;
+  contentPlain?: string;
+  isPinned?: boolean;
+  createdAt?: number;
+};
+
+export function matchesProjectDocsSeedContent(
+  content: string,
+  locale: Locale,
+): boolean {
+  const seed = getProjectDocsSeed(locale);
+  if (content === JSON.stringify(seed.content)) return true;
+  try {
+    return extractPlainTextFromTiptap(JSON.parse(content)) === seed.contentPlain;
+  } catch {
+    return false;
+  }
+}
+
+export function isProjectDocsNote(
+  title: string,
+  content?: string,
+  contentPlain?: string,
+): boolean {
+  if (contentPlain) {
+    for (const seedLocale of ["en", "zh"] as const) {
+      if (contentPlain === getProjectDocsSeed(seedLocale).contentPlain) {
+        return true;
+      }
+    }
+  }
+  if (content) {
+    return (
+      matchesProjectDocsSeedContent(content, "en") ||
+      matchesProjectDocsSeedContent(content, "zh")
+    );
+  }
+  return PROJECT_DOCS_NOTE_TITLES.includes(
+    title as (typeof PROJECT_DOCS_NOTE_TITLES)[number],
+  );
+}
+
+function compareProjectDocsPickCandidates(
+  a: ProjectDocsPickCandidate,
+  b: ProjectDocsPickCandidate,
+  locale: Locale,
+): number {
+  const expectedTitle = getProjectDocsSeed(locale).title;
+  const score = (note: ProjectDocsPickCandidate) =>
+    [
+      note.title === expectedTitle ? 1 : 0,
+      matchesProjectDocsSeedContent(note.content, locale) ? 1 : 0,
+      note.isPinned ? 1 : 0,
+      -(note.createdAt ?? 0),
+    ] as const;
+
+  const sa = score(a);
+  const sb = score(b);
+  for (let i = 0; i < sa.length; i += 1) {
+    if (sa[i] !== sb[i]) return sa[i]! - sb[i]!;
+  }
+  return a.id.localeCompare(b.id);
+}
+
+/** Pick the canonical project-docs seed when duplicate rows exist. */
+export function pickProjectDocsNote<T extends ProjectDocsPickCandidate>(
+  candidates: T[],
+  locale: Locale,
+): T | undefined {
+  const matches = candidates.filter((note) =>
+    isProjectDocsNote(note.title, note.content, note.contentPlain),
+  );
+  if (matches.length === 0) return undefined;
+  if (matches.length === 1) return matches[0];
+  return [...matches].sort((a, b) =>
+    compareProjectDocsPickCandidates(b, a, locale),
+  )[0];
+}
+
+/** Hide duplicate canonical-title project-docs cards; renamed copies stay visible. */
+export function filterNotesForProjectDocsList<T extends ProjectDocsPickCandidate>(
+  notes: T[],
+  locale: Locale,
+): T[] {
+  const canonicalCandidates = notes.filter(
+    (note) =>
+      PROJECT_DOCS_NOTE_TITLES.includes(
+        note.title as (typeof PROJECT_DOCS_NOTE_TITLES)[number],
+      ) && isProjectDocsNote(note.title, note.content, note.contentPlain),
+  );
+  const canonical = pickProjectDocsNote(canonicalCandidates, locale);
+  if (!canonical) return notes;
+
+  return notes.filter((note) => {
+    if (!PROJECT_DOCS_NOTE_TITLES.includes(
+      note.title as (typeof PROJECT_DOCS_NOTE_TITLES)[number],
+    )) {
+      return true;
+    }
+    if (!isProjectDocsNote(note.title, note.content, note.contentPlain)) {
+      return true;
+    }
+    return note.id === canonical.id;
+  });
+}
+
+/** Merge duplicate project-docs rows and repoint wiki links to the canonical target. */
+export async function consolidateProjectDocsNotes(
+  locale: Locale,
+): Promise<string | null> {
+  const notes = await noteStorage.list({ status: "active" });
+  const candidates = notes.filter((note) =>
+    isProjectDocsNote(note.title, note.content, note.contentPlain),
+  );
+  if (candidates.length === 0) return null;
+
+  const canonical = pickProjectDocsNote(candidates, locale);
+  if (!canonical) return null;
+
+  const { title, content, contentPlain } = getProjectDocsSeed(locale);
+  const contentStr = JSON.stringify(content);
+  if (canonical.content !== contentStr || canonical.title !== title) {
+    await noteStorage.update(canonical.id, {
+      title,
+      content: contentStr,
+      contentPlain,
+    });
+    await graphEngine.syncNoteLinks(canonical.id, contentStr);
+  }
+
+  for (const duplicate of candidates) {
+    if (duplicate.id === canonical.id) continue;
+    await linkStorage.repointIncomingTarget(duplicate.id, canonical.id);
+    await linkStorage.deleteBySource(duplicate.id);
+    await noteStorage.delete(duplicate.id);
+  }
+
+  await linkStorage.dedupeIncomingWikiLinks(canonical.id);
+  return canonical.id;
+}
 
 export type WelcomeSeedLocale = "en" | "zh";
 
@@ -385,6 +531,7 @@ async function runBootstrapSeed(locale: Locale): Promise<void> {
   await ensureWelcomeNote(locale);
   await ensureProjectDocsNote(locale);
   await ensureFormatPlaygroundNote(locale);
+  await consolidateProjectDocsNotes(locale);
 }
 
 /** Idempotent first-run seed keyed by bootstrap locale (welcome + format playground). */

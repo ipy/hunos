@@ -6,6 +6,7 @@ import { useUIStore } from "@/store/uiStore";
 import { useNoteStore } from "@/store/noteStore";
 import { useSettingsStore } from "@/store/settingsStore";
 import { filterNotesForPlaygroundList } from "@/storage/formatPlaygroundNote";
+import { filterNotesForProjectDocsList } from "@/storage/welcomeNotes";
 import type { Note } from "@/types/note";
 
 export const EDITOR_NOTE_SEARCH_TESTID = "editor-note-search";
@@ -37,7 +38,10 @@ export function EditorNoteSearch({ onClose }: EditorNoteSearchProps) {
   const [localQuery, setLocalQuery] = useState(searchQuery);
 
   const resultNotes = localQuery.trim()
-    ? filterNotesForPlaygroundList(searchResults, locale)
+    ? filterNotesForProjectDocsList(
+        filterNotesForPlaygroundList(searchResults, locale),
+        locale,
+      )
     : [];
 
   const handleClose = useCallback(() => {
