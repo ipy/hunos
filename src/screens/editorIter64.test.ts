@@ -8,10 +8,6 @@ import {
   disambiguateBacklinkContexts,
 } from "@/graph/linkExtractor";
 import { graphEngine, stableBacklinkLinkId } from "@/graph/graphEngine";
-import {
-  backlinksPrefixSeparatorTestId,
-  backlinksPrefixTestId,
-} from "@/components/backlinks/BacklinksPanel";
 import { splitBacklinkSnippetParts } from "@/components/backlinks/formatBacklinkSnippet";
 import { getBootstrapPlaygroundSeedContent } from "@/storage/bootstrapTagSeeds";
 import { getProjectDocsSeed } from "@/storage/welcomeNotes";
@@ -19,14 +15,6 @@ import { getProjectDocsSeed } from "@/storage/welcomeNotes";
 const notesById = new Map<string, Note>();
 const linksByTarget = new Map<string, Link[]>();
 
-const backlinksPanelSource = readFileSync(
-  join(process.cwd(), "src/components/backlinks/BacklinksPanel.tsx"),
-  "utf8",
-);
-const editorScreenSource = readFileSync(
-  join(process.cwd(), "src/screens/EditorScreen.tsx"),
-  "utf8",
-);
 const bootstrapHygieneSource = readFileSync(
   join(process.cwd(), "src/storage/bootstrapGraphHygiene.ts"),
   "utf8",
@@ -231,14 +219,6 @@ describe("iteration 64 — prefix uniqueness (AC64-backlink-prefix-unique-runtim
     expect(prefixes.join(" ")).toMatch(/标签与链接/);
     expect(prefixes.join(" ")).toMatch(/自由试炼/);
   });
-
-  it("exports backlinks-prefix-* test ids for runtime reads", () => {
-    expect(backlinksPrefixTestId("abc")).toBe("backlinks-prefix-abc");
-    expect(backlinksPanelSource).toContain("backlinksPrefixTestId");
-    expect(backlinksPanelSource).toContain(
-      "data-testid={backlinksPrefixTestId",
-    );
-  });
 });
 
 describe("iteration 64 — prefix visual separator (AC64-prefix-visual-separator)", () => {
@@ -249,22 +229,5 @@ describe("iteration 64 — prefix visual separator (AC64-prefix-visual-separator
     expect(parts.prefix).toBe("标签与链接");
     expect(parts.body).toMatch(/项目文档/);
     expect(parts.body).not.toMatch(/^标签与链接/);
-  });
-
-  it("renders a dedicated separator test id between prefix and body", () => {
-    expect(backlinksPrefixSeparatorTestId("abc")).toBe(
-      "backlinks-prefix-separator-abc",
-    );
-    expect(backlinksPanelSource).toContain("backlinksPrefixSeparatorTestId");
-  });
-});
-
-describe("iteration 64 — section-aware navigation", () => {
-  it("wires backlink navigation to section scroll in the editor screen", () => {
-    expect(editorScreenSource).toContain(
-      "onNavigateToNote={handleBacklinkNavigate}",
-    );
-    expect(editorScreenSource).toContain("scrollToBacklinkSection");
-    expect(editorScreenSource).toContain("pendingBacklinkSectionRef");
   });
 });

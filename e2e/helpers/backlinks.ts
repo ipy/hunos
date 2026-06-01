@@ -95,6 +95,25 @@ export async function collectIncomingBacklinkRowTestIds(
   return testIds.filter((id): id is string => id != null);
 }
 
+function incomingBacklinkLinkId(rowTestId: string): string {
+  return rowTestId.replace(/^backlinks-item-/, "");
+}
+
+/** Collect visible prefix labels from backlinks-prefix-* test ids (AC64). */
+export async function collectIncomingBacklinkPrefixTexts(
+  page: Page,
+): Promise<string[]> {
+  const rowTestIds = await collectIncomingBacklinkRowTestIds(page);
+  const prefixes: string[] = [];
+  for (const rowTestId of rowTestIds) {
+    const linkId = incomingBacklinkLinkId(rowTestId);
+    const prefix = page.getByTestId(`backlinks-prefix-${linkId}`);
+    await expect(prefix).toBeVisible();
+    prefixes.push(await prefix.innerText());
+  }
+  return prefixes;
+}
+
 /**
  * Multi-hop backlink nav — re-collects row test ids after each return when needed;
  * stable source+position keys keep ids identical across graph reloads (AC60).

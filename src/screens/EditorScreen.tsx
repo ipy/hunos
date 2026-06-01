@@ -96,7 +96,10 @@ import {
   isDebouncedAutosaveStillCurrent,
   resolveEditorAutosaveContentJson,
 } from "@/screens/editorAutosaveEffectCleanup";
-import { scrollToBacklinkSection } from "@/utils/backlinkSectionScroll";
+import {
+  scheduleBacklinkSectionScroll,
+  scrollToBacklinkSection,
+} from "@/utils/backlinkSectionScroll";
 import type { PersistNoteOptions } from "@/screens/editorNotePersistence";
 
 declare const __HUNOS_E2E__: boolean | undefined;
@@ -261,22 +264,19 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     const pending = pendingBacklinkSectionRef.current;
     if (!pending || !editorInstance || note?.id !== pending.noteId) return;
 
-    const tryScroll = () =>
-      scrollToBacklinkSection(editorInstance, pending.section);
-
-    if (tryScroll()) {
-      pendingBacklinkSectionRef.current = null;
-      return;
-    }
-
-    let raf = 0;
-    raf = requestAnimationFrame(() => {
-      if (tryScroll()) {
+    const section = pending.section;
+    return scheduleBacklinkSectionScroll(
+      () => scrollToBacklinkSection(editorInstance, section),
+      () => {
         pendingBacklinkSectionRef.current = null;
-      }
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [editorInstance, note?.id]);
+      },
+    );
+  }, [
+    editorInstance,
+    note?.id,
+    noteContentForEditor,
+    restoreEditorSyncTick,
+  ]);
 
   useEffect(() => {
     if (typeof __HUNOS_E2E__ === "undefined" || !__HUNOS_E2E__) return;

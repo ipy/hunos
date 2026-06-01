@@ -36,3 +36,42 @@ export function scrollToBacklinkSection(
   if (headingPos == null) return false;
   return scrollToTocDocPos(editor, headingPos);
 }
+
+export const BACKLINK_SECTION_SCROLL_MAX_ATTEMPTS = 30;
+
+type FrameScheduler = (callback: FrameRequestCallback) => number;
+
+/** Retry section scroll until the editor document exposes the target heading. */
+export function scheduleBacklinkSectionScroll(
+  tryScroll: () => boolean,
+  onSuccess: () => void,
+  frame: FrameScheduler = requestAnimationFrame,
+  cancelFrame: (handle: number) => void = cancelAnimationFrame,
+  maxAttempts: number = BACKLINK_SECTION_SCROLL_MAX_ATTEMPTS,
+): () => void {
+  if (tryScroll()) {
+    onSuccess();
+    return () => {};
+  }
+
+  let attempts = 0;
+  let rafId = 0;
+  let cancelled = false;
+
+  const tick: FrameRequestCallback = () => {
+    if (cancelled) return;
+    if (tryScroll()) {
+      onSuccess();
+      return;
+    }
+    if (++attempts >= maxAttempts) return;
+    rafId = frame(tick);
+  };
+
+  rafId = frame(tick);
+
+  return () => {
+    cancelled = true;
+    cancelFrame(rafId);
+  };
+}

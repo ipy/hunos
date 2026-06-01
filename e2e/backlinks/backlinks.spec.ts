@@ -7,6 +7,7 @@ import {
 import {
   assertBacklinkSnippetPlainText,
   clickEachIncomingBacklinkByFreshTestId,
+  collectIncomingBacklinkPrefixTexts,
   collectIncomingBacklinkRowTestIds,
   expandBacklinksPanelIfCollapsed,
   expectBacklinkNavigationHash,
@@ -14,7 +15,7 @@ import {
   openProjectDocsWithBacklinksPanel,
   waitForIncomingBacklinkRowCount,
 } from "../helpers/backlinks";
-import { openNoteFromList } from "../helpers/notes";
+import { noteIdFromListItem, openNoteFromList } from "../helpers/notes";
 
 const DESKTOP_VIEWPORT = { width: 1280, height: 720 } as const;
 
@@ -270,6 +271,74 @@ test.describe("backlinks footer — iter 61", () => {
       expect(contexts[0]!.length).toBeGreaterThan(0);
       expect(contexts[1]!.length).toBeGreaterThan(0);
     });
+  });
+
+  test.describe("iter 65 — AC64 runtime gates", () => {
+    let formatPlaygroundNoteId: string;
+
+    for (const { label, viewport } of BACKLINKS_VIEWPORTS) {
+      test.describe(label, () => {
+        test.use({ viewport });
+
+        test.beforeEach(async ({ page }) => {
+          formatPlaygroundNoteId = await noteIdFromListItem(
+            page,
+            FORMAT_PLAYGROUND_TITLE,
+          );
+          await openProjectDocsWithBacklinksPanel(page);
+          await expandBacklinksPanelIfCollapsed(page);
+        });
+
+        test("AC64-backlinks-canonical-count-runtime: two incoming rows from playground source id", async ({
+          page,
+        }) => {
+          const toggle = page.getByTestId("backlinks-panel-toggle");
+          await expect(toggle).toContainText("(2)");
+          await waitForIncomingBacklinkRowCount(page, 2);
+
+          const rowTestIds = await collectIncomingBacklinkRowTestIds(page);
+          expect(rowTestIds).toHaveLength(2);
+          for (const rowTestId of rowTestIds) {
+            expect(await incomingBacklinkTargetNoteId(page, rowTestId)).toBe(
+              formatPlaygroundNoteId,
+            );
+          }
+        });
+
+        test("AC64-backlink-prefix-unique-runtime: prefix testids are pairwise distinct", async ({
+          page,
+        }) => {
+          const rowTestIds = await collectIncomingBacklinkRowTestIds(page);
+          const prefixes = await collectIncomingBacklinkPrefixTexts(page);
+          expect(new Set(prefixes).size).toBe(rowTestIds.length);
+          expect(prefixes.join(" ")).toMatch(/标签与链接/);
+          expect(prefixes.join(" ")).toMatch(/自由试炼/);
+        });
+
+        test("AC64-prefix-visual-separator: renders · between prefix and body", async ({
+          page,
+        }) => {
+          const rowTestIds = await collectIncomingBacklinkRowTestIds(page);
+          for (const rowTestId of rowTestIds) {
+            const linkId = rowTestId.replace(/^backlinks-item-/, "");
+            const separator = page.getByTestId(
+              `backlinks-prefix-separator-${linkId}`,
+            );
+            await expect(separator).toBeVisible();
+            await expect(separator).toHaveText("·");
+
+            const prefix = await page
+              .getByTestId(`backlinks-prefix-${linkId}`)
+              .innerText();
+            const snippet = await page
+              .getByTestId(`backlinks-snippet-${linkId}`)
+              .innerText();
+            expect(snippet.startsWith(prefix)).toBe(true);
+            expect(snippet.slice(prefix.length).trimStart()).toMatch(/^·/);
+          }
+        });
+      });
+    }
   });
 
   test.describe("desktop — iter 59 regression", () => {
