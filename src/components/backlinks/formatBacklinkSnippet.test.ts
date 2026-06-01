@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   backlinkSnippetHasRawMarkdown,
   formatBacklinkSnippet,
+  splitBacklinkSnippetParts,
 } from "./formatBacklinkSnippet";
 
 describe("formatBacklinkSnippet", () => {
@@ -79,5 +80,13 @@ describe("formatBacklinkSnippet", () => {
     expect(tags.startsWith("标签与链接 ·")).toBe(true);
     expect(tryOwn.startsWith("自由试炼 ·")).toBe(true);
     expect(tags).not.toBe(tryOwn);
+  });
+
+  it("splits prefix and body for visual separator rendering (AC64-prefix-visual-separator)", () => {
+    const parts = splitBacklinkSnippetParts(
+      "自由试炼 · ... 与 项目文档 #42。...",
+    );
+    expect(parts.prefix).toBe("自由试炼");
+    expect(parts.body).toMatch(/项目文档 #42/);
   });
 });

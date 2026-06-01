@@ -72,9 +72,8 @@ describe("reconcileBootstrapGraph", () => {
   });
 
   it("removes duplicate canonical playground rows and resyncs seed links", async () => {
-    const {
-      getBootstrapPlaygroundSeedContent,
-    } = await import("./bootstrapTagSeeds");
+    const { getBootstrapPlaygroundSeedContent } =
+      await import("./bootstrapTagSeeds");
     const seedContent = getBootstrapPlaygroundSeedContent("zh");
     const notes: Note[] = [
       {
@@ -115,7 +114,7 @@ describe("reconcileBootstrapGraph", () => {
     expect(dedupeIncomingWikiLinks).toHaveBeenCalledTimes(2);
   });
 
-  it("drops non-playground incoming wiki links on canonical project docs", async () => {
+  it("drops ghost incoming links from deleted source notes", async () => {
     const { getBootstrapPlaygroundSeedContent } =
       await import("./bootstrapTagSeeds");
     const { getProjectDocsSeed } = await import("./welcomeNotes");
@@ -159,8 +158,8 @@ describe("reconcileBootstrapGraph", () => {
         createdAt: 1,
       },
       {
-        id: "link-stray",
-        sourceNoteId: "docs-old",
+        id: "link-ghost",
+        sourceNoteId: "pg-old",
         targetNoteId: "docs-zh",
         type: "wiki_link",
         context: "ctx-b",
@@ -172,7 +171,7 @@ describe("reconcileBootstrapGraph", () => {
     const { reconcileBootstrapGraph } = await import("./bootstrapGraphHygiene");
     await reconcileBootstrapGraph("zh");
 
-    expect(linkDelete).toHaveBeenCalledTimes(1);
-    expect(linkDelete).toHaveBeenCalledWith("link-stray");
+    expect(linkDelete).toHaveBeenCalledTimes(2);
+    expect(linkDelete).toHaveBeenCalledWith("link-ghost");
   });
 });

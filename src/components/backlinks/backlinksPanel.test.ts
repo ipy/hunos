@@ -8,6 +8,8 @@ import {
   assertUniqueBacklinkPanelKeys,
   backlinksItemSnippetTestId,
   backlinksItemTestId,
+  backlinksPrefixSeparatorTestId,
+  backlinksPrefixTestId,
   backlinksRowKey,
 } from "./BacklinksPanel";
 import { dedupeBacklinkResults } from "@/graph/graphEngine";
@@ -34,6 +36,13 @@ describe("BacklinksPanel automation testids", () => {
     );
     expect(backlinksItemSnippetTestId("link-abc")).not.toBe(
       backlinksItemTestId("link-abc"),
+    );
+  });
+
+  it("derives prefix and separator testids (AC64-backlink-prefix-unique-runtime)", () => {
+    expect(backlinksPrefixTestId("link-abc")).toBe("backlinks-prefix-link-abc");
+    expect(backlinksPrefixSeparatorTestId("link-abc")).toBe(
+      "backlinks-prefix-separator-link-abc",
     );
   });
 

@@ -1,3 +1,5 @@
+import { backlinkPrefixFromContext } from "@/graph/linkExtractor";
+
 /** Unwrap or drop markdown tokens truncated by the link context window. */
 function stripOrphanMarkdownDelimiters(text: string): string {
   let out = text;
@@ -52,6 +54,35 @@ export function formatBacklinkSnippet(context: string): string {
   text = text.replace(/\s+/g, " ").trim();
 
   return text;
+}
+
+const BACKLINK_SNIPPET_SEP = " · ";
+
+/** Split formatted snippet into a section prefix and trailing context body. */
+export function splitBacklinkSnippetParts(context: string): {
+  prefix: string | null;
+  body: string;
+} {
+  const rawPrefix = backlinkPrefixFromContext(context);
+  if (!rawPrefix || rawPrefix === context) {
+    return { prefix: null, body: formatBacklinkSnippet(context) };
+  }
+
+  let remainder = context;
+  const prefixSegmentCount = rawPrefix.split(BACKLINK_SNIPPET_SEP).length;
+  for (
+    let i = 0;
+    i < prefixSegmentCount && remainder.includes(BACKLINK_SNIPPET_SEP);
+    i++
+  ) {
+    const idx = remainder.indexOf(BACKLINK_SNIPPET_SEP);
+    remainder = remainder.slice(idx + BACKLINK_SNIPPET_SEP.length);
+  }
+
+  return {
+    prefix: formatBacklinkSnippet(rawPrefix),
+    body: formatBacklinkSnippet(remainder),
+  };
 }
 
 /** Raw markdown tokens that must not appear in formatted backlink snippets. */

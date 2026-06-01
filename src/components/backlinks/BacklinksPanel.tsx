@@ -5,7 +5,10 @@ import { dedupeBacklinkResults, graphEngine } from "@/graph/graphEngine";
 import { useNoteStore } from "@/store/noteStore";
 import { Icon } from "@/components/common/Icon";
 import type { BacklinkResult } from "@/types/graph";
-import { formatBacklinkSnippet } from "./formatBacklinkSnippet";
+import {
+  formatBacklinkSnippet,
+  splitBacklinkSnippetParts,
+} from "./formatBacklinkSnippet";
 
 export const BACKLINKS_PANEL_TESTID = "backlinks-panel";
 export const BACKLINKS_PANEL_TOGGLE_TESTID = "backlinks-panel-toggle";
@@ -23,6 +26,16 @@ export function backlinksItemTestId(linkId: string): string {
 /** Context/snippet line inside a backlink row — stable for e2e text reads. */
 export function backlinksItemSnippetTestId(linkId: string): string {
   return `backlinks-snippet-${linkId}`;
+}
+
+/** Section prefix label inside a backlink row (AC64-backlink-prefix-unique-runtime). */
+export function backlinksPrefixTestId(linkId: string): string {
+  return `backlinks-prefix-${linkId}`;
+}
+
+/** Visual separator between prefix and snippet body (AC64-prefix-visual-separator). */
+export function backlinksPrefixSeparatorTestId(linkId: string): string {
+  return `backlinks-prefix-separator-${linkId}`;
 }
 
 /** Stable React key when linkId alone may duplicate across wiki-link rows. */
@@ -55,9 +68,13 @@ export function assertUniqueBacklinkPanelKeys(
 
 interface BacklinksPanelProps {
   noteId: string;
+  onNavigateToNote?: (noteId: string, sectionHeading: string | null) => void;
 }
 
-export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
+export function BacklinksPanel({
+  noteId,
+  onNavigateToNote,
+}: BacklinksPanelProps) {
   const { t } = useTranslation();
   const theme = useTheme();
   const { setActiveNote, notes } = useNoteStore();
@@ -100,57 +117,96 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
 
   assertUniqueBacklinkPanelKeys(incomingRows, outgoingRows);
 
+  const navigateToNote = (
+    targetNoteId: string,
+    sectionHeading: string | null,
+  ) => {
+    if (onNavigateToNote) {
+      onNavigateToNote(targetNoteId, sectionHeading);
+      return;
+    }
+    void setActiveNote(targetNoteId);
+  };
+
   const renderLink = (
     section: "incoming" | "outgoing",
     bl: BacklinkResult,
     index: number,
-  ) => (
-    <div
-      key={backlinksRowKey(section, bl, index)}
-      data-testid={backlinksItemTestId(bl.linkId)}
-      data-link-key={bl.linkId}
-      data-note-id={bl.noteId}
-      data-note-title={bl.noteTitle}
-      onClick={() => setActiveNote(bl.noteId)}
-      style={{
-        padding: "10px 12px",
-        borderRadius: theme.radius.md,
-        cursor: "pointer",
-        marginBottom: 4,
-        backgroundColor: theme.colors.surface,
-        transition: "background-color 0.15s ease",
-      }}
-      onMouseEnter={(e) =>
-        (e.currentTarget.style.backgroundColor = theme.colors.surfaceHover)
-      }
-      onMouseLeave={(e) =>
-        (e.currentTarget.style.backgroundColor = theme.colors.surface)
-      }
-    >
+  ) => {
+    const snippetParts = bl.context
+      ? splitBacklinkSnippetParts(bl.context)
+      : null;
+
+    return (
       <div
+        key={backlinksRowKey(section, bl, index)}
+        data-testid={backlinksItemTestId(bl.linkId)}
+        data-link-key={bl.linkId}
+        data-note-id={bl.noteId}
+        data-note-title={bl.noteTitle}
+        onClick={() => navigateToNote(bl.noteId, snippetParts?.prefix ?? null)}
         style={{
-          fontSize: theme.fontSize.sm,
-          fontWeight: theme.fontWeight.medium,
-          color: theme.colors.text,
-          marginBottom: bl.context ? 4 : 0,
+          padding: "10px 12px",
+          borderRadius: theme.radius.md,
+          cursor: "pointer",
+          marginBottom: 4,
+          backgroundColor: theme.colors.surface,
+          transition: "background-color 0.15s ease",
         }}
+        onMouseEnter={(e) =>
+          (e.currentTarget.style.backgroundColor = theme.colors.surfaceHover)
+        }
+        onMouseLeave={(e) =>
+          (e.currentTarget.style.backgroundColor = theme.colors.surface)
+        }
       >
-        {bl.noteTitle || t("notes.untitled", { defaultValue: "Untitled" })}
-      </div>
-      {bl.context && (
         <div
-          data-testid={backlinksItemSnippetTestId(bl.linkId)}
           style={{
-            fontSize: theme.fontSize.xs,
-            color: theme.colors.textTertiary,
-            lineHeight: 1.4,
+            fontSize: theme.fontSize.sm,
+            fontWeight: theme.fontWeight.medium,
+            color: theme.colors.text,
+            marginBottom: bl.context ? 4 : 0,
           }}
         >
-          {formatBacklinkSnippet(bl.context)}
+          {bl.noteTitle || t("notes.untitled", { defaultValue: "Untitled" })}
         </div>
-      )}
-    </div>
-  );
+        {bl.context && (
+          <div
+            data-testid={backlinksItemSnippetTestId(bl.linkId)}
+            style={{
+              fontSize: theme.fontSize.xs,
+              color: theme.colors.textTertiary,
+              lineHeight: 1.4,
+            }}
+          >
+            {snippetParts?.prefix ? (
+              <>
+                <span
+                  data-testid={backlinksPrefixTestId(bl.linkId)}
+                  style={{
+                    fontWeight: theme.fontWeight.medium,
+                    color: theme.colors.textSecondary,
+                  }}
+                >
+                  {snippetParts.prefix}
+                </span>
+                <span
+                  data-testid={backlinksPrefixSeparatorTestId(bl.linkId)}
+                  aria-hidden
+                  style={{ marginInline: 4, color: theme.colors.textTertiary }}
+                >
+                  ·
+                </span>
+                {snippetParts.body}
+              </>
+            ) : (
+              formatBacklinkSnippet(bl.context)
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div

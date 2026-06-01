@@ -15,10 +15,12 @@ import {
 } from "./welcomeNotes";
 
 /** Drop duplicate canonical playground rows and resync seed wiki links. */
-async function consolidateFormatPlaygroundNotes(locale: Locale): Promise<void> {
+async function consolidateFormatPlaygroundNotes(
+  locale: Locale,
+): Promise<string | null> {
   const notes = await noteStorage.list({ status: "active" });
   const canonical = pickFormatPlaygroundNote(notes, locale);
-  if (!canonical) return;
+  if (!canonical) return null;
 
   const duplicates = notes.filter(
     (note) =>
@@ -34,22 +36,21 @@ async function consolidateFormatPlaygroundNotes(locale: Locale): Promise<void> {
 
   const seedContent = getBootstrapPlaygroundSeedContent(locale);
   const expectedTitle = getFormatPlaygroundTitle(locale);
-  if (
-    canonical.content !== seedContent ||
-    canonical.title !== expectedTitle
-  ) {
+  if (canonical.content !== seedContent || canonical.title !== expectedTitle) {
     await noteStorage.update(canonical.id, {
       content: seedContent,
       title: expectedTitle,
     });
   }
   await graphEngine.syncNoteLinks(canonical.id, seedContent);
+  return canonical.id;
 }
 
 /** Keep only canonical playground wiki links on the seed project-docs target. */
 async function pruneStrayProjectDocsIncomingLinks(
   locale: Locale,
   projectDocsId: string,
+  canonicalPlaygroundId: string,
 ): Promise<void> {
   const projectDocs = await noteStorage.get(projectDocsId);
   if (
@@ -60,14 +61,24 @@ async function pruneStrayProjectDocsIncomingLinks(
     return;
   }
 
-  const notes = await noteStorage.list({ status: "active" });
-  const canonicalPlayground = pickFormatPlaygroundNote(notes, locale);
-  if (!canonicalPlayground) return;
-
   const incoming = await linkStorage.getIncoming(projectDocsId);
   for (const link of incoming) {
     if (link.type !== "wiki_link") continue;
-    if (link.sourceNoteId === canonicalPlayground.id) continue;
+    if (link.sourceNoteId === canonicalPlaygroundId) continue;
+    await linkStorage.delete(link.id);
+  }
+}
+
+/** Drop incoming wiki links whose source note was removed during consolidation. */
+async function pruneInactiveSourceIncomingWikiLinks(
+  projectDocsId: string,
+): Promise<void> {
+  const notes = await noteStorage.list({ status: "active" });
+  const activeSourceIds = new Set(notes.map((note) => note.id));
+  const incoming = await linkStorage.getIncoming(projectDocsId);
+  for (const link of incoming) {
+    if (link.type !== "wiki_link") continue;
+    if (activeSourceIds.has(link.sourceNoteId)) continue;
     await linkStorage.delete(link.id);
   }
 }
@@ -78,10 +89,17 @@ async function pruneStrayProjectDocsIncomingLinks(
  */
 export async function reconcileBootstrapGraph(locale: Locale): Promise<void> {
   const projectDocsId = await consolidateProjectDocsNotes(locale);
-  await consolidateFormatPlaygroundNotes(locale);
+  const playgroundId = await consolidateFormatPlaygroundNotes(locale);
   if (projectDocsId) {
     await linkStorage.dedupeIncomingWikiLinks(projectDocsId);
-    await pruneStrayProjectDocsIncomingLinks(locale, projectDocsId);
+    if (playgroundId) {
+      await pruneStrayProjectDocsIncomingLinks(
+        locale,
+        projectDocsId,
+        playgroundId,
+      );
+    }
+    await pruneInactiveSourceIncomingWikiLinks(projectDocsId);
     await linkStorage.dedupeIncomingWikiLinks(projectDocsId);
   }
 }

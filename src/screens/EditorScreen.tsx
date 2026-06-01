@@ -96,6 +96,7 @@ import {
   isDebouncedAutosaveStillCurrent,
   resolveEditorAutosaveContentJson,
 } from "@/screens/editorAutosaveEffectCleanup";
+import { scrollToBacklinkSection } from "@/utils/backlinkSectionScroll";
 import type { PersistNoteOptions } from "@/screens/editorNotePersistence";
 
 declare const __HUNOS_E2E__: boolean | undefined;
@@ -112,6 +113,7 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
     notes,
     saveNoteContent,
     saveNoteTitle,
+    setActiveNote,
     pinNote,
     trashNote,
     archiveNote,
@@ -148,6 +150,10 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
   const contentWriteEpochRef = useRef(0);
   const lastPlaygroundMigrateKeyRef = useRef<string | null>(null);
   const playgroundRestoreSessionRef = useRef(createPlaygroundRestoreSession());
+  const pendingBacklinkSectionRef = useRef<{
+    noteId: string;
+    section: string;
+  } | null>(null);
   const pendingRestoreToastRef = useRef(false);
 
   const note = notes.find((n) => n.id === activeNoteId);
@@ -235,6 +241,42 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
       registerHunosE2eEditor(editor);
     }
   }, []);
+
+  const handleBacklinkNavigate = useCallback(
+    (targetNoteId: string, sectionHeading: string | null) => {
+      if (sectionHeading) {
+        pendingBacklinkSectionRef.current = {
+          noteId: targetNoteId,
+          section: sectionHeading,
+        };
+      } else {
+        pendingBacklinkSectionRef.current = null;
+      }
+      void setActiveNote(targetNoteId);
+    },
+    [setActiveNote],
+  );
+
+  useEffect(() => {
+    const pending = pendingBacklinkSectionRef.current;
+    if (!pending || !editorInstance || note?.id !== pending.noteId) return;
+
+    const tryScroll = () =>
+      scrollToBacklinkSection(editorInstance, pending.section);
+
+    if (tryScroll()) {
+      pendingBacklinkSectionRef.current = null;
+      return;
+    }
+
+    let raf = 0;
+    raf = requestAnimationFrame(() => {
+      if (tryScroll()) {
+        pendingBacklinkSectionRef.current = null;
+      }
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [editorInstance, note?.id]);
 
   useEffect(() => {
     if (typeof __HUNOS_E2E__ === "undefined" || !__HUNOS_E2E__) return;
@@ -1838,7 +1880,13 @@ export function EditorScreen({ layout = "mobile" }: EditorScreenProps) {
           paragraphSpacing={settings.paragraphSpacing}
           hideCompletedTasks={settings.hideCompletedTasks}
         />
-        {!focusMode && <BacklinksPanel key={note.id} noteId={note.id} />}
+        {!focusMode && (
+          <BacklinksPanel
+            key={note.id}
+            noteId={note.id}
+            onNavigateToNote={handleBacklinkNavigate}
+          />
+        )}
       </div>
 
       {editorInstance && (
