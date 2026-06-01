@@ -93,8 +93,15 @@ export function backlinkContextWithSection(
   return `${prefix}${context}`;
 }
 
-/** Leading section label before the first context separator, if any. */
+/**
+ * Leading disambiguation label for a backlink context — section alone, or
+ * section + source/hint when rows were already disambiguated.
+ */
 export function backlinkPrefixFromContext(context: string): string {
+  const parts = context.split(BACKLINK_SECTION_SEP);
+  if (parts.length >= 3) {
+    return `${parts[0]}${BACKLINK_SECTION_SEP}${parts[1]}`;
+  }
   const sep = context.indexOf(BACKLINK_SECTION_SEP);
   if (sep === -1) return context;
   return context.slice(0, sep);

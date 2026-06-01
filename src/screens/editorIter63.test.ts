@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   backlinkContextWithSection,
+  backlinkPrefixFromContext,
   disambiguateBacklinkContexts,
   extractFromPlainText,
   extractPlainTextForGraphSync,
@@ -21,6 +22,10 @@ const backlinksE2eSource = readFileSync(
 );
 const bootstrapSource = readFileSync(
   join(process.cwd(), "src/app/bootstrapAppData.ts"),
+  "utf8",
+);
+const bootstrapHygieneSource = readFileSync(
+  join(process.cwd(), "src/storage/bootstrapGraphHygiene.ts"),
   "utf8",
 );
 const graphEngineSource = readFileSync(
@@ -97,6 +102,12 @@ describe("iteration 63 — canonical project docs count (AC63-backlinks-canonica
     );
     expect(links).toHaveLength(2);
   });
+
+  it("bootstrap hygiene prunes non-playground incoming links on canonical seed", () => {
+    expect(bootstrapHygieneSource).toContain(
+      "pruneStrayProjectDocsIncomingLinks",
+    );
+  });
 });
 
 function backlinkSnippetLabel(text: string): string {
@@ -105,6 +116,12 @@ function backlinkSnippetLabel(text: string): string {
 }
 
 describe("iteration 63 — prefix uniqueness (AC63-backlink-prefix-unique)", () => {
+  it("groups section + hint as one prefix for already-disambiguated rows", () => {
+    expect(
+      backlinkPrefixFromContext("自由试炼 · #1 · ... first ..."),
+    ).toBe("自由试炼 · #1");
+  });
+
   it("adds source-title hints when section prefixes collide across sources", () => {
     const contexts = disambiguateBacklinkContexts([
       {

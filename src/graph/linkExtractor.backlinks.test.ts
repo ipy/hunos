@@ -96,4 +96,21 @@ describe("disambiguateBacklinkContexts", () => {
     expect(first).toMatch(/^自由试炼 · 格式试炼场 ·/);
     expect(second).toMatch(/^自由试炼 · Other ·/);
   });
+
+  it("treats section + hint as the prefix when re-disambiguating stored rows", () => {
+    const rows = disambiguateBacklinkContexts([
+      {
+        context: "自由试炼 · #1 · ... a ...",
+        noteTitle: "项目文档",
+      },
+      {
+        context: "自由试炼 · #2 · ... b ...",
+        noteTitle: "项目文档",
+      },
+    ]);
+    expect(rows).toEqual([
+      "自由试炼 · #1 · ... a ...",
+      "自由试炼 · #2 · ... b ...",
+    ]);
+  });
 });
